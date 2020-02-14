@@ -1,39 +1,23 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from tkinter import *
+import time
+import multiprocessing
 
 
 class RaceTrack:
-    def __init__(self, dt=0.5):
+    def __init__(self, interface, dt=0.5):
         self.start_location = State(x=[80, 80])
         self.end_location = State(x=[20, 20])
 
         self.state = State()
 
-        plt.ion()
-        self.fig = plt.figure()
-        self.axes = self.fig.gca()
-
+        self.track = interface
         self.dt = dt
-
-    def show_track(self):
-        x = [0, 0, 100, 100]
-        y = [0, 100, 0, 100]
-
-        self.axes.plot(x, y, 'ro', color='black')
-        self.axes.plot(self.end_location.x, self.end_location.y, 'x', color='green', markersize=10)
-        self.axes.plot(self.start_location.x, self.end_location.y, 'x', color='green', markersize=10)
-
-        plt.draw()
-        plt.pause(0.01)
-
-    def draw_car(self):
-        self.axes.plot(self.state.location.x, self.state.location.y, '*', color='red', markersize=10)
-
 
     def add_locations(self, start_location, end_location):
         self.start_location = start_location
         self.end_location = end_location
-
 
     def step(self, action):
         # action space is (ax, ay)
@@ -47,19 +31,33 @@ class RaceTrack:
             dd[i] = action[i] * self.dt * self.dt
 
         self.state.update_state(dv, dd)
+        # print(dd)
 
-        done = self.check_done
+        done = self.check_done()
         reward = self.check_distance_to_target()
 
-        next_state = self.state.copy()
+        time.sleep(0.1)        
 
-        return next_state.x, reward, False
+        return self.state, reward, False
 
     def reset(self):
         self.state.set_state()
         self.reward = 0
 
+
         # reset other variables here
+
+    def render(self):
+        #this function provides visual representation
+        x = self.state.x.copy()
+        print(self.state.x)
+
+        for i in range(2):
+            if x[i] <0:
+                x[i] = -x[i]
+            x[i] = x[i] *200
+            
+        self.track.q.put(x)
 
     def check_done(self):
         if self.state == self.end_location:
@@ -73,11 +71,6 @@ class RaceTrack:
 
         return dis
 
-
-class Car:
-    # the car is part of the environment
-    def __init__(self):
-        self.mass = 1000
 
 
 
@@ -104,10 +97,15 @@ class State(Location):
         self.v = v
     
     def update_state(self, dv, dd):
-        self.x += dd
-        self.v += dv
+        for i in range(2):
+            self.x[i] += dd[i]
+            self.v[i] += dv[i]
+
 
     def set_state(self, x=[0, 0], v=[0, 0] ):
         self.x = x
         self.v = v
+
+
+
 
