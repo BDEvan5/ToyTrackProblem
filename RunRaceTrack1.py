@@ -8,7 +8,7 @@ import multiprocessing
 
 if __name__ == "__main__":
 
-    track_interface = TrackInterfac.Interface()
+    track_interface = TrackInterfac.Interface(100)
     env = TrackEnv1.RaceTrack(track_interface)
     myAgent = Controller1.Agent(env)
 

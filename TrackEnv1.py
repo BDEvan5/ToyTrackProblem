@@ -2,18 +2,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tkinter import *
 import time
-import multiprocessing
+# import multiprocessing as mp 
+import LocationState as ls
 
 
 class RaceTrack:
     def __init__(self, interface, dt=0.5):
-        self.start_location = State(x=[80, 80])
-        self.end_location = State(x=[20, 20])
-
-        self.state = State()
-
         self.track = interface
         self.dt = dt
+
+        self.state = ls.State()
+
+        start_location = [80, 80]
+        self.start_location = ls.State(x=start_location)
+        self.end_location = ls.State(x=[20, 20])           
+        self.track.location.x = self.track.scale_input(start_location)
 
     def add_locations(self, start_location, end_location):
         self.start_location = start_location
@@ -42,14 +45,9 @@ class RaceTrack:
         # reset other variables here
 
     def render(self):
-        #this function provides visual representation
-        x = self.state.x.copy()
-
-        for i in range(2):
-            if x[i] <0:
-                x[i] = -x[i]
-            x[i] = x[i] *200
-            
+        # this function sends the state to the interface
+        x = self.state.x.copy()  
+        
         self.track.q.put(x)
 
     def _check_done(self):
@@ -73,37 +71,22 @@ class RaceTrack:
             dd[i] = action[i] * self.dt * self.dt
 
         self.state.update_state(dv, dd)
+        self._check_next_state()
 
-
-
-
-    
-# these are minor helper data structures for the env
-
-class Location:
-    def __init__(self, x=[0, 0]):
-        self.x = x
-
-    def set_location(self, x):
-        self.x = x
-
-    def get_location(self):
-        return self.x
-
-
-class State(Location):
-    def __init__(self, v=[0, 0], x=[0, 0]):
-        Location.__init__(self, x) # it would appear that you must innitialise an inherited object 
-        self.v = v
-    
-    def update_state(self, dv, dd):
+    def _check_next_state(self):
+        # this will be exapnded to a bigger function that will include friction etc
         for i in range(2):
-            self.x[i] += dd[i]
-            self.v[i] += dv[i]
+            # this in effect provides the bounce off the wall idea
+            # it flips the position and velocity
+            if self.state.x[i] < 0:
+                self.state.x[i] = -self.state.x[i]
+                self.state.v[i] = - self.state.v[i]
+            # check lower boundary
+            if self.state.x[i] > self.track.size[i]:
+                self.state.x[i] = 2*self.track.size[i] -self.state.x[i]
+                self.state.v[i] = - self.state.v[i]
 
-    def set_state(self, x=[0, 0], v=[0, 0] ):
-        self.x = x
-        self.v = v
+
 
 
 
