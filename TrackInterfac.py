@@ -3,20 +3,23 @@ import multiprocessing
 import LocationState as ls
 
 class Interface:
-    def __init__(self, update_time=100):
+    def __init__(self, update_time=100, scaling_factor=10, size=[1000, 1000]):
         self.dt = update_time
         self.root = Tk()
-        self.location = ls.Location([100, 100])
+        self.location = ls.Location()
+        self.end_l = ls.Location()
 
         self.q = multiprocessing.Queue()
 
-        self.fs = 200
-        self.size = [1000, 1000]
+        self.fs = scaling_factor
+        self.size = size
+
+        self.canv = Canvas(self.root, height=self.size[0], width=self.size[1])
+        self.o = self.canv.create_oval(20, 20, 40, 40, fill='red')
         
     def setup_root(self):
         print("Setup root called")
-        self.canv = Canvas(self.root, height=self.size[0], width=self.size[1])
-        self.o = self.canv.create_oval(20, 20, 40, 40, fill='red')
+        
         self.canv.pack()
         self.root.after(0, self.move_o)
         self.root.mainloop()
@@ -54,3 +57,10 @@ class Interface:
             x_out[i] = x_in[i] * self.fs
         return x_out
         
+    def set_end_location(self, x):
+        x = self.scale_input(x)
+        self.end_l.x = x
+        self.end_x = self.canv.create_text(x[0], x[1], text='X')
+        self.canv.pack()
+
+
