@@ -21,8 +21,10 @@ if __name__ == "__main__":
 
     agent.join()
 
+    root.terminate()
 
-    # myAgent.random_agent()
+
+
 
 
 
