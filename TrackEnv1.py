@@ -4,6 +4,7 @@ from tkinter import *
 import time
 # import multiprocessing as mp 
 import LocationState as ls
+from copy import deepcopy
 
 
 class RaceTrack:
@@ -13,9 +14,12 @@ class RaceTrack:
         self.dx = dx
 
         self.state = ls.State()
+        self.prev_s = ls.State()
         
         self.start_location = ls.State()
-        self.end_location = ls.State()           
+        self.end_location = ls.State()   
+
+        self.obstacles = []        
 
     def add_locations(self, x_start, x_end):
         self.start_location.set_location(x_start)
@@ -24,7 +28,7 @@ class RaceTrack:
         self.track.set_end_location(x_end)
 
     def step(self, action):
-
+        
         self._get_next_state(action)
 
         done = self._check_done()
@@ -37,7 +41,6 @@ class RaceTrack:
         self.state.set_state(self.start_location.x)
         self.reward = 0
         return self.state
-
 
     def render(self):
         # this function sends the state to the interface
@@ -64,6 +67,8 @@ class RaceTrack:
         return dis
 
     def _get_next_state(self, action):
+        self.prev_s.x = deepcopy(self.state.x)
+        # self.prev_s = self.state.copy()
         dv = [0, 0]
         dd = [0, 0]
         for i in range(2):
@@ -73,6 +78,7 @@ class RaceTrack:
 
         self.state.update_state(dv, dd)
         self._check_next_state()
+        self._check_collision()
 
     def _check_next_state(self):
         # this will be exapnded to a bigger function that will include friction etc
@@ -82,13 +88,27 @@ class RaceTrack:
             if self.state.x[i] < 0:
                 self.state.x[i] = -self.state.x[i]
                 self.state.v[i] = - self.state.v[i]
-            # check lower boundary
+            # check outer boundary
             if self.state.x[i] > self.track.size[i]:
                 self.state.x[i] = 2*self.track.size[i] -self.state.x[i]
                 self.state.v[i] = - self.state.v[i]
 
-        # consider moving this into the interface class
-        # this needs to be the physics engine which validates the state
+        self._check_collision()
+
+    def add_obstacle(self, obs):
+        self.track.add_obstacle(obs)
+        self.obstacles.append(obs)
+
+    def _check_collision(self):
+        x = self.state.x
+        for o in self.obstacles:
+            if o[0] < x[0] < o[2]:
+                if o[1] < x[1] < o[3]:
+                    print("Collision")
+                    # this just resets to previos postion.
+                    self.state.x = self.prev_s.x
+                    self.state.v = [0, 0]
+
 
 
 

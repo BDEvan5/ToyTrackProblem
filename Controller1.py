@@ -27,7 +27,7 @@ class RandomAgent:
         print("Random Episode done")
 
 class OptimalAgent:
-    def __init__(self, env, logger, sleep=0.1, fa=1):
+    def __init__(self, env, logger, sleep=0.4, fa=1):
         self.env = env 
         self.sleep = sleep
         self.fa = fa # action factor for how much to relate action to difference

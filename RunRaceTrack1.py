@@ -7,6 +7,12 @@ import multiprocessing as mp
 import time
 import logging
 
+def set_up_env(env):
+    o1 = (20, 40, 80, 60)
+    env.add_obstacle(o1)
+
+
+
 def run_random_agent():
     track_interface = TrackInterfac.Interface(50)
     env = TrackEnv1.RaceTrack(track_interface)
@@ -35,8 +41,6 @@ def run_optimal_agent():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    logger.debug("Hi")
-
     track_interface = TrackInterfac.Interface(500)
     env = TrackEnv1.RaceTrack(track_interface)
     myAgent = Controller1.OptimalAgent(env, logger)
@@ -45,6 +49,8 @@ def run_optimal_agent():
     start_location = [80.0, 95.0]
     end_location = [20.0, 35.0]
     myAgent.set_locations(start_location, end_location)
+    set_up_env(env)
+
 
     root = mp.Process(target=track_interface.setup_root)
     # agent = mp.Process(target=myAgent.random_agent)
@@ -56,6 +62,7 @@ def run_optimal_agent():
     agent.join()
 
     root.terminate()
+
 
     
 if __name__ == "__main__":
