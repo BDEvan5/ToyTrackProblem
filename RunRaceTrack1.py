@@ -43,7 +43,8 @@ def run_optimal_agent():
 
     track_interface = TrackInterfac.Interface(500)
     env = TrackEnv1.RaceTrack(track_interface)
-    myAgent = Controller1.OptimalAgent(env, logger)
+    # myAgent = Controller1.OptimalAgent(env, logger)
+    myAgent = Controller1.StarAOpti(env, logger)
 
     # set up start and end.
     start_location = [80.0, 95.0]
@@ -53,8 +54,8 @@ def run_optimal_agent():
 
 
     root = mp.Process(target=track_interface.setup_root)
-    # agent = mp.Process(target=myAgent.random_agent)
-    agent = mp.Process(target=myAgent.opti_agent)
+    agent = mp.Process(target=myAgent.StarA)
+    # agent = mp.Process(target=myAgent.opti_agent)
 
     root.start()
     agent.start()

@@ -27,7 +27,7 @@ class RandomAgent:
         print("Random Episode done")
 
 class OptimalAgent:
-    def __init__(self, env, logger, sleep=0.4, fa=1):
+    def __init__(self, env, logger, sleep=0.1, fa=1):
         self.env = env 
         self.sleep = sleep
         self.fa = fa # action factor for how much to relate action to difference
@@ -53,7 +53,7 @@ class OptimalAgent:
 
         self.open_list.append(self.start_n)
 
-    def opti_agent(self, steps=100):
+    def opti_agent(self, steps=50):
         print("Optimial agent called")
 
         state = self.env.reset() # not needed until learning starts
@@ -137,6 +137,138 @@ class OptimalAgent:
                 break
         print("Random Episode done")
 
+
+class StarAOpti:
+    def __init__(self, env, logger, sleep=0.5, fa=1):
+        self.env = env 
+        self.sleep = sleep
+        self.fa = fa # action factor for how much to relate action to difference
+        self.end = ls.Location()
+        self.start = ls.Location()
+
+        self.start_n = None
+        self.end_n = None
+        self.state = None
+
+        self.open_list = []
+        self.closed_list = []
+        self.children = []
+        self.current_node = None
+
+        self.logger = logger
+
+    def set_locations(self, x_start, x_end):
+        self.start = x_start
+        self.end = x_end
+        self.env.add_locations(x_start, x_end)
+
+        self.start_n = Node(None, x_start)
+        self.end_n = Node(None, x_end)
+
+        self.open_list.append(self.start_n)
+
+    def StarA(self, steps=50):
+        print("A Star agent called")
+
+        self.find_next_node()
+
+        self.state = self.env.reset() # not needed until learning starts
+        done = False
+        self.logger.debug("0: ----------------------" )
+        self.logger.debug("New State - " + str(self.state.x))
+
+        step = 1
+        # while len(self.open_list) > 0 and step < steps:
+        while step < steps:
+            self.generate_children()
+
+            self.create_child_nodes()
+
+            self.find_next_node()
+
+            action = self.select_action()
+
+            self.state, _, done = self.env.step(action)
+            self.env.render() 
+      
+            if done:
+                break
+
+            self.logger.debug("%d: ----------------------" %(step))
+            self.logger.debug("Action taken - " + str(action))
+            self.logger.debug("New State - " + str(self.state.x))
+
+            time.sleep(self.sleep)
+            
+            step += 1
+        
+        print("Optimal Episode done in %d steps" % step)
+    
+    def find_next_node(self):
+        # Get the current node
+        self.current_node = self.open_list[0]
+        current_index = 0
+        for index, item in enumerate(self.open_list):
+            if item.f < self.current_node.f:
+                self.current_node = item
+                current_index = index
+        # Pop current off open list, add to closed list
+        self.open_list.pop(current_index)
+        self.closed_list.append(self.current_node)
+
+    def generate_children(self):
+        self.children.clear() # deletes old children
+        dx = self.env.dx / 10
+        for new_position in [(0, -dx), (0, dx), (-dx, 0), (dx, 0), (-dx, -dx), (-dx, dx), (dx, -dx), (dx, dx)]: # Adjacent squares
+
+            # Get node position
+            node_position = (self.current_node.position[0] + new_position[0], self.current_node.position[1] + new_position[1])
+
+            # possibly insert code here to check that it is ok
+            for sense in self.state.senses:
+                if sense.val == 1:
+                    # this means there is an obstacle so it isn't a valid node
+                    continue
+
+            # Create new node
+            new_node = Node(self.current_node, node_position)
+
+            # Create the f, g, and h values
+            new_node.g = self.current_node.g + 1
+            new_node.h = ((new_node.position[0] - self.end_n.position[0]) ** 2) + ((new_node.position[1] - self.end_n.position[1]) ** 2)
+            new_node.f = new_node.g + new_node.h
+
+            # Append
+            self.children.append(new_node)
+
+    def create_child_nodes(self):
+        for child in self.children:
+             # Child is on the closed list
+            for closed_child in self.closed_list:
+                if child == closed_child:
+                    continue
+
+            # Create the f, g, and h values
+            child.g = self.current_node.g + 1
+            child.h = ((child.position[0] - self.end_n.position[0]) ** 2) + ((child.position[1] - self.end_n.position[1]) ** 2)
+            child.f = child.g + child.h
+
+            # Child is already in the open list
+            for open_node in self.open_list:
+                if child == open_node and child.g > open_node.g:
+                    continue
+
+            # Add the child to the open list
+            self.open_list.append(child)
+            self.env.track.node_q.put(child.position)
+
+    def select_action(self):
+        # this method selects an action to move toward the supposed best node
+        action = [0.0, 0.0]
+        for i in range(2):
+            action[i] = self.end_n.position[i] - self.current_node.position[i] *self.fa
+
+        return action
 
 class Node():
     """A node class for A* Pathfinding"""

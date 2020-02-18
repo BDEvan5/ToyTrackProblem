@@ -27,6 +27,10 @@ class RaceTrack:
         self.track.location.x = self.track.scale_input(x_start)
         self.track.set_end_location(x_end)
 
+    def add_obstacle(self, obs):
+        self.track.add_obstacle(obs)
+        self.obstacles.append(obs)
+
     def step(self, action):
         
         self._get_next_state(action)
@@ -44,7 +48,8 @@ class RaceTrack:
 
     def render(self):
         # this function sends the state to the interface
-        x = self.state.x.copy()  
+        # x = self.state.deepcopy()  
+        x = deepcopy(self.state)
         self.track.q.put(x)
 
     def _check_done(self):
@@ -79,6 +84,7 @@ class RaceTrack:
         self.state.update_state(dv, dd)
         self._check_next_state()
         self._check_collision()
+        self._update_senses()
 
     def _check_next_state(self):
         # this will be exapnded to a bigger function that will include friction etc
@@ -95,10 +101,6 @@ class RaceTrack:
 
         self._check_collision()
 
-    def add_obstacle(self, obs):
-        self.track.add_obstacle(obs)
-        self.obstacles.append(obs)
-
     def _check_collision(self):
         x = self.state.x
         for o in self.obstacles:
@@ -109,7 +111,21 @@ class RaceTrack:
                     self.state.x = self.prev_s.x
                     self.state.v = [0, 0]
 
-
+    def _update_senses(self):
+        for sense in self.state.senses:
+            # this is how far the sensor looks
+            dx = 10
+            sense_l = [0, 0]
+            for i in range(2):
+                sense_l[i] = self.state.x[i] + sense.dir[i] * dx
+            sense.val = self._check_single_collision(sense_l)
+            
+    def _check_single_collision(self, point):
+        for o in self.obstacles:
+            if o[0] < point[0] < o[2]:
+                if o[1] < point[1] < o[3]:
+                    return 1
+        return 0
 
 
 
