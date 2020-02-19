@@ -55,6 +55,10 @@ class Interface:
                 s = self.sense_canv.create_rectangle(p1, p2, fill='black')
                 self.sense_blocks.append(s)
 
+        self.reward_name = Label(self.info_p, text="Reward")
+        self.reward_name.pack()
+        self.reward = Label(self.info_p, text="0")
+        self.reward.pack()
         
     def setup_root(self):
         print("Setup root called")
@@ -151,7 +155,7 @@ class Interface:
             elif s.val == 0:
                 self.sense_canv.itemconfig(block, fill='white')
 
-
-
+        reward_text = str(self.state.reward)
+        self.reward.config(text=reward_text)
 
 
