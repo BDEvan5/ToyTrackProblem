@@ -2,6 +2,7 @@ from tkinter import *
 import multiprocessing
 import LocationState as ls
 
+
 class Interface:
     def __init__(self, update_time=0, scaling_factor=10, size=[1000, 1000]):
         self.dt = update_time
@@ -19,9 +20,7 @@ class Interface:
         self.sense_blocks = []
         self.prev_px = []
 
-        self.setup_window()
-
-        
+        self.setup_window()  
 
     def setup_window(self):
         self.canv = Canvas(self.root, height=self.size[0], width=self.size[1])
@@ -55,9 +54,6 @@ class Interface:
                 s = self.sense_canv.create_rectangle(p1, p2, fill='black')
                 self.sense_blocks.append(s)
 
-        
-
-        
         
     def setup_root(self):
         print("Setup root called")
@@ -109,9 +105,11 @@ class Interface:
         return x_out
         
     def set_end_location(self, x):
+    
+
         x = self.scale_input(x)
         self.end_l.x = x
-        self.end_x = self.canv.create_text(x[0], x[1], text='X')
+        self.end_x = self.canv.create_text(x[0], x[1], text='X', fill='blue', font = "Times 20 italic bold")
         self.canv.pack()
 
     def add_obstacle(self, obs):
@@ -148,8 +146,8 @@ class Interface:
         location_text = str(self.location.x)
         self.loc.config(text=location_text)
 
+        # self.state.print_sense()
         for s, block in zip(self.state.senses, self.sense_blocks):
-            # print(s.val)
             if s.val == 1:
                 self.sense_canv.itemconfig(block, fill='black')
             elif s.val == 0:

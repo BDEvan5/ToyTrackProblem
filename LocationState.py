@@ -17,9 +17,11 @@ class SingleSense:
     def __init__(self, dir=[0, 0], val=0):
         self.dir = dir
         self.val = val
+        self.sense_location = [0, 0]
 
     def print_sense(self):
-        print(str(self.dir) + " --> Val: " + str(self.val))
+        print(str(self.dir) + " --> Val: " + str(self.val) + " --> Loc: " + str(self.sense_location))
+
 
 class Sense:
     def __init__(self):
@@ -27,7 +29,7 @@ class Sense:
       
         for i in range(3):
             for j in range(3):
-                sense = SingleSense([j-1, 1-i])
+                sense = SingleSense([j-1, i-1])
                 self.senses.append(sense)
                 
     def print_sense(self):
@@ -52,4 +54,9 @@ class State(Location, Sense):
     def set_state(self, x=[0, 0], v=[0, 0] ):
         self.x = x
         self.v = v
+
+    def set_sense_locations(self, dx):
+        for sense in self.senses:
+            for i in range(2):
+                sense.sense_location[i] = self.x[i] + sense.dir[i] * dx
 

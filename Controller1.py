@@ -3,6 +3,7 @@ import TrackEnv1
 import LocationState as ls
 import time
 import logging
+import LibFunctions as f
 
 
 class RandomAgent:
@@ -139,7 +140,7 @@ class OptimalAgent:
 
 
 class StarAOpti:
-    def __init__(self, env, logger, sleep=0.5, fa=1):
+    def __init__(self, env, logger, sleep=0.4, fa=5):
         self.env = env 
         self.sleep = sleep
         self.fa = fa # action factor for how much to relate action to difference
@@ -190,6 +191,8 @@ class StarAOpti:
 
             self.state, _, done = self.env.step(action)
             self.env.render() 
+
+            self.update_current_node()
       
             if done:
                 break
@@ -204,6 +207,9 @@ class StarAOpti:
         
         print("Optimal Episode done in %d steps" % step)
     
+    def update_current_node(self):
+        self.current_node.position = self.state.x
+
     def find_next_node(self):
         # Get the current node
         self.current_node = self.open_list[0]
@@ -218,28 +224,29 @@ class StarAOpti:
 
     def generate_children(self):
         self.children.clear() # deletes old children
-        dx = self.env.dx / 10
-        for new_position in [(0, -dx), (0, dx), (-dx, 0), (dx, 0), (-dx, -dx), (-dx, dx), (dx, -dx), (dx, dx)]: # Adjacent squares
 
+        position_list = []
+        for i in range(3):
+            for j in range(3):
+                dir = [(j-1)*self.env.ds, (i-1)*self.env.ds]
+                position_list.append(dir)
+
+        for sense in self.state.senses: # Adjacent squares
             # Get node position
-            node_position = (self.current_node.position[0] + new_position[0], self.current_node.position[1] + new_position[1])
+            node_position = sense.sense_location
 
-            # possibly insert code here to check that it is ok
-            for sense in self.state.senses:
-                if sense.val == 1:
-                    # this means there is an obstacle so it isn't a valid node
-                    continue
+            if sense.val == 0:
 
-            # Create new node
-            new_node = Node(self.current_node, node_position)
+                # Create new node - no obstacle
+                new_node = Node(self.current_node, node_position)
 
-            # Create the f, g, and h values
-            new_node.g = self.current_node.g + 1
-            new_node.h = ((new_node.position[0] - self.end_n.position[0]) ** 2) + ((new_node.position[1] - self.end_n.position[1]) ** 2)
-            new_node.f = new_node.g + new_node.h
+                # Create the f, g, and h values
+                new_node.g = self.current_node.g + 1
+                new_node.h = ((new_node.position[0] - self.end_n.position[0]) ** 2) + ((new_node.position[1] - self.end_n.position[1]) ** 2)
+                new_node.f = new_node.g + new_node.h
 
-            # Append
-            self.children.append(new_node)
+                # Append
+                self.children.append(new_node)
 
     def create_child_nodes(self):
         for child in self.children:
@@ -264,10 +271,13 @@ class StarAOpti:
 
     def select_action(self):
         # this method selects an action to move toward the supposed best node
-        action = [0.0, 0.0]
-        for i in range(2):
-            action[i] = self.end_n.position[i] - self.current_node.position[i] *self.fa
 
+        # good question is how to know how far to step
+        action = [0.0, 0.0]
+        dis = f.get_distance(self.end_n.position, self.state.x)
+        scale = self.fa * (dis * 0.02)
+        for i in range(2):
+            action[i] = (self.current_node.position[i] - self.state.x[i]) * scale
         return action
 
 class Node():

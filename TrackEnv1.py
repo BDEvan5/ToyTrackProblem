@@ -8,10 +8,11 @@ from copy import deepcopy
 
 
 class RaceTrack:
-    def __init__(self, interface, dt=0.5, dx=0.1):
+    def __init__(self, interface, dt=0.5, dx=1, sense_dis=5):
         self.track = interface
         self.dt = dt
         self.dx = dx
+        self.ds = sense_dis
 
         self.state = ls.State()
         self.prev_s = ls.State()
@@ -34,6 +35,7 @@ class RaceTrack:
     def step(self, action):
         
         self._get_next_state(action)
+        self._update_senses()
 
         done = self._check_done()
         reward = self._check_distance_to_target()   
@@ -43,12 +45,12 @@ class RaceTrack:
     def reset(self):
         # resets to starting location
         self.state.set_state(self.start_location.x)
+        self._update_senses()
         self.reward = 0
         return self.state
 
     def render(self):
         # this function sends the state to the interface
-        # x = self.state.deepcopy()  
         x = deepcopy(self.state)
         self.track.q.put(x)
 
@@ -81,6 +83,8 @@ class RaceTrack:
             dv[i] = action[i] * self.dt
             dd[i] = action[i] * self.dt * self.dt
 
+        # come back to a more accurate model one day, but at the moment there are problems
+
         self.state.update_state(dv, dd)
         self._check_next_state()
         self._check_collision()
@@ -112,20 +116,18 @@ class RaceTrack:
                     self.state.v = [0, 0]
 
     def _update_senses(self):
+        self.state.set_sense_locations(self.ds)
+        # self.state.print_sense()
         for sense in self.state.senses:
-            # this is how far the sensor looks
-            dx = 10
-            sense_l = [0, 0]
-            for i in range(2):
-                sense_l[i] = self.state.x[i] + sense.dir[i] * dx
-            sense.val = self._check_single_collision(sense_l)
+            for o in self.obstacles:
+                if o[0] < sense.sense_location[0] < o[2]:
+                    if o[1] < sense.sense_location[1] < o[3]:
+                        sense.val = 1
+                        # print("Sense going to collide")
+                else:
+                    sense.val = 0
+
             
-    def _check_single_collision(self, point):
-        for o in self.obstacles:
-            if o[0] < point[0] < o[2]:
-                if o[1] < point[1] < o[3]:
-                    return 1
-        return 0
 
 
 
