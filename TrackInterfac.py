@@ -1,6 +1,7 @@
 from tkinter import *
 import multiprocessing
 import LocationState as ls
+import LibFunctions as f
 
 
 class Interface:
@@ -105,8 +106,6 @@ class Interface:
         return x_out
         
     def set_end_location(self, x):
-    
-
         x = self.scale_input(x)
         self.end_l.x = x
         self.end_x = self.canv.create_text(x[0], x[1], text='X', fill='blue', font = "Times 20 italic bold")
@@ -121,22 +120,21 @@ class Interface:
     def plot_line(self):
         i = len(self.prev_px)
         print(i)
-        # print(self.prev_px[i-1])
         if i > 2:
-            self.canv.create_line(self.prev_px[i-1], self.prev_px[i-2], fill='green')
+            # self.canv.create_line(self.prev_px[i-1], self.prev_px[i-2], fill='purple')
+            current_pos = self.scale_input(self.state.x)
+            self.canv.create_line(self.prev_px[i-2], current_pos, fill='purple')
 
     def draw_nodes(self):
-        # while not self.node_q.empty():
-        #     node = self.node_q.get()
-        #     node = self.scale_input(node)
-            # print(node)
         node = [0, 0]
-        dx = 5 # scaling factor for sense
+        dx = 5 # scaling factor for sense - should be same as in track
         for sense in self.state.senses:
-            for i in range(2):
-                node[i] = self.state.x[i] + sense.dir[i] * dx
+            node = f.add_locations(self.state.x, sense.dir, dx)
             node = self.scale_input(node)
-            self.canv.create_text(node[0], node[1], text='X')
+            if sense.val == 0:
+                self.canv.create_text(node[0], node[1], text='X', fill='green')
+            else:
+                self.canv.create_text(node[0], node[1], text='X', fill='red')
             self.canv.pack()
 
     def update_info(self):

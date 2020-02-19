@@ -140,7 +140,7 @@ class OptimalAgent:
 
 
 class StarAOpti:
-    def __init__(self, env, logger, sleep=0.4, fa=5):
+    def __init__(self, env, logger, sleep=0.4, fa=20):
         self.env = env 
         self.sleep = sleep
         self.fa = fa # action factor for how much to relate action to difference
@@ -275,7 +275,7 @@ class StarAOpti:
         # good question is how to know how far to step
         action = [0.0, 0.0]
         dis = f.get_distance(self.end_n.position, self.state.x)
-        scale = self.fa * (dis * 0.02)
+        scale = self.fa * (dis * 0.01)
         for i in range(2):
             action[i] = (self.current_node.position[i] - self.state.x[i]) * scale
         return action

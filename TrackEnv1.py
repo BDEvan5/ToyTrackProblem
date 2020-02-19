@@ -8,7 +8,7 @@ from copy import deepcopy
 
 
 class RaceTrack:
-    def __init__(self, interface, dt=0.5, dx=1, sense_dis=5):
+    def __init__(self, interface, dt=0.5, dx=0.2, sense_dis=5):
         self.track = interface
         self.dt = dt
         self.dx = dx
