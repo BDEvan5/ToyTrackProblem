@@ -1,6 +1,6 @@
 import numpy as np
 
-def add_locations(x1=[0, 0], x2=[0, 0], dx=0):
+def add_locations(x1=[0, 0], x2=[0, 0], dx=1):
     # dx is a scaling factor
     ret = [0.0, 0.0]
     for i in range(2):

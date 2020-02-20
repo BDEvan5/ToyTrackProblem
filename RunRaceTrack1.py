@@ -1,5 +1,5 @@
 import TrackEnv1
-# import RL_controller
+import RL_controller
 import Controller1
 import TrackInterfac
 import matplotlib.pyplot as plt
@@ -77,7 +77,7 @@ def run_rl_agent():
     logger.setLevel(logging.DEBUG)
 
     track_interface = TrackInterfac.Interface(500)
-    env = TrackEnv1.RaceTrack(track_interface)
+    env = TrackEnv1.RaceTrack(track_interface, logger)
     myAgent = RL_controller.RL_Controller(env, logger)
 
     # set up start and end.
@@ -92,10 +92,11 @@ def run_rl_agent():
     agent = mp.Process(target=myAgent.run_learning)
     # agent = mp.Process(target=myAgent.opti_agent)
 
-    root.start()
+    # root.start()
     agent.start()
 
     agent.join()
+    # root.join()
 
     root.terminate()
 
@@ -103,8 +104,8 @@ def run_rl_agent():
     
 if __name__ == "__main__":
     # run_random_agent()
-    run_optimal_agent()
-    # run_rl_agent()
+    # run_optimal_agent()
+    run_rl_agent()
 
 
 

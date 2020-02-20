@@ -123,7 +123,7 @@ class Interface:
 
     def plot_line(self):
         i = len(self.prev_px)
-        print(i)
+        # print(i)
         if i > 2:
             # self.canv.create_line(self.prev_px[i-1], self.prev_px[i-2], fill='purple')
             current_pos = self.scale_input(self.state.x)
