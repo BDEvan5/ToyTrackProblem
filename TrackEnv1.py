@@ -14,8 +14,8 @@ class RaceTrack:
         self.dx = dx
         self.ds = sense_dis
 
-        self.state_space = 11
-        self.action_space = 4
+        self.state_space = 2
+        self.action_space = 9
 
         self.state = ls.State()
         self.prev_s = ls.State()
@@ -40,16 +40,17 @@ class RaceTrack:
 
     def step(self, action):
         
-        self._get_next_state(action)
+        self._update_state(action)
+        self._check_collision()
         self._update_senses()
 
         done = self._check_done()
+
         if self.collision_flag is False:
             reward = self._check_distance_to_target() * -1 +100
         else: 
             reward = -100
         self.state.reward = reward
-
 
         return self.state, reward, done
 
@@ -84,25 +85,20 @@ class RaceTrack:
 
         return dis
 
-    def _get_next_state(self, action):
+    def _update_state(self, action):
         self.prev_s.x = deepcopy(self.state.x)
 
-
-
-        # self.prev_s = self.state.copy()
         dv = [0, 0]
         dd = [0, 0]
         for i in range(2):
             # this performs manual integration, I am not fully sure this is correct but I think it is
             dv[i] = action[i] * self.dt
+            # add velocity dynamic here
             dd[i] = action[i] * self.dt * self.dt
 
         # come back to a more accurate model one day, but at the moment there are problems
 
         self.state.update_state(dv, dd)
-        # self._check_next_state()
-        self._check_collision()
-        self._update_senses()
 
     def _check_next_state(self):
         # this will be exapnded to a bigger function that will include friction etc
@@ -142,26 +138,24 @@ class RaceTrack:
             self.state.v = [0, 0]
             self.collision_flag = True
 
-
     def _update_senses(self):
         self.state.set_sense_locations(self.ds)
         b = self.boundary
         # self.state.print_sense()
         for sense in self.state.senses:
-            for o in self.obstacles:
-                if o[0] < sense.sense_location[0] < o[2]:
-                    if o[1] < sense.sense_location[1] < o[3]:
-                        sense.val = 1
-                        # print("Sense going to collide")
-                else:
-                    sense.val = 0
-            # checks the boundaries       
             if b[0] < sense.sense_location[0] < b[2]:
                 if b[1] < sense.sense_location[1] < b[3]:
                     sense.val = 0
                     # It is within the boundary
                 else:
+                    # hits te wall boundary
                     sense.val = 1
+
+            for o in self.obstacles:
+                if o[0] < sense.sense_location[0] < o[2]:
+                    if o[1] < sense.sense_location[1] < o[3]:
+                        sense.val = 1
+                        # if it hits an obstacle   
 
     def add_boundaries(self, b):
         self.boundary = b

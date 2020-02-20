@@ -140,7 +140,7 @@ class OptimalAgent:
 
 
 class StarAOpti:
-    def __init__(self, env, logger, sleep=0.4, fa=20):
+    def __init__(self, env, logger, sleep=0.4, fa=6):
         self.env = env 
         self.sleep = sleep
         self.fa = fa # action factor for how much to relate action to difference
@@ -179,7 +179,7 @@ class StarAOpti:
         self.logger.debug("New State - " + str(self.state.x))
 
         step = 1
-        # while len(self.open_list) > 0 and step < steps:
+
         while step < steps:
             self.generate_children()
 

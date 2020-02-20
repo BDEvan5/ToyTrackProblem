@@ -51,10 +51,10 @@ def run_optimal_agent():
 
     # set up start and end.
     start_location = [80.0, 95.0]
-    end_location = [20.0, 35.0]
+    end_location = [30.0, 25.0]
     myAgent.set_locations(start_location, end_location)
-    set_up_env(env)
     add_boundaries(env)
+    set_up_env(env)
 
 
     root = mp.Process(target=track_interface.setup_root)
