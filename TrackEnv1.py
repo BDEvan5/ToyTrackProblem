@@ -10,8 +10,7 @@ import logging
 
 
 class RaceTrack:
-    def __init__(self, interface, logger, dx=10, sense_dis=5):
-        self.track = interface
+    def __init__(self, logger, dx=10, sense_dis=5):
         self.dx = dx # this is how close it must be to stop
         self.ds = sense_dis # this is how far the sensor can look ahead
         self.logger = logger
@@ -31,11 +30,10 @@ class RaceTrack:
     def add_locations(self, x_start, x_end):
         self.start_location.set_location(x_start)
         self.end_location.set_location(x_end)
-        self.track.location.x = self.track.scale_input(x_start)
-        self.track.set_end_location(x_end)
+        # self.track.prev_px = self.track.scale_input(x_start)
+        # self.track.set_end_location(x_end)
 
     def add_obstacle(self, obs):
-        self.track.add_obstacle(obs)
         self.obstacles.append(obs)
 
     def add_boundaries(self, b):
@@ -76,10 +74,11 @@ class RaceTrack:
         self.reward = 0
         return self.state
 
-    def render(self):
+    # def render(self):
         # this function sends the state to the interface
-        x = deepcopy(self.state)
-        self.track.q.put(x)
+        # this is currently disabled for replay instead
+        # x = deepcopy(self.state)
+        # self.track.step_q.put(x)
 
     def _get_reward(self):
         dis = f.get_distance(self.state.x, self.end_location.x) 

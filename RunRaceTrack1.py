@@ -13,15 +13,21 @@ def set_up_env(env):
     o1 = (20, 40, 80, 60)
     env.add_obstacle(o1)
 
-def set_up_tube(env):
+def set_up(env, myPlayer, myAgent):
+    start_location = [50.0, 95.0]
+    end_location = [50.0, 15.0]
     o1 = (0, 0, 30, 100)
-    env.add_obstacle(o1)
     o2 = (70, 0, 100, 100)
-    env.add_obstacle(o2)
-
-def add_boundaries(env):
     b = (1, 1, 99, 99)
+
+    env.add_obstacle(o1)
+    env.add_obstacle(o2)
     env.add_boundaries(b)
+    myAgent.set_locations(start_location, end_location)
+    myPlayer.interface.set_locations(start_location, end_location)
+    myPlayer.interface.add_obstacle(o1)
+    myPlayer.interface.add_obstacle(o2)
+
 
 def run_random_agent():
     track_interface = TrackInterfac.Interface(50)
@@ -115,17 +121,13 @@ def run_rl_tube():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    track_interface = TrackInterfac.Interface(500)
-    env = TrackEnv1.RaceTrack(track_interface, logger)
+    # track_interface = TrackInterfac.Interface(500)
+    env = TrackEnv1.RaceTrack(logger)
     myAgent = RL_controller.RL_Controller(env, logger)
-    myPlayer = TrackInterfac.ReplayEpisode(track_interface)
+    myPlayer = TrackInterfac.ReplayEpisode()
 
     # set up start and end.
-    start_location = [50.0, 95.0]
-    end_location = [50.0, 15.0]
-    myAgent.set_locations(start_location, end_location)
-    add_boundaries(env)
-    set_up_tube(env)
+    set_up(env, myPlayer, myAgent)
 
     myAgent.run_learning()
     ep_mem = myAgent.get_ep_mem()

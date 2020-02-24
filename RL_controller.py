@@ -79,7 +79,6 @@ class RL_Controller:
             self.state = self.morph_state(obs)
             cum_reward = 0
             for t in range(max_time):
-                self.env.render()
                 
                 network_action = self.agent.get_action(self.state)
 

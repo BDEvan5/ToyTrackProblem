@@ -190,7 +190,6 @@ class StarAOpti:
             action = self.select_action()
 
             self.state, _, done = self.env.step(action)
-            self.env.render() 
 
             self.update_current_node()
       
