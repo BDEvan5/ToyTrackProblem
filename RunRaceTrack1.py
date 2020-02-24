@@ -7,10 +7,17 @@ from tkinter import *
 import multiprocessing as mp
 import time
 import logging
+import EpisodeMem
 
 def set_up_env(env):
     o1 = (20, 40, 80, 60)
     env.add_obstacle(o1)
+
+def set_up_tube(env):
+    o1 = (0, 0, 30, 100)
+    env.add_obstacle(o1)
+    o2 = (70, 0, 100, 100)
+    env.add_obstacle(o2)
 
 def add_boundaries(env):
     b = (1, 1, 99, 99)
@@ -81,15 +88,15 @@ def run_rl_agent():
     myAgent = RL_controller.RL_Controller(env, logger)
 
     # set up start and end.
-    start_location = [75.0, 75.0]
+    start_location = [75.0, 65.0]
     end_location = [20.0, 35.0]
     myAgent.set_locations(start_location, end_location)
     add_boundaries(env)
     # set_up_env(env)
 
-
+    # currently running test RL agent
     root = mp.Process(target=track_interface.setup_root)
-    agent = mp.Process(target=myAgent.run_learning)
+    agent = mp.Process(target=myAgent.run_test_learning)
     # agent = mp.Process(target=myAgent.opti_agent)
 
     # root.start()
@@ -98,14 +105,42 @@ def run_rl_agent():
     agent.join()
     # root.join()
 
-    root.terminate()
+    # root.terminate()
+
+
+def run_rl_tube():
+    logging.basicConfig(filename="Documents/ToyTrackProblem/rl_AgentLog.log", 
+                    format='%(asctime)s %(message)s', 
+                    filemode='w') 
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    track_interface = TrackInterfac.Interface(500)
+    env = TrackEnv1.RaceTrack(track_interface, logger)
+    myAgent = RL_controller.RL_Controller(env, logger)
+    myPlayer = TrackInterfac.ReplayEpisode(track_interface)
+
+    # set up start and end.
+    start_location = [50.0, 95.0]
+    end_location = [50.0, 15.0]
+    myAgent.set_locations(start_location, end_location)
+    add_boundaries(env)
+    set_up_tube(env)
+
+    myAgent.run_learning()
+    ep_mem = myAgent.get_ep_mem()
+    # ep_mem.print_ep()
+
+    myPlayer.run_replay(ep_mem)
+    
 
 
     
 if __name__ == "__main__":
     # run_random_agent()
     # run_optimal_agent()
-    run_rl_agent()
+    # run_rl_agent()
+    run_rl_tube()
 
 
 

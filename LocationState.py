@@ -45,6 +45,7 @@ class State(Location, Sense):
 
         self.step = 0
         self.reward = 0
+        self.dis = 100 # think about how to set this
     
     def update_state(self, dv, dd):
         self.step += 1

@@ -140,7 +140,7 @@ class OptimalAgent:
 
 
 class StarAOpti:
-    def __init__(self, env, logger, sleep=0.4, fa=6):
+    def __init__(self, env, logger, sleep=0.4, fa=5):
         self.env = env 
         self.sleep = sleep
         self.fa = fa # action factor for how much to relate action to difference

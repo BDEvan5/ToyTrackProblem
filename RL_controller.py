@@ -9,14 +9,17 @@ import gym
 from collections import deque
 
 import logging
+import EpisodeMem
 
 class DQN:
     # this class is going to be the model and be accessed from the main function
     # this is like a memory test to copy the other example.
-    def __init__(self, state_space, action_space):
+    def __init__(self, logger, state_space, action_space):
+        self.logger = logger
+
         self.lr = 0.3
-        self.epsilon = 0.8
-        self.epsilon_decay = 0.95
+        self.epsilon = 0.99
+        self.epsilon_decay = 0.99995
         self.min_epsilon = 0.01
         self.gamma = 0.95
 
@@ -44,6 +47,8 @@ class DQN:
     def replay(self, batch_size):
         minibatch = random.sample(self.memory, batch_size)
         for state, action, reward, next_state, done in minibatch:
+            msg = "State: " + str(state) + " Action: " + str(action) + " Reward: " + str(reward) + " Next state:" + str(next_state)
+            self.logger.debug(msg)
             target = reward
             if not done:
                 target = (reward + self.gamma *
@@ -58,15 +63,16 @@ class RL_Controller:
     def __init__(self, env, logger, batch_size=8):
         self.env = env
         self.batch_size = batch_size
-        self.agent = DQN(self.env.state_space, self.env.action_space)
+        self.agent = DQN(logger, self.env.state_space, self.env.action_space)
 
         self.state = None
         self.obs = None
         self.action = None
 
         self.logger = logger
+        self.ep = EpisodeMem.EpisodeMem()
         
-    def run_learning(self, max_time=50, episodes=100):
+    def run_learning(self, max_time=50, episodes=1):
 
         for e in range(episodes):
             obs = self.env.reset()
@@ -74,11 +80,43 @@ class RL_Controller:
             cum_reward = 0
             for t in range(max_time):
                 self.env.render()
+                
+                network_action = self.agent.get_action(self.state)
 
-                # good_action = False
-                # while good_action is False:
-                #     network_action = self.agent.get_action(self.state)
-                #     good_action = self.check_move(network_action)
+                self.action = self.morph_action(network_action)
+                msg = "Action: " + str(self.action)
+
+                # print(msg)                
+
+                new_obs, reward, done = self.env.step(self.action)
+                cum_reward += reward
+                
+                new_state = self.morph_state(new_obs)
+                self.agent.memorize(self.state, network_action, reward, new_state, done)
+                self.state = new_state
+
+                self.ep.add_step(new_obs, self.action, reward)
+
+                if t == max_time-1:
+                    print("Max Steps reached")
+                    done = True
+
+                if done:
+                    print("episode: {}/{}, score: {}, e: {:.2}"
+                        .format(e, episodes, cum_reward, self.agent.epsilon))
+                    break
+
+                if len(self.agent.memory) > self.batch_size:
+                    self.agent.replay(self.batch_size)
+
+    def run_test_learning(self, max_time=250, episodes=1):
+
+        for e in range(episodes):
+            obs = self.env.reset()
+            self.state = self.morph_state(obs)
+            cum_reward = 0
+            for t in range(max_time):
+                self.env.render()
                 
                 network_action = self.agent.get_action(self.state)
 
@@ -95,6 +133,7 @@ class RL_Controller:
                 self.state = new_state
 
                 if t == max_time-1:
+                    print("Max Steps reached")
                     done = True
 
                 if done:
@@ -126,4 +165,6 @@ class RL_Controller:
     def set_locations(self, x_start, x_end):
         self.env.add_locations(x_start, x_end)
 
+    def get_ep_mem(self):
+        return self.ep
 

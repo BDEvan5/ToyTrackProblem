@@ -10,7 +10,7 @@ import logging
 
 
 class RaceTrack:
-    def __init__(self, interface, logger, dx=0.2, sense_dis=5):
+    def __init__(self, interface, logger, dx=10, sense_dis=5):
         self.track = interface
         self.dx = dx # this is how close it must be to stop
         self.ds = sense_dis # this is how far the sensor can look ahead
@@ -42,6 +42,8 @@ class RaceTrack:
         self.boundary = b
 
     def step(self, action):
+        self.prev_s = deepcopy(self.state)
+
         self.logger.debug("%d: ----------------------" %(self.state.step))
         self.logger.debug("Old State - " + str(self.state.x))
         self.logger.debug("Action taken - " + str(action))
@@ -57,16 +59,15 @@ class RaceTrack:
 
         done = self._check_done()
 
-        reward = f.get_distance(self.state.x, self.end_location.x) * -1 +100
-
-        self.state.reward = reward
+        self._get_reward()
+        self.logger.debug("Reward: " + str(self.state.reward))
         self.state.step += 1
 
         
         
         self.logger.debug("New State - " + str(self.state.x))
 
-        return self.state, reward, done
+        return self.state, self.state.reward, done
 
     def reset(self):
         # resets to starting location
@@ -79,6 +80,20 @@ class RaceTrack:
         # this function sends the state to the interface
         x = deepcopy(self.state)
         self.track.q.put(x)
+
+    def _get_reward(self):
+        dis = f.get_distance(self.state.x, self.end_location.x) 
+
+        if dis < self.prev_s.dis:
+            # it moved closer
+            reward  = 10
+        else:
+            reward = -10
+            # it moved further away
+
+        self.state.dis = dis
+
+        self.state.reward = reward
 
     def _check_done(self):
         dis = f.get_distance(self.end_location.x, self.state.x)
@@ -137,10 +152,8 @@ class RaceTrack:
 
         return new_x
 
-            
-# class TrackParams:
+
+# class TrackInfo:
 #     def __init__(self):
-
-
-
+#         self.
 

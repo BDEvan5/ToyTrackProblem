@@ -1,11 +1,14 @@
 from tkinter import *
-import multiprocessing
+import multiprocessing as mp
 import LocationState as ls
 import LibFunctions as f
+import EpisodeMem
+import time
+
 
 
 class Interface:
-    def __init__(self, update_time=0, scaling_factor=10, size=[1000, 1000]):
+    def __init__(self, update_time=0.0, scaling_factor=10, size=[1000, 1000]):
         self.dt = update_time
         self.fs = scaling_factor
         self.size = size
@@ -15,11 +18,13 @@ class Interface:
         self.end_l = ls.Location()
 
         self.state = ls.State()
+        self.step_i = EpisodeMem.StepInfo()
 
-        self.q = multiprocessing.Queue()
-        self.node_q = multiprocessing.Queue()
+        self.q = mp.Queue()
+        self.step_q = mp.Queue()
+        self.node_q = mp.Queue()
         self.sense_blocks = []
-        self.prev_px = []
+        self.prev_px = [0, 0]
 
         self.setup_window()  
 
@@ -79,14 +84,15 @@ class Interface:
         x_new[0] = (coords[0] + coords[2])/2
         x_new[1] = (coords[1] + coords[3])/2
         self.location.set_location(x_new)
-        self.prev_px.append(x_new)
+        # self.prev_px.append(x_new)
 
     def run_interface_loop(self):
-        self.get_state()
+        self.get_step_info()
         self.move_o()
         self.plot_line()
         self.draw_nodes()
         self.update_info()
+        self.prev_px = self.step_i.state.x
         self.root.after(self.dt, self.run_interface_loop)
 
     def get_state(self):
@@ -95,7 +101,7 @@ class Interface:
 
     def get_xy(self):
         # _px indicates it is a pixel value
-        x = self.state.x
+        x = self.step_i.state.x
         x = self.scale_input(x)
         px = [0, 0]
         for i  in range(2):
@@ -142,20 +148,51 @@ class Interface:
             self.canv.pack()
 
     def update_info(self):
-        step_text = str(self.state.step)
+        step_text = str(self.step_i.state.step)
         self.step.config(text=step_text)
 
-        location_text = str(self.location.x)
+        location_text = str(self.step_i.state.x)
         self.loc.config(text=location_text)
 
         # self.state.print_sense()
-        for s, block in zip(self.state.senses, self.sense_blocks):
+        for s, block in zip(self.step_i.state.senses, self.sense_blocks):
             if s.val == 1:
                 self.sense_canv.itemconfig(block, fill='black')
             elif s.val == 0:
                 self.sense_canv.itemconfig(block, fill='white')
 
-        reward_text = str(self.state.reward)
+        reward_text = str(self.step_i.state.reward)
         self.reward.config(text=reward_text)
+
+    def get_step_info(self):
+        if not self.q.empty():
+            self.step_i = self.step_q.get()
+            self.step_i.print_step()
+        
+
+
+
+
+class ReplayEpisode:
+    def __init__(self, interface):
+        self.ep = None
+        self.interface = interface
+
+    def run_replay(self, ep_mem):
+        self.ep = ep_mem
+
+        print("Starting Replay")
+        # add steps to q
+        for step in self.ep.steps:
+            self.interface.step_q.put(step)
+
+        root = mp.Process(target=self.interface.setup_root)
+        root.start()
+        time.sleep(25)
+        root.terminate()
+
+        
+
+
 
 
