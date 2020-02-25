@@ -12,6 +12,10 @@ class Location:
         self.prev_dis = 100
         self.name = ""
 
+    def increment_location(self):
+        self.prev_dis = deepcopy(self.dis)
+        self.prev_x = deepcopy(self.x)
+
 
 class SingleSense:
     def __init__(self, dir=[0, 0], angle=0):

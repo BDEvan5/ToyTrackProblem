@@ -8,13 +8,13 @@ import time
 
 
 class Interface:
-    def __init__(self, update_time=100, scaling_factor=10, size=[1000, 1000]):
+    def __init__(self, track, update_time=100, scaling_factor=10):
         self.dt = update_time
         self.fs = scaling_factor
-        self.size = size
+        self.size = [100*self.fs, 100*self.fs]  # the grid is 100 points scaled
+        self.track = track
 
         self.root = Tk()
-        self.end_l = ls.Location()
 
         self.step_i = EpisodeMem.StepInfo()
 
@@ -24,11 +24,13 @@ class Interface:
         self.prev_px = [0, 0]
 
         self.setup_window()  
+        self.set_up_track()
 
         
 
     def setup_window(self):
         self.canv = Canvas(self.root, height=self.size[0], width=self.size[1])
+
         p1 = [30, 30]
         p2 = [70, 70]
         self.o = self.canv.create_oval(p1, p2, fill='red')
@@ -84,28 +86,32 @@ class Interface:
         self.update_info()
         self.root.after(self.dt, self.run_interface_loop)
 
-    def scale_input(self, x_in):
+    def _scale_input(self, x_in):
         x_out = [0, 0] # this creates same size vector
         for i in range(2):
             x_out[i] = x_in[i] * self.fs
         return x_out
-        
-    def set_locations(self, start, end):
-        x = self.scale_input(end)
-        self.end_l.x = x
-        self.end_x = self.canv.create_text(x[0], x[1], text='X', fill='blue', font = "Times 20 italic bold")
-        self.canv.pack()
+  
+    def set_up_track(self):
+        # self.canv.create_rectangle([0, 0], self.size, fill='blue')
+        # self.canv.pack()
+        # self.canv.create_rectangle(self.track.boundary, fill='white')
+        # self.canv.pack()
 
-        self.prev_px = self.scale_input(start)
+        for obs in self.track.obstacles:
+            o1 = self._scale_input(obs[0:2])
+            o2 = self._scale_input(obs[2:4])
+            self.canv.create_rectangle(o1, o2, fill='blue')
+            self.canv.pack()
 
-    def add_obstacle(self, obs):
-        o1 = self.scale_input(obs[0:2])
-        o2 = self.scale_input(obs[2:4])
-        self.canv.create_rectangle(o1, o2, fill='blue')
-        self.canv.pack()
+        x = self._scale_input(self.track.end_location)
+        self.end_x = self.canv.create_text(x[0], x[1], text='X', fill='brown', font = "Times 20 italic bold")
+        self.canv.pack()    
+
+        self.prev_px = self._scale_input(self.track.start_location)    
 
     def update_position(self):
-        current_pos = self.scale_input(self.step_i.state.x)
+        current_pos = self._scale_input(self.step_i.state.x)
         # print("Current: " + str(current_pos) + " -> Prev: " + str(self.prev_px))
 
         px = f.sub_locations(current_pos, self.prev_px)
@@ -120,7 +126,7 @@ class Interface:
         dx = 5 # scaling factor for sense - should be same as in track
         for sense in self.step_i.state.senses:
             node = f.add_locations(self.step_i.state.x, sense.dir, dx)
-            node = self.scale_input(node)
+            node = self._scale_input(node)
             if sense.val == 0:
                 self.canv.create_text(node[0], node[1], text='X', fill='green')
             else:
@@ -153,9 +159,9 @@ class Interface:
 
 
 class ReplayEpisode:
-    def __init__(self, dt=200):
+    def __init__(self, track, dt=200):
         self.ep = None
-        self.interface = Interface(dt)
+        self.interface = Interface(track, dt)
         self.dt = dt
 
     def run_replay(self, ep_mem):

@@ -165,8 +165,7 @@ class RL_Controller:
         np.around(action, decimals=4)
         return action 
 
-    def set_locations(self, x_start, x_end):
-        self.env.add_locations(x_start, x_end)
+
 
     def get_ep_mem(self):
         return self.ep
