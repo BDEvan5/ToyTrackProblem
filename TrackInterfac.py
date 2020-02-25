@@ -29,15 +29,8 @@ class Interface:
 
     def setup_window(self):
         self.canv = Canvas(self.root, height=self.size[0], width=self.size[1])
-        size = 40
-        # p1 = p2 = [0, 0]
-        # p0 = [50, 50]
-        # for i in range(2):
-        #     p1[i] = p0[i] - size
-        #     p2[i] = p0[i] + size
         p1 = [30, 30]
         p2 = [70, 70]
-        print(p1, p2)
         self.o = self.canv.create_oval(p1, p2, fill='red')
 
         self.info_p = Frame(self.root, height=self.size[0], width=(self.size[1]/10))
@@ -87,7 +80,7 @@ class Interface:
     def run_interface_loop(self):
         self.get_step_info()
         self.update_position()
-        # self.draw_nodes()
+        self.draw_nodes()
         self.update_info()
         self.root.after(self.dt, self.run_interface_loop)
 
@@ -135,7 +128,7 @@ class Interface:
             self.canv.pack()
 
     def update_info(self):
-        step_text = str(self.step_i.state.step)
+        step_text = str(self.step_i.step)
         self.step.config(text=step_text)
 
         location_text = str(self.step_i.state.x)
@@ -148,12 +141,12 @@ class Interface:
             elif s.val == 0:
                 self.sense_canv.itemconfig(block, fill='white')
 
-        reward_text = str(self.step_i.state.reward)
+        reward_text = str(self.step_i.reward)
         self.reward.config(text=reward_text)
 
     def get_step_info(self):
         self.step_i = self.step_q.get()
-        self.step_i.print_step()
+        # self.step_i.print_step()
         
 
 

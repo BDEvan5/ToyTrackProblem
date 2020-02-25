@@ -48,7 +48,7 @@ class DQN:
         minibatch = random.sample(self.memory, batch_size)
         for state, action, reward, next_state, done in minibatch:
             msg = "State: " + str(state) + " Action: " + str(action) + " Reward: " + str(reward) + " Next state:" + str(next_state)
-            self.logger.debug(msg)
+            # self.logger.debug(msg)
             target = reward
             if not done:
                 target = (reward + self.gamma *
@@ -64,13 +64,15 @@ class RL_Controller:
         self.env = env
         self.batch_size = batch_size
         self.agent = DQN(logger, self.env.state_space, self.env.action_space)
+        self.act_n = self.env.action_space
+        
 
         self.state = None
         self.obs = None
         self.action = None
 
         self.logger = logger
-        self.ep = EpisodeMem.EpisodeMem()
+        self.ep = EpisodeMem.EpisodeMem(logger)
         
     def run_learning(self, max_time=50, episodes=1):
 
@@ -82,10 +84,7 @@ class RL_Controller:
                 
                 network_action = self.agent.get_action(self.state)
 
-                self.action = self.morph_action(network_action)
-                msg = "Action: " + str(self.action)
-
-                # print(msg)                
+                self.action = self.morph_action(network_action)              
 
                 new_obs, reward, done = self.env.step(self.action)
                 cum_reward += reward
@@ -98,11 +97,13 @@ class RL_Controller:
 
                 if t == max_time-1:
                     print("Max Steps reached")
+                    self.logger.warning("Max Steps reached")
                     done = True
 
                 if done:
-                    print("episode: {}/{}, score: {}, e: {:.2}"
-                        .format(e, episodes, cum_reward, self.agent.epsilon))
+                    msg = "episode: {}/{}, score: {}, e: {:.2}".format(e, episodes, cum_reward, self.agent.epsilon)
+                    print(msg)
+                    self.logger.warning(msg)
                     break
 
                 if len(self.agent.memory) > self.batch_size:
@@ -155,10 +156,13 @@ class RL_Controller:
     def morph_action(self, network_action):
         action = [0, 0]
         scale = 10
-        action[0] = network_action / 3 -1
-        action[1] = (network_action-1) % 3 -1
+
+        angle = np.pi / self.act_n * network_action - np.pi/2
+        action[0] = np.sin(angle)
+        action[1] = - np.cos(angle)
         for i in range(2):
             action[i] *= scale
+        np.around(action, decimals=4)
         return action 
 
     def set_locations(self, x_start, x_end):

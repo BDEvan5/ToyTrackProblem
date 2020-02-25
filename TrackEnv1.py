@@ -16,10 +16,9 @@ class RaceTrack:
         self.logger = logger
 
         self.state_space = 2
-        self.action_space = 9
+        self.action_space = 10
 
-        self.state = ls.State()
-        self.prev_s = ls.State()
+        self.state = ls.CarState(self.action_space)
         
         self.start_location = ls.Location()
         self.end_location = ls.Location()   
@@ -28,10 +27,8 @@ class RaceTrack:
         self.boundary = None
 
     def add_locations(self, x_start, x_end):
-        self.start_location.set_location(x_start)
-        self.end_location.set_location(x_end)
-        # self.track.prev_px = self.track.scale_input(x_start)
-        # self.track.set_end_location(x_end)
+        self.start_location.x = x_start
+        self.end_location.x = x_end
 
     def add_obstacle(self, obs):
         self.obstacles.append(obs)
@@ -40,32 +37,21 @@ class RaceTrack:
         self.boundary = b
 
     def step(self, action):
-        self.prev_s = deepcopy(self.state)
-
-        self.logger.debug("%d: ----------------------" %(self.state.step))
-        self.logger.debug("Old State - " + str(self.state.x))
-        self.logger.debug("Action taken - " + str(action))
+        # self.prev_s = deepcopy(self.state)
+        self.state.prev_x = deepcopy(self.state.x)
+        self.state.prev_dis = deepcopy(self.state.dis)
 
         new_x = self._get_next_state(action)
-        self.logger.debug("Proposed New X - " + str(new_x))
         coll_flag = self._check_collision(new_x)
 
         if not coll_flag: # no collsions
             self.state.x = new_x
 
         self._update_senses()
-
         done = self._check_done()
+        reward = self._get_reward()
 
-        self._get_reward()
-        self.logger.debug("Reward: " + str(self.state.reward))
-        self.state.step += 1
-
-        
-        
-        self.logger.debug("New State - " + str(self.state.x))
-
-        return self.state, self.state.reward, done
+        return self.state, reward, done
 
     def reset(self):
         # resets to starting location
@@ -74,16 +60,10 @@ class RaceTrack:
         self.reward = 0
         return self.state
 
-    # def render(self):
-        # this function sends the state to the interface
-        # this is currently disabled for replay instead
-        # x = deepcopy(self.state)
-        # self.track.step_q.put(x)
-
     def _get_reward(self):
         dis = f.get_distance(self.state.x, self.end_location.x) 
 
-        if dis < self.prev_s.dis:
+        if dis < self.state.prev_dis:
             # it moved closer
             reward  = 10
         else:
@@ -91,14 +71,13 @@ class RaceTrack:
             # it moved further away
 
         self.state.dis = dis
-
-        self.state.reward = reward
+        return  reward
 
     def _check_done(self):
         dis = f.get_distance(self.end_location.x, self.state.x)
 
         if dis < self.dx:
-            print("Final distance is: " % dis)
+            print("Final distance is: %d" % dis)
             return True
         return False
 
@@ -118,7 +97,7 @@ class RaceTrack:
             ret = 1
         if ret == 1:
             # print(msg)
-            self.logger.debug(msg)
+            self.logger.info(msg)
         return ret
 
     def _update_senses(self):
@@ -151,8 +130,4 @@ class RaceTrack:
 
         return new_x
 
-
-# class TrackInfo:
-#     def __init__(self):
-#         self.
 
