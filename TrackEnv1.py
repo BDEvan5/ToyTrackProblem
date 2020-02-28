@@ -20,17 +20,19 @@ class RaceEnv:
         self.action_space = 10
 
         self.state = ls.CarState(self.action_space)
+        self.car = ls.CarModel()
     
     def step(self, action):
-        self.state.increment_location()
+        # self.state.increment_location()
 
         # new_x = self._get_next_state(action)
-        new_x, new_v = self._get_next_controlled_state(action, dt=1)
+        # new_x, new_v = self._get_next_controlled_state(action, dt=1)
+        new_x = self.state.chech_new_state(action)
         coll_flag = self._check_collision(new_x)
 
         if not coll_flag: # no collsions
-            self.state.x = new_x
-            self.state.v = new_v
+            a, t_dot = self.car.get_delta(action)
+            self.state.update_state(a, t_dot)
 
         self._update_senses()
         done = self._check_done()
@@ -41,6 +43,7 @@ class RaceEnv:
     def reset(self):
         # resets to starting location
         self.state.x = self.track.start_location
+        self.state.v = 0
         self._update_senses()
         self.reward = 0
         return self.state
@@ -48,10 +51,7 @@ class RaceEnv:
     def _get_reward(self, coll_flag):
         dis = f.get_distance(self.state.x, self.track.end_location) 
 
-        if dis < self.state.prev_dis:
-            reward  = 10
-        else:
-            reward = -10
+        reward = 100 - dis  # reward increases as distance decreases
         if coll_flag:
             reward = -50
 
@@ -78,7 +78,7 @@ class RaceEnv:
             msg = "X wall collision --> x: %d, b:%d;%d"%(x[0], b[0], b[2])
             ret = 1
         if x[1] < b[1] or x[1] > b[3]:
-            msg = "Y wall collision --> x: %d, b:%d;%d"%(x[1], b[1], b[3])
+            msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
             ret = 1
         if ret == 1:
             # print(msg)
@@ -118,8 +118,6 @@ class RaceEnv:
         
         new_x = f.add_locations(self.state.x, dd)
         new_v = f.add_locations(self.state.v, dv)
-        print(self.state.v)
-        print(dd)
         return new_x, new_v
 
 
@@ -140,7 +138,5 @@ class TrackData:
 
     def add_boundaries(self, b):
         self.boundary = b
-
-
 
 

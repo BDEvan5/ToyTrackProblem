@@ -155,7 +155,7 @@ class RL_Controller:
 
     def morph_action(self, network_action):
         action = [0, 0]
-        scale = 10
+        scale = 5
 
         angle = np.pi / self.act_n * network_action - np.pi/2
         action[0] = np.sin(angle)

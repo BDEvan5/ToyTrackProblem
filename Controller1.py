@@ -4,6 +4,7 @@ import LocationState as ls
 import time
 import logging
 import LibFunctions as f
+import EpisodeMem
 
 
 class RandomAgent:
@@ -140,16 +141,17 @@ class OptimalAgent:
 
 
 class StarAOpti:
-    def __init__(self, env, logger, sleep=0.4, fa=5):
+    def __init__(self, env, logger, track, sleep=0.4, fa=5):
         self.env = env 
         self.sleep = sleep
         self.fa = fa # action factor for how much to relate action to difference
-        self.end = ls.Location()
-        self.start = ls.Location()
 
         self.start_n = None
         self.end_n = None
         self.state = None
+        self.ep = EpisodeMem.EpisodeMem(logger)
+        self.track = track
+
 
         self.open_list = []
         self.closed_list = []
@@ -158,18 +160,18 @@ class StarAOpti:
 
         self.logger = logger
 
-    def set_locations(self, x_start, x_end):
-        self.start = x_start
-        self.end = x_end
-        self.env.add_locations(x_start, x_end)
+    def set_locations(self):
+        self.start = self.track.start_location
+        self.end = self.track.end_location
 
-        self.start_n = Node(None, x_start)
-        self.end_n = Node(None, x_end)
+        self.start_n = Node(None, self.start)
+        self.end_n = Node(None, self.end)
 
         self.open_list.append(self.start_n)
 
     def StarA(self, steps=50):
         print("A Star agent called")
+        self.set_locations()
 
         self.find_next_node()
 
@@ -188,10 +190,13 @@ class StarAOpti:
             self.find_next_node()
 
             action = self.select_action()
+            print(action)
 
-            self.state, _, done = self.env.step(action)
+            self.state, reward, done = self.env.step(action)
 
             self.update_current_node()
+
+            self.ep.add_step(self.state, action, reward)
       
             if done:
                 break
@@ -266,7 +271,7 @@ class StarAOpti:
 
             # Add the child to the open list
             self.open_list.append(child)
-            self.env.track.node_q.put(child.position)
+            # self.env.track.node_q.put(child.position)
 
     def select_action(self):
         # this method selects an action to move toward the supposed best node
@@ -276,8 +281,11 @@ class StarAOpti:
         dis = f.get_distance(self.end_n.position, self.state.x)
         scale = self.fa * (dis * 0.01)
         for i in range(2):
-            action[i] = (self.current_node.position[i] - self.state.x[i]) * scale
+            action[i] = -(self.current_node.position[i] - self.state.x[i]) * scale
         return action
+
+    def get_ep_mem(self):
+        return self.ep
 
 class Node():
     """A node class for A* Pathfinding"""
