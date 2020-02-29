@@ -129,6 +129,8 @@ class TrackData:
         self.start_location = [0, 0]
         self.end_location = [0, 0]
 
+        self.point_list = []
+
     def add_locations(self, x_start, x_end):
         self.start_location = x_start
         self.end_location = x_end
@@ -139,4 +141,6 @@ class TrackData:
     def add_boundaries(self, b):
         self.boundary = b
 
+    def add_way_points(self, point_list):
+        self.point_list = point_list
 

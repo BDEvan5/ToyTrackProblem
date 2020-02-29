@@ -8,6 +8,7 @@ import multiprocessing as mp
 import time
 import logging
 import EpisodeMem
+import GlobalOpti as go 
 
 def set_up_env(env):
     o1 = (20, 40, 80, 60)
@@ -150,15 +151,45 @@ def run_rl_tube():
 
     myPlayer.run_replay(ep_mem)
     
+def find_optimal_route():
+    logging.basicConfig(filename="Documents/ToyTrackProblem/AgentLog.log", 
+                    format='%(asctime)s %(message)s', 
+                    filemode='w') 
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    myTrack = TrackEnv1.TrackData()
+    single_corner(myTrack)
+    # simple_maze(myTrack)
+
+    myOpti = go.A_Star(myTrack)
+    myOpti.run_search()
+
+    myPoints = myOpti.get_open_list()
+    myTrack.add_way_points(myPoints)
+    print(myPoints)
+
+    # env = TrackEnv1.RaceEnv(myTrack, logger)
+    # myAgent = Controller1.StarAOpti(env, logger, myTrack)
+
+
+    myPlayer = TrackInterfac.ReplayEpisode(myTrack)
+    myPlayer.show_route()
+
+    # myAgent.StarA()
+    # ep_mem = myAgent.get_ep_mem()
+    # # ep_mem.print_ep()
+
+    # myPlayer.run_replay(ep_mem)
 
 
     
 if __name__ == "__main__":
     # run_random_agent()
-    run_optimal_agent()
+    # run_optimal_agent()
     # run_rl_agent()
     # run_rl_tube()
-
+    find_optimal_route()
 
 
 

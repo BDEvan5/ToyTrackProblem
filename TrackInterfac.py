@@ -68,6 +68,31 @@ class Interface:
         self.reward = Label(self.info_p, text="0")
         self.reward.pack()
         
+    def set_up_track(self):
+        # self.canv.create_rectangle([0, 0], self.size, fill='blue')
+        # self.canv.pack()
+        # self.canv.create_rectangle(self.track.boundary, fill='white')
+        # self.canv.pack()
+
+        for obs in self.track.obstacles:
+            o1 = self._scale_input(obs[0:2])
+            o2 = self._scale_input(obs[2:4])
+            self.canv.create_rectangle(o1, o2, fill='blue')
+            self.canv.pack()
+
+        x = self._scale_input(self.track.end_location)
+        self.end_x = self.canv.create_text(x[0], x[1], text='X', fill='brown', font = "Times 20 italic bold")
+        self.canv.pack()    
+
+        self.prev_px = self._scale_input(self.track.start_location)   
+
+        for point in self.track.point_list:
+            # print(point)
+            x = self._scale_input(point)
+            self.end_x = self.canv.create_text(x[0], x[1], text='o', fill='orange', font = "Times 20 italic bold")
+            self.canv.pack()   
+
+
     def setup_root(self):
         print("Setup root called")
         p0 = [50, 50]
@@ -92,24 +117,7 @@ class Interface:
             x_out[i] = x_in[i] * self.fs
         return x_out
   
-    def set_up_track(self):
-        # self.canv.create_rectangle([0, 0], self.size, fill='blue')
-        # self.canv.pack()
-        # self.canv.create_rectangle(self.track.boundary, fill='white')
-        # self.canv.pack()
-
-        for obs in self.track.obstacles:
-            o1 = self._scale_input(obs[0:2])
-            o2 = self._scale_input(obs[2:4])
-            self.canv.create_rectangle(o1, o2, fill='blue')
-            self.canv.pack()
-
-        x = self._scale_input(self.track.end_location)
-        self.end_x = self.canv.create_text(x[0], x[1], text='X', fill='brown', font = "Times 20 italic bold")
-        self.canv.pack()    
-
-        self.prev_px = self._scale_input(self.track.start_location)    
-
+    
     def update_position(self):
         current_pos = self._scale_input(self.step_i.state.x)
         # print("Current: " + str(current_pos) + " -> Prev: " + str(self.prev_px))
@@ -154,6 +162,17 @@ class Interface:
         self.step_i = self.step_q.get()
         # self.step_i.print_step()
         
+    def show_map(self):
+        print("Show Map called")
+        p0 = [50, 50]
+        px = f.sub_locations(self.prev_px, p0)
+
+        self.canv.move(self.o, px[0], px[1])
+        
+        self.canv.pack()
+
+        self.root.mainloop()
+
 
 
 
@@ -177,6 +196,13 @@ class ReplayEpisode:
         root.start()
         time.sleep(10)
         root.terminate()
+
+    def show_route(self):
+        root = mp.Process(target=self.interface.show_map)
+        root.start()
+        time.sleep(10)
+        root.terminate()
+
 
         
 
