@@ -230,10 +230,7 @@ class StarAOpti:
         self.children.clear() # deletes old children
 
         position_list = []
-        for i in range(3):
-            for j in range(3):
-                dir = [(j-1)*self.env.ds, (i-1)*self.env.ds]
-                position_list.append(dir)
+        
 
         for sense in self.state.senses: # Adjacent squares
             # Get node position

@@ -15,10 +15,11 @@ import LocationState as ls
 
 
 class A_Star:
-    def __init__(self, track, ds=5):
+    def __init__(self, track, logger, ds=10):
         # ds is the search size around the current node
         self.ds = ds
         self.track = track
+        self.logger = logger
 
         self.open_list = []
         self.closed_list = []
@@ -29,24 +30,25 @@ class A_Star:
             for j in range(3):
                 direction = [(j-1)*self.ds, (i-1)*self.ds]
                 self.position_list.append(direction)
-        print(self.position_list)
 
+        self.position_list.pop(4) # remove stand still
         self.current_node = Node()
 
-    def run_search(self, max_steps=500):
-        self.set_up_start_node()
+        self.open_node_n = 0
 
-        for i in range(max_steps):
+    def run_search(self, max_steps=4000):
+        self.set_up_start_node()
+        i = 0
+        while len(self.open_list) > 0 and i < max_steps:
             self.find_current_node()
 
             if self.check_done():
+                print("The shortest path has been found")
                 break
 
             self.generate_children()
 
-            self.set_up_children()
-
-
+            i += 1
 
     def set_up_start_node(self):
         self.start_n = Node(None, self.track.start_location)
@@ -64,11 +66,29 @@ class A_Star:
         # Pop current off open list, add to closed list
         self.open_list.pop(current_index)
         self.closed_list.append(self.current_node)
+        # self.logger.debug(self.current_node.log_msg())
 
-    def check_done(self, dx_max=5):
+    def check_done(self):
+        dx_max = self.ds
         dis = f.get_distance(self.current_node.position, self.end_n.position)
         if dis < dx_max:
             return True
+        return False
+
+    def check_closed_list(self, new_node):
+        for closed_child in self.closed_list:
+            if new_node.position == closed_child.position:
+                self.logger.debug(closed_child.position)
+                return True
+        return False
+
+    def check_open_list(self, new_node):
+        for open_node in self.open_list:
+            if new_node == open_node: # if in open set return true
+                if new_node.g < open_node.g: # if also beats g score - update g
+                    open_node.g = new_node.g
+                    open_node.parent = new_node.parent
+                return True
         return False
 
     def generate_children(self):
@@ -77,19 +97,39 @@ class A_Star:
         for direction in self.position_list:
             new_position = f.add_locations(self.current_node.position, direction)
 
-            if not self._check_collision(new_position): # no collision
-                # Create new node - no obstacle
-                new_node = Node(self.current_node, new_position)
+            if self._check_collision(new_position): 
+                continue # collision - skp this direction
+            # Create new node - no obstacle
+            new_node = Node(self.current_node, new_position)
 
-                # Create the f, g, and h values
-                new_node.g = self.current_node.g + 1
-                h_val = f.get_distance(new_node.position, self.end_n.position)
-                new_node.h = h_val
-                new_node.f = new_node.g + new_node.h
+            self.children.append(new_node)
+        
+        for new_node in self.children:
+            if self.check_closed_list(new_node): # no in closed list
+                # self.logger.debug("Didn't add CLOSED node")
+                # self.logger.debug(new_node.log_msg())
+                continue
+           
+            # Create the f, g, and h values
+            new_node.g = self.current_node.g + self.ds
+            # child.g = f.get_distance(self.start_n.position, child.position)
+            h_val = f.get_distance(new_node.position, self.end_n.position)
+            new_node.h = h_val 
+            new_node.f = new_node.g + new_node.h
 
-                # Append
-                self.children.append(new_node)
+             # Child is already in the open list
+            if self.check_open_list(new_node):
+                self.logger.debug("Didn't add OPEN node")
+                self.logger.debug(new_node.log_msg())
+                continue
 
+            # Add the child to the open list
+
+            self.open_list.append(new_node)
+            self.open_node_n += 1
+            self.logger.debug("Added new node to open list")
+            self.logger.debug(new_node.log_msg())
+                
     def _check_collision(self, x):
         # consider moving to track object
         b = self.track.boundary
@@ -110,29 +150,20 @@ class A_Star:
         #     self.logger.info(msg)
         return ret
 
-    def set_up_children(self):
-        for child in self.children:
-             # Child is on the closed list
-            for closed_child in self.closed_list:
-                if child == closed_child: # this uses the __eq__
-                    continue
-
-            # Child is already in the open list
-            for open_node in self.open_list:
-                if child == open_node and child.g > open_node.g:
-                    continue
-
-            # Add the child to the open list
-            self.open_list.append(child)
-
-    def get_open_list(self):
+    def get_opti_path(self):
         ret_list = []
         way_point = [0, 0]
-        for node in self.closed_list:
-            way_point = node.position
-            ret_list.append(way_point)
+        curr = self.current_node
+        while curr is not None:
+            ret_list.append(curr.position)
+            curr = curr.parent
 
-        return ret_list
+        closed_list = []
+        for node in self.closed_list:
+            closed_list.append(node.position)
+
+        return ret_list[::-1], closed_list
+
 
 
 
@@ -151,22 +182,16 @@ class Node():
     def __eq__(self, other):
         return self.position == other.position
 
+    def log_msg(self):
+        if self.parent is not None:
+            msg1 = "Parent: " + str(self.parent.position)
+            msg2 = "; Pos: " + str(self.position)
+            msg3 = "; G: %d -> h: %d -> f: %d " %(self.g, self.h, self.f)
+
+            msg = msg1 + msg2 + msg3
+            return msg
 
 
 
-
-
-
-# class Controller:
-#     def __init__(self):
-#         self.
-
-#     def get_acc(self, x0, x1, v0, v1):
-#         dx = f.sub_locations(x1, x0) 
-#         dv = f.sub_locations(v1, v0)
-#         dt = 2 * np.divide(dx, dv)
-#         a = np.divide(dv, [dt, dt])
-
-#         return a, dt
 
 

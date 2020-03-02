@@ -159,15 +159,17 @@ def find_optimal_route():
     logger.setLevel(logging.DEBUG)
 
     myTrack = TrackEnv1.TrackData()
-    single_corner(myTrack)
-    # simple_maze(myTrack)
+    # single_corner(myTrack)
+    simple_maze(myTrack)
 
-    myOpti = go.A_Star(myTrack)
-    myOpti.run_search()
+    myOpti = go.A_Star(myTrack, logger, 5)
+    myOpti.run_search()   
+    
 
-    myPoints = myOpti.get_open_list()
+    myPoints, cl = myOpti.get_opti_path()
     myTrack.add_way_points(myPoints)
-    print(myPoints)
+
+    # print(myPoints)
 
     # env = TrackEnv1.RaceEnv(myTrack, logger)
     # myAgent = Controller1.StarAOpti(env, logger, myTrack)

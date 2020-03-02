@@ -86,10 +86,11 @@ class Interface:
 
         self.prev_px = self._scale_input(self.track.start_location)   
 
-        for point in self.track.point_list:
+        for i, point in enumerate(self.track.point_list):
             # print(point)
             x = self._scale_input(point)
-            self.end_x = self.canv.create_text(x[0], x[1], text='o', fill='orange', font = "Times 20 italic bold")
+            str_msg = str(i)
+            self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
             self.canv.pack()   
 
 
@@ -194,7 +195,7 @@ class ReplayEpisode:
 
         root = mp.Process(target=self.interface.setup_root)
         root.start()
-        time.sleep(10)
+        time.sleep(20)
         root.terminate()
 
     def show_route(self):
