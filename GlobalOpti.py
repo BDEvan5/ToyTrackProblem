@@ -3,16 +3,6 @@ import TrackEnv1
 import LibFunctions as f
 import LocationState as ls
 
-# class GlobalPlanner:
-#     def __init__(self, track, n_nodes=100):
-#         self.track = track
-#         self.n_nodes = n_nodes
-
-#     def find_optimum_route(self):
-
-#     def get_first_guess(self, dx1 = 5):
-#         # dx1 is first step size
-
 
 class A_Star:
     def __init__(self, track, logger, ds=10):
@@ -47,7 +37,6 @@ class A_Star:
                 break
 
             self.generate_children()
-
             i += 1
 
     def set_up_start_node(self):
@@ -75,14 +64,14 @@ class A_Star:
             return True
         return False
 
-    def check_closed_list(self, new_node):
+    def _check_closed_list(self, new_node):
         for closed_child in self.closed_list:
             if new_node.position == closed_child.position:
                 self.logger.debug(closed_child.position)
                 return True
         return False
 
-    def check_open_list(self, new_node):
+    def _check_open_list(self, new_node):
         for open_node in self.open_list:
             if new_node == open_node: # if in open set return true
                 if new_node.g < open_node.g: # if also beats g score - update g
@@ -105,7 +94,7 @@ class A_Star:
             self.children.append(new_node)
         
         for new_node in self.children:
-            if self.check_closed_list(new_node): # no in closed list
+            if self._check_closed_list(new_node): # no in closed list
                 # self.logger.debug("Didn't add CLOSED node")
                 # self.logger.debug(new_node.log_msg())
                 continue
@@ -118,7 +107,7 @@ class A_Star:
             new_node.f = new_node.g + new_node.h
 
              # Child is already in the open list
-            if self.check_open_list(new_node):
+            if self._check_open_list(new_node):
                 self.logger.debug("Didn't add OPEN node")
                 self.logger.debug(new_node.log_msg())
                 continue
