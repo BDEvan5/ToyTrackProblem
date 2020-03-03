@@ -5,7 +5,7 @@ import LocationState as ls
 
 
 class A_Star:
-    def __init__(self, track, logger, ds=10):
+    def __init__(self, track, logger, ds):
         # ds is the search size around the current node
         self.ds = ds
         self.track = track
@@ -61,13 +61,13 @@ class A_Star:
         dx_max = self.ds
         dis = f.get_distance(self.current_node.position, self.end_n.position)
         if dis < dx_max:
+            print("Found")
             return True
         return False
 
     def _check_closed_list(self, new_node):
         for closed_child in self.closed_list:
             if new_node.position == closed_child.position:
-                self.logger.debug(closed_child.position)
                 return True
         return False
 
@@ -91,9 +91,6 @@ class A_Star:
             # Create new node - no obstacle
             new_node = Node(self.current_node, new_position)
 
-            self.children.append(new_node)
-        
-        for new_node in self.children:
             if self._check_closed_list(new_node): # no in closed list
                 # self.logger.debug("Didn't add CLOSED node")
                 # self.logger.debug(new_node.log_msg())
@@ -101,23 +98,22 @@ class A_Star:
            
             # Create the f, g, and h values
             new_node.g = self.current_node.g + self.ds
-            # child.g = f.get_distance(self.start_n.position, child.position)
             h_val = f.get_distance(new_node.position, self.end_n.position)
             new_node.h = h_val 
             new_node.f = new_node.g + new_node.h
 
              # Child is already in the open list
             if self._check_open_list(new_node):
-                self.logger.debug("Didn't add OPEN node")
-                self.logger.debug(new_node.log_msg())
+                # self.logger.debug("Didn't add OPEN node")
+                # self.logger.debug(new_node.log_msg())
                 continue
 
             # Add the child to the open list
 
             self.open_list.append(new_node)
             self.open_node_n += 1
-            self.logger.debug("Added new node to open list")
-            self.logger.debug(new_node.log_msg())
+            # self.logger.debug("Added new node to open list")
+            # self.logger.debug(new_node.log_msg())
                 
     def _check_collision(self, x):
         # consider moving to track object
@@ -144,7 +140,9 @@ class A_Star:
         way_point = [0, 0]
         curr = self.current_node
         while curr is not None:
-            ret_list.append(curr.position)
+            wp = ls.WayPoint()
+            wp.x = curr.position
+            ret_list.append(wp)
             curr = curr.parent
 
         closed_list = []
@@ -152,8 +150,6 @@ class A_Star:
             closed_list.append(node.position)
 
         return ret_list[::-1], closed_list
-
-
 
 
 class Node():

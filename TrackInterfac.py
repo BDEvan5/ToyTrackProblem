@@ -4,6 +4,7 @@ import LocationState as ls
 import LibFunctions as f
 import EpisodeMem
 import time
+import numpy as np 
 
 
 
@@ -16,7 +17,7 @@ class Interface:
 
         self.root = Tk()
 
-        self.step_i = EpisodeMem.StepInfo()
+        self.step_i = ls.SimulationState()
 
         self.step_q = mp.Queue()
         self.node_q = mp.Queue()
@@ -24,9 +25,7 @@ class Interface:
         self.prev_px = [0, 0]
 
         self.setup_window()  
-        self.set_up_track()
-
-        
+        self.set_up_track()   
 
     def setup_window(self):
         self.canv = Canvas(self.root, height=self.size[0], width=self.size[1])
@@ -48,6 +47,10 @@ class Interface:
         self.loc = Label(self.info_p, text=(0, 0))
         self.loc.pack()
 
+        self.velocity_name = Label(self.info_p, text="Velocity")
+        self.velocity_name.pack()
+        self.velocity = Label(self.info_p, text="0 @ 0")
+        self.velocity.pack()
 
         # this is a canvas to hold the senses
         self.sense_name = Label(self.info_p, text="Sensing")
@@ -67,6 +70,16 @@ class Interface:
         self.reward_name.pack()
         self.reward = Label(self.info_p, text="0")
         self.reward.pack()
+
+        self.action_name = Label(self.info_p, text="Action")
+        self.action_name.pack()
+        self.action = Label(self.info_p, text="[0, 0]")
+        self.action.pack()
+
+        self.distance_name = Label(self.info_p, text="Distance To Target")
+        self.distance_name.pack()
+        self.distance = Label(self.info_p, text="0")
+        self.distance.pack()
         
     def set_up_track(self):
         # self.canv.create_rectangle([0, 0], self.size, fill='blue')
@@ -88,11 +101,12 @@ class Interface:
 
         for i, point in enumerate(self.track.point_list):
             # print(point)
-            x = self._scale_input(point)
+            x = self._scale_input(point.x)
             str_msg = str(i)
+            # self.end_x = self.canv.create_text(x[0], x[1], text="-", fill='black', font = "Times 20 bold")
             self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
-            self.canv.pack()   
 
+            self.canv.pack()   
 
     def setup_root(self):
         print("Setup root called")
@@ -118,9 +132,8 @@ class Interface:
             x_out[i] = x_in[i] * self.fs
         return x_out
   
-    
     def update_position(self):
-        current_pos = self._scale_input(self.step_i.state.x)
+        current_pos = self._scale_input(self.step_i.x)
         # print("Current: " + str(current_pos) + " -> Prev: " + str(self.prev_px))
 
         px = f.sub_locations(current_pos, self.prev_px)
@@ -133,8 +146,8 @@ class Interface:
     def draw_nodes(self):
         node = [0, 0]
         dx = 5 # scaling factor for sense - should be same as in track
-        for sense in self.step_i.state.senses:
-            node = f.add_locations(self.step_i.state.x, sense.dir, dx)
+        for sense in self.step_i.senses:
+            node = f.add_locations(self.step_i.x, sense.dir, dx)
             node = self._scale_input(node)
             if sense.val == 0:
                 self.canv.create_text(node[0], node[1], text='X', fill='green')
@@ -146,18 +159,27 @@ class Interface:
         step_text = str(self.step_i.step)
         self.step.config(text=step_text)
 
-        location_text = str(self.step_i.state.x)
+        location_text = str(np.around(self.step_i.x, 3))
         self.loc.config(text=location_text)
+        velocity_text = str(self.step_i.v) + " @ " + str(self.step_i.theta)
+        self.velocity.config(text=velocity_text)
 
-        # self.state.print_sense()
-        for s, block in zip(self.step_i.state.senses, self.sense_blocks):
-            if s.val == 1:
-                self.sense_canv.itemconfig(block, fill='black')
-            elif s.val == 0:
-                self.sense_canv.itemconfig(block, fill='white')
+        # self.step_i.print_sense()
+        # for s, block in zip(self.step_i.senses, self.sense_blocks):
+        #     if s.val == 1:
+        #         self.sense_canv.itemconfig(block, fill='black')
+        #     elif s.val == 0:
+        #         self.sense_canv.itemconfig(block, fill='white')
 
         reward_text = str(self.step_i.reward)
         self.reward.config(text=reward_text)
+
+        action_text = str(np.around(self.step_i.action, 2))
+        self.action.config(text=action_text)
+
+        self.distance.config(text=str(self.step_i.distance_to_target))
+
+
 
     def get_step_info(self):
         self.step_i = self.step_q.get()
@@ -178,7 +200,7 @@ class Interface:
 
 
 
-class ReplayEpisode:
+class ShowInterface:
     def __init__(self, track, dt=200):
         self.ep = None
         self.interface = Interface(track, dt)

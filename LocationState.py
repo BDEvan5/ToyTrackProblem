@@ -28,7 +28,7 @@ class SingleSense:
 
 
 class Sensing:
-    def __init__(self, n):
+    def __init__(self, n=10):
         self.n = n  # number of senses
         self.senses = []
 
@@ -58,22 +58,12 @@ class Sensing:
             sense.dir = dir
 
 
-class CarModel:
-    def __init__(self):
-        self.m = 1
-        self.L = 1
-        self.J = 1
-
-    def get_delta(self, f):
-        a = f[0] / self.m
-        theta_dot = f[1] * self.L / self.J
-
-        return a, theta_dot
 
 
-class CarState(WayPoint, Sensing, CarModel):
+
+class CarState(WayPoint, Sensing):
     def __init__(self, n=10):
-        WayPoint.__init__(self) 
+        WayPoint.__init__(self)
         Sensing.__init__(self, n)
         self.car = None
 
@@ -82,21 +72,35 @@ class CarState(WayPoint, Sensing, CarModel):
         for sense in self.senses:
             sense.sense_location = f.add_locations(self.x, sense.dir, dx)
 
-    def update_state(self, a, theta_dot, dt=1):
-        self.x[0] += self.v * dt * np.sin(self.theta)
-        self.x[1] += self.v * dt * np.cos(self.theta)
 
-        self.v += a * dt
-        self.theta += theta_dot
+class EnvState:
+    def __init__(self):
+        self.action = [0, 0]
+        self.reward = 0
+        self.distance_to_target = 0
+        self.done = False
 
-        self.update_sense_offsets(self.theta)
+class SimulationState(CarState, EnvState):
+    def __init__(self):
+        super().__init__(n=10)
+        self.step = 0
 
-    def chech_new_state(self, f=[0, 0], dt=1):
-        x = [0.0, 0.0]
-        x[0] = self.x[0] + self.v * dt * np.sin(self.theta)
-        x[1] = self.x[1] + self.v * dt * np.cos(self.theta)
+    def _add_car_state(self, car_state):
+        self.x = car_state.x
+        self.v = car_state.v
+        self.theta = car_state.theta
 
-        return x
+    def _add_env_state(self, env_state):
+        self.action = env_state.action
+        self.reward = env_state.reward
+        self.distance_to_target = env_state.distance_to_target
 
+    def print_step(self, i):
+        msg0 = str(i)
+        msg1 = " State; x: " + str(np.around(self.x,2)) + " v: " + str(self.v) + "@ " + str(self.theta)
+        msg2 = " Action: " + str(np.around(self.action,3))
+        msg3 = " Reward: " + str(self.reward)
 
+        print(msg0 + msg1 + msg2 + msg3)
+        # self.print_sense()
 

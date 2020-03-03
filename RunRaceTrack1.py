@@ -1,6 +1,5 @@
 import TrackEnv1
 import RL_controller
-import Controller1
 import TrackInterfac
 import matplotlib.pyplot as plt
 from tkinter import *
@@ -9,6 +8,7 @@ import time
 import logging
 import EpisodeMem
 import GlobalOpti as go 
+import Controller
 
 def set_up_env(env):
     o1 = (20, 40, 80, 60)
@@ -162,27 +162,27 @@ def find_optimal_route():
     # single_corner(myTrack)
     simple_maze(myTrack)
 
-    myOpti = go.A_Star(myTrack, logger, 5)
-    myOpti.run_search()   
+    myCar = TrackEnv1.CarModel()
+
+
+    myOpti = go.A_Star(myTrack, logger, 10)
+    env = TrackEnv1.RaceEnv(myTrack, myCar, logger)
+    myAgent = Controller.Controller(env, logger)
     
 
-    myPoints, cl = myOpti.get_opti_path()
+    myOpti.run_search()   
+    myPoints, _ = myOpti.get_opti_path()
     myTrack.add_way_points(myPoints)
 
-    # print(myPoints)
+    myAgent.run_control()
 
-    # env = TrackEnv1.RaceEnv(myTrack, logger)
-    # myAgent = Controller1.StarAOpti(env, logger, myTrack)
+    myPlayer = TrackInterfac.ShowInterface(myTrack)
+    # myPlayer.show_route()
 
-
-    myPlayer = TrackInterfac.ReplayEpisode(myTrack)
-    myPlayer.show_route()
-
-    # myAgent.StarA()
-    # ep_mem = myAgent.get_ep_mem()
-    # # ep_mem.print_ep()
-
-    # myPlayer.run_replay(ep_mem)
+    ep_mem = env.sim_mem
+    # ep_mem.print_ep()
+    
+    myPlayer.run_replay(ep_mem)
 
 
     
