@@ -1,18 +1,6 @@
+import ToyTrackSimulation as tts
 import TrackEnv1
-import RL_controller
-import TrackInterfac
-import matplotlib.pyplot as plt
-from tkinter import *
-import multiprocessing as mp
-import time
-import logging
-import EpisodeMem
-import GlobalOpti as go 
-import Controller
 
-def set_up_env(env):
-    o1 = (20, 40, 80, 60)
-    env.add_obstacle(o1)
 
 def straight_track(myTrack):
     start_location = [50.0, 95.0]
@@ -53,145 +41,22 @@ def simple_maze(myTrack):
     myTrack.add_obstacle(o2)
 
 
-def run_random_agent():
-    track_interface = TrackInterfac.Interface(50)
-    env = TrackEnv1.RaceTrack(track_interface)
-    myAgent = Controller1.RandomAgent(env)
-
-    # set up start and end.
-    start_location = [8, 8]
-    end_location = [2, 2]
-    env.add_locations(start_location, end_location)
-
-    root = mp.Process(target=track_interface.setup_root)
-    agent = mp.Process(target=myAgent.random_agent)
-
-    root.start()
-    agent.start()
-
-    agent.join()
-
-    root.terminate()
 
 
-def run_optimal_agent():
-    logging.basicConfig(filename="Documents/ToyTrackProblem/AgentLog.log", 
-                    format='%(asctime)s %(message)s', 
-                    filemode='w') 
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    myTrack = TrackEnv1.TrackData()
-    simple_maze(myTrack)
-
-    env = TrackEnv1.RaceEnv(myTrack, logger)
-    myAgent = Controller1.StarAOpti(env, logger, myTrack)
-    myPlayer = TrackInterfac.ReplayEpisode(myTrack)
-
-    myAgent.StarA()
-    ep_mem = myAgent.get_ep_mem()
-    # ep_mem.print_ep()
-
-    myPlayer.run_replay(ep_mem)
-
-
-def run_rl_agent():
-    logging.basicConfig(filename="Documents/ToyTrackProblem/rl_AgentLog.log", 
-                    format='%(asctime)s %(message)s', 
-                    filemode='w') 
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    track_interface = TrackInterfac.Interface(500)
-    env = TrackEnv1.RaceTrack(track_interface, logger)
-    myAgent = RL_controller.RL_Controller(env, logger)
-
-    # set up start and end.
-    start_location = [75.0, 65.0]
-    end_location = [20.0, 35.0]
-    myAgent.set_locations(start_location, end_location)
-    add_boundaries(env)
-    # set_up_env(env)
-
-    # currently running test RL agent
-    root = mp.Process(target=track_interface.setup_root)
-    agent = mp.Process(target=myAgent.run_test_learning)
-    # agent = mp.Process(target=myAgent.opti_agent)
-
-    # root.start()
-    agent.start()
-
-    agent.join()
-    # root.join()
-
-    # root.terminate()
-
-
-def run_rl_tube():
-    logging.basicConfig(filename="Documents/ToyTrackProblem/rl_AgentLog.log", 
-                    format='%(asctime)s %(message)s', 
-                    filemode='w') 
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    # track_interface = TrackInterfac.Interface(500)
-    myTrack = TrackEnv1.TrackData()
-    single_corner(myTrack)
-    # simple_maze(myTrack)
-
-    env = TrackEnv1.RaceEnv(myTrack, logger)
-    myAgent = RL_controller.RL_Controller(env, logger)
-    myPlayer = TrackInterfac.ReplayEpisode(myTrack)
-
-    # set up start and end.
-
-    myAgent.run_learning()
-    ep_mem = myAgent.get_ep_mem()
-    # ep_mem.print_ep()
-
-    myPlayer.run_replay(ep_mem)
-    
-def find_optimal_route():
-    logging.basicConfig(filename="Documents/ToyTrackProblem/AgentLog.log", 
-                    format='%(asctime)s %(message)s', 
-                    filemode='w') 
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
+def run_sim():
     myTrack = TrackEnv1.TrackData()
     # single_corner(myTrack)
     simple_maze(myTrack)
 
     myCar = TrackEnv1.CarModel()
 
-
-    myOpti = go.A_Star(myTrack, logger, 10)
-    env = TrackEnv1.RaceEnv(myTrack, myCar, logger)
-    myAgent = Controller.Controller(env, logger)
-    
-
-    myOpti.run_search()   
-    myPoints, _ = myOpti.get_opti_path()
-    myTrack.add_way_points(myPoints)
-
-    myAgent.run_control()
-
-    myPlayer = TrackInterfac.ShowInterface(myTrack)
-    # myPlayer.show_route()
-
-    ep_mem = env.sim_mem
-    # ep_mem.print_ep()
-    
-    myPlayer.run_replay(ep_mem)
-
+    mySim = tts.RacingSimulation(myTrack, myCar)
+    mySim.run_simulation()
 
     
 if __name__ == "__main__":
-    # run_random_agent()
-    # run_optimal_agent()
-    # run_rl_agent()
-    # run_rl_tube()
-    find_optimal_route()
+
+    run_sim()
 
 
 
