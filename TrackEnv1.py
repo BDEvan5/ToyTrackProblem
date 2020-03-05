@@ -54,7 +54,6 @@ class RaceEnv:
         self.env_state.action = action
 
         self.sim_mem.add_step(self.car_state, self.env_state)
-        # print(self.env_state.action)
 
         return self.car_state, self.env_state.done
 
@@ -171,6 +170,11 @@ class CarModel:
         self.L = 1
         self.J = 5
         self.b = [0.5, 0.2]
+
+        self.max_v = 0
+        
+    def set_up_car(self, max_v):
+        self.max_v = max_v
 
     def get_delta(self, f):
         a = f[0] / self.m

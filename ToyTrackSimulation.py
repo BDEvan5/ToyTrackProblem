@@ -11,6 +11,7 @@ import logging
 import EpisodeMem
 import GlobalOpti
 import Controller
+import PathSmoothing
 
 
 class RacingSimulation:
@@ -25,6 +26,7 @@ class RacingSimulation:
         self.car = car
 
         self.path_planner = GlobalOpti.A_Star(self.track, self.logger, 10)
+        self.smoothing = PathSmoothing.TrackSmoothing(self.track, self.car)
         self.env = TrackEnv1.RaceEnv(self.track, self.car, self.logger)
         self.controller = Controller.Controller(self.env, self.logger)
 
@@ -35,8 +37,13 @@ class RacingSimulation:
         self.path_planner.run_search()  # 
 
         planned_path, _ = self.path_planner.get_opti_path()
-        # Smoothing call to come here
+        self.smoothing.add_path(planned_path)
+        self.smoothing.add_velocity()
+        planned_path = self.smoothing.get_path()
         self.track.add_way_points(planned_path)
+
+        for wp in planned_path:
+            wp.print_point()
 
     def run_control(self):
         self.controller.run_control()

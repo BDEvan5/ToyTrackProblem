@@ -40,7 +40,10 @@ def simple_maze(myTrack):
     myTrack.add_obstacle(o1)
     myTrack.add_obstacle(o2)
 
+def standard_car(myCar):
+    max_v = 5
 
+    myCar.set_up_car(max_v)
 
 
 def run_sim():
@@ -49,6 +52,7 @@ def run_sim():
     simple_maze(myTrack)
 
     myCar = TrackEnv1.CarModel()
+    standard_car(myCar)
 
     mySim = tts.RacingSimulation(myTrack, myCar)
     mySim.run_simulation()
