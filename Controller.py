@@ -22,7 +22,7 @@ class Controller:
     def run_control(self, max_steps=40):
         i = 0
         self.state = self.env.reset()
-        for w_pt in self.env.track.point_list: # steps through way points
+        for w_pt in self.env.track.route: # steps through way points
             self.cur_target = w_pt
             while not self.at_target() and i < max_steps: #keeps going till at each pt
                 
@@ -47,20 +47,6 @@ class Controller:
             print("Way point reached: " + str(self.cur_target.x))
             return True
         return False
-
-
-    # def get_action(self):
-    #     target = self.cur_target.x
-    #     cur = self.state.x
-    #     direc = f.sub_locations(cur, target)
-
-    #     scale = -0.1
-    #     action = [0, 0]
-    #     for i in range(2):
-    #         action[i] = direc[i] * scale
-
-    #     # print(action)
-    #     return action
     
     def get_controlled_action(self, wp):
         x_ref = wp.x 
@@ -78,7 +64,7 @@ class Controller:
         th = self.th_controll(e_th)
 
         action = [a, th]
-        print(action)
+        # print(action)
         return action
 
 

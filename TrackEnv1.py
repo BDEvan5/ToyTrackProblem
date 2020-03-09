@@ -44,7 +44,7 @@ class RaceEnv:
 
     def control_step(self, action):
         new_x = self.car.chech_new_state(self.car_state, action)
-        coll_flag = self._check_collision(new_x)
+        coll_flag = self.track._check_collision(new_x)
 
         if not coll_flag: # no collsions
             self.car.update_controlled_state(self.car_state, action, self.dt)
@@ -84,25 +84,6 @@ class RaceEnv:
             return True
         return False
 
-    def _check_collision(self, x):
-        b = self.track.boundary
-        ret = 0
-        for i, o in enumerate(self.track.obstacles):
-            if o[0] < x[0] < o[2]:
-                if o[1] < x[1] < o[3]:
-                    msg = "Obstacle collision %d --> x: %d;%d"%(i, x[0],x[1])
-                    ret = 1
-        if x[0] < b[0] or x[0] > b[2]:
-            msg = "X wall collision --> x: %d, b:%d;%d"%(x[0], b[0], b[2])
-            ret = 1
-        if x[1] < b[1] or x[1] > b[3]:
-            msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
-            ret = 1
-        if ret == 1:
-            # print(msg)
-            self.logger.info(msg)
-        return ret
-
     def _update_senses(self):
         self.car_state.set_sense_locations(self.ds)
         b = self.track.boundary
@@ -131,16 +112,14 @@ class RaceEnv:
 
 
 
-class TrackData:
+class TrackData(ls.Path):
     def __init__(self):
+        ls.Path.__init__(self)
         self.boundary = None
         self.obstacles = []
 
         self.start_location = [0, 0]
         self.end_location = [0, 0]
-
-        self.point_list = []
-        self.route = ls.Path()
 
     def add_locations(self, x_start, x_end):
         self.start_location = x_start
@@ -152,8 +131,24 @@ class TrackData:
     def add_boundaries(self, b):
         self.boundary = b
 
-    def add_way_points(self, point_list):
-        self.point_list = point_list
+    def _check_collision(self, x):
+        b = self.boundary
+        ret = 0
+        for i, o in enumerate(self.obstacles):
+            if o[0] < x[0] < o[2]:
+                if o[1] < x[1] < o[3]:
+                    msg = "Obstacle collision %d --> x: %d;%d"%(i, x[0],x[1])
+                    ret = 1
+        if x[0] < b[0] or x[0] > b[2]:
+            msg = "X wall collision --> x: %d, b:%d;%d"%(x[0], b[0], b[2])
+            ret = 1
+        if x[1] < b[1] or x[1] > b[3]:
+            msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
+            ret = 1
+        # if ret == 1:
+            # print(msg)
+            # self.logger.info(msg)
+        return ret
 
 
 class CarModel:

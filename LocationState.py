@@ -28,6 +28,9 @@ class Path:
         wp.set_point(x, v, theta)
         self.route.append(wp)
 
+    def print_route(self):
+        for wp in self.route:
+            print("X: (%d;%d), v: %d, th: %d" %(wp.x[0], wp.x[1], wp.v, wp.theta))
 
 class SingleSense:
     def __init__(self, dir=[0, 0], angle=0):

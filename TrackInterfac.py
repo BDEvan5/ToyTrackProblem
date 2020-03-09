@@ -99,7 +99,7 @@ class Interface:
 
         self.prev_px = self._scale_input(self.track.start_location)   
 
-        for i, point in enumerate(self.track.point_list):
+        for i, point in enumerate(self.track.route):
             # print(point)
             x = self._scale_input(point.x)
             str_msg = str(i)
