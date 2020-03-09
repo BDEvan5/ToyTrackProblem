@@ -21,8 +21,8 @@ class SimMem:
 
     def log_step(self, step):
         msg0 =  str(step.step) + ": ----------------------" + str(step.step)
-        msg1 = "State: x->" + str(step.x) + "v-> [" + str(step.v) + "] theta->" + str(step.theta)
-        msg2 = "Action: " + str(step.action)
+        msg1 = "State: x->" + str(step.car_state.x) + "v-> [" + str(step.car_state.v) + "] theta->" + str(step.car_state.theta)
+        msg2 = "Action: " + str(step.env_state.action)
         # msg3 = "Reward: " + str(step.reward)
 
         self.logger.debug(msg0)

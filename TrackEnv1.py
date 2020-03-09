@@ -150,6 +150,26 @@ class TrackData(ls.Path):
             # self.logger.info(msg)
         return ret
 
+    def _check_path_collision(self, x0, x1):
+        # write this one day to check  points along line
+        b = self.boundary
+        ret = 0
+        for i, o in enumerate(self.obstacles):
+            if o[0] < x1[0] < o[2]:
+                if o[1] < x1[1] < o[3]:
+                    msg = "Obstacle collision %d --> x: %d;%d"%(i, x1[0],x1[1])
+                    ret = 1
+        if x[0] < b[0] or x1[0] > b[2]:
+            msg = "X wall collision --> x: %d, b:%d;%d"%(x1[0], b[0], b[2])
+            ret = 1
+        if x1[1] < b[1] or x1[1] > b[3]:
+            msg = "Y wall collision --> y: %d, b:%d;%d"%(x1[1], b[1], b[3])
+            ret = 1
+        # if ret == 1:
+            # print(msg)
+            # self.logger.info(msg)
+        return ret
+
 
 class CarModel:
     def __init__(self):
@@ -164,18 +184,6 @@ class CarModel:
     def set_up_car(self, max_v):
         self.max_v = max_v
     
-    # def update_state(self, car_state, a, theta_dot, dt=1):
-    #     # self.x[0] += self.v * dt * np.sin(self.theta)
-    #     # self.x[1] += self.v * dt * np.cos(self.theta)
-
-    #     # self.v += np.abs(a * dt)
-    #     # self.theta += theta_dot
-    #     # x = [0, 0]
-    #     car_state.x[0] += a * dt**2
-    #     car_state.x[1] += theta_dot *dt **2
-
-    #     # self.update_sense_offsets(self.theta)
-
     def update_controlled_state(self, state, action, dt):
         a = action[0]
         th = action[1]
@@ -188,7 +196,6 @@ class CarModel:
 
         state.update_sense_offsets(state.theta)
            
-
     def chech_new_state(self, state, action, dt=1):
         x = [0.0, 0.0]
         a = action[0]

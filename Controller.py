@@ -19,17 +19,18 @@ class Controller:
         self.cur_target = ls.WayPoint()
 
 
-    def run_control(self, max_steps=40):
+    def run_control(self, max_steps=100):
         i = 0
         self.state = self.env.reset()
         for w_pt in self.env.track.route: # steps through way points
             self.cur_target = w_pt
+            # w_pt.print_point()
+            i = 0
             while not self.at_target() and i < max_steps: #keeps going till at each pt
-                
                 action = self.get_controlled_action(w_pt)
                 self.env.control_step(action)
 
-                self.logger.debug("Current Target: " + str(w_pt.x))
+                self.logger.debug("Current Target: " + str(w_pt.x) + "V_th" + str(w_pt.v) + "@" + str(w_pt.theta))
 
                 self.state, done = self.env.control_step(action)
 
@@ -39,6 +40,7 @@ class Controller:
 
                 self.logger.debug("")
                 i+=1 
+            
 
     def at_target(self):
         way_point_dis = f.get_distance(self.state.x, self.cur_target.x)
@@ -57,22 +59,21 @@ class Controller:
         e_v = v_ref - self.state.v # error for controler
         a = self.acc_control(e_v)
 
-        k_th_ref = 0.2 # amount to favour v direction
+        k_th_ref = 0.1 # amount to favour v direction
         # run th control
-        x_ref_th = -self.get_xref_th(self.state.x, x_ref)
+        x_ref_th = self.get_xref_th(self.state.x, x_ref)
         e_th = th_ref * k_th_ref + x_ref_th * (1- k_th_ref) # - self.state.theta
         th = self.th_controll(e_th)
+
+        self.logger.debug("X_ref_th: " + str(x_ref_th))
 
         action = [a, th]
         # print(action)
         return action
 
-
-
-
     def acc_control(self, e_v):
         # this function is the actual controller
-        k = 0.2
+        k = 0.15
         return k * e_v
 
     def th_controll(self, e_th):
@@ -80,12 +81,23 @@ class Controller:
         return e_th
 
     def get_xref_th(self, x1, x2):
-        dy = x2[1] - x1[1]
         dx = x2[0] - x1[0]
+        dy = x2[1] - x1[1]
+        # self.logger.debug("x1: " + str(x1) + " x2: " + str(x2))
+        # self.logger.debug("dxdy: %d, %d" %(dx,dy))
         if dy != 0:
-            return np.arctan(dx / dy)
+            ret = np.abs(np.arctan(dx / dy))
         else:
-            return np.pi / 2
+            ret = np.pi / 2
+
+        # sort out the sin
+        sign = 1
+        if dx < 0:
+            sign = -1
+        if dy > 0: # dy is opposite to normal
+            ret = np.pi - np.abs(ret)
+        return ret * sign
+            
 
 
 

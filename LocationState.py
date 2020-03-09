@@ -33,8 +33,8 @@ class Path:
             print("X: (%d;%d), v: %d, th: %d" %(wp.x[0], wp.x[1], wp.v, wp.theta))
 
 class SingleSense:
-    def __init__(self, dir=[0, 0], angle=0):
-        self.dir = dir
+    def __init__(self, direc=[0, 0], angle=0):
+        self.dir = direc
         self.sense_location = [0, 0]
         self.val = 0 # always start open
         self.angle = angle
@@ -50,14 +50,14 @@ class Sensing:
 
         d_angle = np.pi / n
 
-        dir = [0, 0]
+        direc = [0, 0]
         for i in range(n):
             angle =  i * d_angle - np.pi /2 # -90 to +90
-            dir[0] = np.sin(angle)
-            dir[1] = - np.cos(angle)  # the - deal with positive being down
-            dir = np.around(dir, decimals=4)
+            direc[0] = np.sin(angle)
+            direc[1] = - np.cos(angle)  # the - deal with positive being down
+            direc = np.around(direc, decimals=4)
 
-            sense = SingleSense(dir, angle)
+            sense = SingleSense(direc, angle)
             self.senses.append(sense)
                 
     def print_sense(self):
@@ -65,13 +65,16 @@ class Sensing:
             e.print_sense()
 
     def update_sense_offsets(self, offset):
-        dir = [0, 0]
+        direc = [0, 0]
+        # print(offset)
         for i, sense in enumerate(self.senses):
-            dir[0] = np.sin(sense.angle + offset)
-            dir[1] = - np.cos(sense.angle + offset)
-            dir = np.around(dir, decimals=4)
+            direc[0] = np.sin(sense.angle + offset)
+            direc[1] = - np.cos(sense.angle + offset)
+            direc = np.around(direc, decimals=4)
 
-            sense.dir = dir
+            sense.dir = direc
+        
+
 
 
 
@@ -85,9 +88,13 @@ class CarState(WayPoint, Sensing):
 
     def set_sense_locations(self, dx):
         # keep dx here so that the sensing distance can be set by the env
+        # print("Old sense")
+        # self.print_sense()
+        self.update_sense_offsets(self.theta)
         for sense in self.senses:
             sense.sense_location = f.add_locations(self.x, sense.dir, dx)
-
+        # print("new Sense")
+        # self.print_sense()
 
 class EnvState:
     def __init__(self):
@@ -96,20 +103,16 @@ class EnvState:
         self.distance_to_target = 0
         self.done = False
 
-class SimulationState(CarState, EnvState):
+class SimulationState():
     def __init__(self):
-        super().__init__(n=10)
+        self.car_state = CarState()
         self.step = 0
 
     def _add_car_state(self, car_state):
-        self.x = car_state.x
-        self.v = car_state.v
-        self.theta = car_state.theta
+        self.car_state = car_state
 
     def _add_env_state(self, env_state):
-        self.action = env_state.action
-        self.reward = env_state.reward
-        self.distance_to_target = env_state.distance_to_target
+        self.env_state = env_state
 
     def print_step(self, i):
         msg0 = str(i)

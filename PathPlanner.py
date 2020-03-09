@@ -1,5 +1,6 @@
 import LibFunctions as f 
 import numpy as np 
+from copy import deepcopy
 
 
 
@@ -9,10 +10,11 @@ class PathPlanner:
         self.logger = logger
         self.car = car
 
-        self.path_finder = A_StarPathFinder(track, logger, 10)
+        self.path_finder = A_StarPathFinder(track, logger)
 
     def plan_path(self):
-        self.path_finder.run_search()
+        self.path_finder.run_search(10)
+        self.smooth_track()
         self.add_velocity()
 
     def add_velocity(self):
@@ -36,11 +38,47 @@ class PathPlanner:
         path[len(path)-1].theta = 0 # set the last point
         path[len(path)-1].v = self.car.max_v
 
+    def smooth_track(self):
+        weight_data = 0.2
+        weight_smooth = 0.05
+        tolerance = 0.00001
+
+        path = deepcopy(self.track.route)
+        new_path = []
+        for pt in path:
+            p = deepcopy(pt)
+            p.x = [0, 0]
+            new_path.append(p)
+        new_path[0] = deepcopy(path[0])
+        new_path[len(new_path)-1] = deepcopy(path[len(new_path)-1])
+
+
+        change = tolerance
+        while change >= tolerance:
+            change = 0.0
+            for i in range(1, len(path)-1):
+                for j in range(2):
+                    aux = new_path[i].x[j]
+                    aux = new_path[i].x[j]
+                    new_path[i].x[j] += weight_data * (path[i].x[j] - new_path[i].x[j])
+                    new_path[i].x[j] += weight_smooth * (new_path[i-1].x[j] + new_path[i+1].x[j] - 2*new_path[i].x[j])
+                    change += abs(aux - new_path[i].x[j])
+
+        self.track.route = new_path
+        for i in range(len(path)):
+            print('[' +', '.join('%.3f'%x for x in path[i].x) +'] -> [' +', '.join('%.3f'%x for x in new_path[i].x) + ']')
+
+
+
+
+
+            
+
 
 class A_StarPathFinder:
-    def __init__(self, track, logger, ds):
+    def __init__(self, track, logger):
         # ds is the search size around the current node
-        self.ds = ds
+        self.ds = None
         self.track = track
         self.logger = logger
 
@@ -49,17 +87,29 @@ class A_StarPathFinder:
         self.children = []
         
         self.position_list = []
-        for i in range(3):
-            for j in range(3):
-                direction = [(j-1)*self.ds, (i-1)*self.ds]
-                self.position_list.append(direction)
-
-        self.position_list.pop(4) # remove stand still
+        
         self.current_node = Node()
 
         self.open_node_n = 0
 
-    def run_search(self, max_steps=4000):
+    def set_directions(self):
+        # for i in range(3):
+        #     for j in range(3):
+        #         direction = [(j-1)*self.ds, (i-1)*self.ds]
+        #         self.position_list.append(direction)
+
+        # self.position_list.pop(4) # remove stand still
+
+        # this makes it not go diagonal
+        self.position_list = [[1, 0], [0, -1], [-1, 0], [0, 1]]
+        for pos in self.position_list:
+            pos[0] = pos[0] * self.ds
+            pos[1] = pos[1] * self.ds
+        print(self.position_list)
+
+    def run_search(self, ds, max_steps=4000):
+        self.ds = ds
+        self.set_directions()
         self.set_up_start_node()
         i = 0
         while len(self.open_list) > 0 and i < max_steps:
@@ -160,8 +210,8 @@ class A_StarPathFinder:
         pos_list = pos_list[::-1]
         for pos in pos_list:
             self.track.add_way_point(pos)
+        self.track.add_way_point(self.track.end_location)
 
-        self.track.print_route()
 
 
 
@@ -190,36 +240,3 @@ class Node():
             return msg
 
 
-class TrackSmoothing:
-    # this class modifies the track route so that it is driveable
-    def __init__(self, track, car):
-        self.car = car
-        self.track = track
-
-        self.path_in = None
-
-    def add_path(self, planned_path):
-        self.path_in = planned_path
-
-    def add_velocity(self):
-        # set up last wp in each cycle
-        for i, wp in enumerate(self.track.route.route):
-            if i == 0:
-                last_wp = wp
-                continue
-            dx = wp.x[0] - last_wp.x[0]
-            dy = wp.x[1] - last_wp.x[1]
-            if dy != 0:
-                gradient = dx/dy  #flips to make forward theta = 0
-            else:
-                gradient = 1000
-            last_wp.theta = np.arctan(gradient)  # gradient to next point
-            last_wp.v = self.car.max_v * (np.pi - last_wp.theta) / np.pi
-
-            last_wp = wp
-
-        self.path_in[len(self.path_in)-1].theta = 0 # set the last point
-        self.path_in[len(self.path_in)-1].v = self.car.max_v
-    
-    def get_path(self):
-        return self.path_in

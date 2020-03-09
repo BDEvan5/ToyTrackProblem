@@ -9,7 +9,7 @@ import numpy as np
 
 
 class Interface:
-    def __init__(self, track, update_time=100, scaling_factor=10):
+    def __init__(self, track, update_time, scaling_factor=10):
         self.dt = update_time
         self.fs = scaling_factor
         self.size = [100*self.fs, 100*self.fs]  # the grid is 100 points scaled
@@ -133,7 +133,7 @@ class Interface:
         return x_out
   
     def update_position(self):
-        current_pos = self._scale_input(self.step_i.x)
+        current_pos = self._scale_input(self.step_i.car_state.x)
         # print("Current: " + str(current_pos) + " -> Prev: " + str(self.prev_px))
 
         px = f.sub_locations(current_pos, self.prev_px)
@@ -144,10 +144,9 @@ class Interface:
         self.prev_px = current_pos
 
     def draw_nodes(self):
-        node = [0, 0]
-        dx = 5 # scaling factor for sense - should be same as in track
-        for sense in self.step_i.senses:
-            node = f.add_locations(self.step_i.x, sense.dir, dx)
+        for sense in self.step_i.car_state.senses:
+            node = sense.sense_location
+            # node = f.add_locations(self.step_i.x, sense.dir, dx)
             node = self._scale_input(node)
             if sense.val == 0:
                 self.canv.create_text(node[0], node[1], text='X', fill='green')
@@ -159,9 +158,9 @@ class Interface:
         step_text = str(self.step_i.step)
         self.step.config(text=step_text)
 
-        location_text = str(np.around(self.step_i.x, 3))
+        location_text = str(np.around(self.step_i.car_state.x, 3))
         self.loc.config(text=location_text)
-        velocity_text = str(self.step_i.v) + " @ " + str(self.step_i.theta)
+        velocity_text = str(self.step_i.car_state.v) + " @ " + str(self.step_i.car_state.theta)
         self.velocity.config(text=velocity_text)
 
         # self.step_i.print_sense()
@@ -171,15 +170,13 @@ class Interface:
         #     elif s.val == 0:
         #         self.sense_canv.itemconfig(block, fill='white')
 
-        reward_text = str(self.step_i.reward)
+        reward_text = str(self.step_i.env_state.reward)
         self.reward.config(text=reward_text)
 
-        action_text = str(np.around(self.step_i.action, 2))
+        action_text = str(np.around(self.step_i.env_state.action, 2))
         self.action.config(text=action_text)
 
-        self.distance.config(text=str(self.step_i.distance_to_target))
-
-
+        self.distance.config(text=str(self.step_i.env_state.distance_to_target))
 
     def get_step_info(self):
         self.step_i = self.step_q.get()
@@ -201,7 +198,7 @@ class Interface:
 
 
 class ShowInterface:
-    def __init__(self, track, dt=200):
+    def __init__(self, track, dt=25):
         self.ep = None
         self.interface = Interface(track, dt)
         self.dt = dt
@@ -217,7 +214,7 @@ class ShowInterface:
 
         root = mp.Process(target=self.interface.setup_root)
         root.start()
-        time.sleep(20)
+        time.sleep(15)
         root.terminate()
 
     def show_route(self):
