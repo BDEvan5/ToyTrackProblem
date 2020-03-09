@@ -151,6 +151,14 @@ class A_Star:
 
         return ret_list[::-1], closed_list
 
+    def set_track_path(self):
+        # this sets the path inside the track to the a star path
+        curr = self.current_node
+        while curr is not None:
+            self.track.route.add_way_point(curr.position)
+            curr = curr.parent
+
+
 
 class Node():
     """A node class for A* Pathfinding"""

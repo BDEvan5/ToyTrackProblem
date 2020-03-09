@@ -18,6 +18,7 @@ class RaceEnv:
         self.ds = sense_dis # this is how far the sensor can look ahead
         self.logger = logger
         self.track = track
+        self.dt = 0.5 # update frequency
 
         self.state_space = 2
         self.action_space = 10
@@ -46,8 +47,7 @@ class RaceEnv:
         coll_flag = self._check_collision(new_x)
 
         if not coll_flag: # no collsions
-            a, t_dot = self.car.get_delta(action)
-            self.car.update_state(self.car_state, a, t_dot)
+            self.car.update_controlled_state(self.car_state, action, self.dt)
 
         self._update_senses()
         self.env_state.done = self._check_done()
@@ -87,10 +87,10 @@ class RaceEnv:
     def _check_collision(self, x):
         b = self.track.boundary
         ret = 0
-        for o in self.track.obstacles:
+        for i, o in enumerate(self.track.obstacles):
             if o[0] < x[0] < o[2]:
                 if o[1] < x[1] < o[3]:
-                    msg = "Boundary collision --> x: %d;%d"%(x[0],x[1])
+                    msg = "Obstacle collision %d --> x: %d;%d"%(i, x[0],x[1])
                     ret = 1
         if x[0] < b[0] or x[0] > b[2]:
             msg = "X wall collision --> x: %d, b:%d;%d"%(x[0], b[0], b[2])
@@ -128,16 +128,7 @@ class RaceEnv:
         new_x = f.add_locations(action, self.car_state.x)
         return new_x
 
-    # def _get_next_controlled_state(self, a, dt):
-    #     dd = dv = [0, 0]
-    #     for i in range(2):
-    #         dd[i] = a[i] * (dt ** 2) 
-    #         dd[i] += self.car_state.v[i] * dt 
-    #         dv[i] = a[i] * dt 
-        
-    #     new_x = f.add_locations(self.car_state.x, dd)
-    #     new_v = f.add_locations(self.car_state.v, dv)
-    #     return new_x, new_v
+
 
 
 class TrackData:
@@ -149,6 +140,7 @@ class TrackData:
         self.end_location = [0, 0]
 
         self.point_list = []
+        self.route = ls.Path()
 
     def add_locations(self, x_start, x_end):
         self.start_location = x_start
@@ -172,36 +164,45 @@ class CarModel:
         self.b = [0.5, 0.2]
 
         self.max_v = 0
+        self.friction = 0.1
         
     def set_up_car(self, max_v):
         self.max_v = max_v
-
-    def get_delta(self, f):
-        a = f[0] / self.m
-        theta_dot = f[1] * self.L / self.J
-        # theta_dot = np.arctan((f[0]/ np.abs(f[1])))
-
-        return a, theta_dot
     
-    def update_state(self, car_state, a, theta_dot, dt=1):
-        # self.x[0] += self.v * dt * np.sin(self.theta)
-        # self.x[1] += self.v * dt * np.cos(self.theta)
+    # def update_state(self, car_state, a, theta_dot, dt=1):
+    #     # self.x[0] += self.v * dt * np.sin(self.theta)
+    #     # self.x[1] += self.v * dt * np.cos(self.theta)
 
-        # self.v += np.abs(a * dt)
-        # self.theta += theta_dot
-        # x = [0, 0]
-        car_state.x[0] += a * dt**2
-        car_state.x[1] += theta_dot *dt **2
+    #     # self.v += np.abs(a * dt)
+    #     # self.theta += theta_dot
+    #     # x = [0, 0]
+    #     car_state.x[0] += a * dt**2
+    #     car_state.x[1] += theta_dot *dt **2
 
-        # self.update_sense_offsets(self.theta)
-        
-        
+    #     # self.update_sense_offsets(self.theta)
 
-    def chech_new_state(self, car_state, f=[0, 0], dt=1):
+    def update_controlled_state(self, state, action, dt):
+        a = action[0]
+        th = action[1]
+        state.v += a * dt - self.friction * state.v
+
+        state.theta = th # assume no th integration to start
+        r = state.v * dt
+        state.x[0] += r * np.sin(state.theta)
+        state.x[1] += - r * np.cos(state.theta)
+
+        state.update_sense_offsets(state.theta)
+           
+
+    def chech_new_state(self, state, action, dt=1):
         x = [0.0, 0.0]
-        x[0] = car_state.x[0] + car_state.v * dt * np.sin(car_state.theta)
-        x[1] = car_state.x[1] + car_state.v * dt * np.cos(car_state.theta)
+        a = action[0]
+        th = action[1]
+        v = a * dt - self.friction * state.v + state.v
 
+        r = v * dt
+        x[0] = r * np.sin(th) + state.x[0]
+        x[1] = - r * np.cos(th) + state.x[1]
         return x
 
 

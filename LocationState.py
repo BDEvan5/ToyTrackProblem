@@ -19,6 +19,16 @@ class WayPoint:
     def print_point(self):
         print("X: " + str(self.x) + " -> v: " + str(self.v) + " -> theta: " +str(self.theta))
 
+class Path:
+    def __init__(self):
+        self.route = []
+    
+    def add_way_point(self, x, v=0, theta=0):
+        wp = WayPoint()
+        wp.set_point(x, v, theta)
+        self.route.append(wp)
+
+
 class SingleSense:
     def __init__(self, dir=[0, 0], angle=0):
         self.dir = dir

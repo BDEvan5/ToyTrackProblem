@@ -10,6 +10,8 @@ class Controller:
         self.env = env # at the moment the points are stored in the track - consider chanings
         self.logger = logger
 
+        self.dt = 0.5 # controller frequency
+
         self.car = TrackEnv1.CarModel()
 
         self.state = ls.CarState()
@@ -17,14 +19,16 @@ class Controller:
         self.cur_target = ls.WayPoint()
 
 
-    def run_control(self, max_steps=200):
+    def run_control(self, max_steps=40):
         i = 0
         self.state = self.env.reset()
         for w_pt in self.env.track.point_list: # steps through way points
             self.cur_target = w_pt
-            while not self.at_target() and i< max_steps: #keeps going till at each pt
+            while not self.at_target() and i < max_steps: #keeps going till at each pt
                 
-                action = self.get_action()
+                action = self.get_controlled_action(w_pt)
+                self.env.control_step(action)
+
                 self.logger.debug("Current Target: " + str(w_pt.x))
 
                 self.state, done = self.env.control_step(action)
@@ -45,18 +49,57 @@ class Controller:
         return False
 
 
-    def get_action(self):
-        target = self.cur_target.x
-        cur = self.state.x
-        direc = f.sub_locations(cur, target)
+    # def get_action(self):
+    #     target = self.cur_target.x
+    #     cur = self.state.x
+    #     direc = f.sub_locations(cur, target)
 
-        scale = -0.1
-        action = [0, 0]
-        for i in range(2):
-            action[i] = direc[i] * scale
+    #     scale = -0.1
+    #     action = [0, 0]
+    #     for i in range(2):
+    #         action[i] = direc[i] * scale
 
-        # print(action)
+    #     # print(action)
+    #     return action
+    
+    def get_controlled_action(self, wp):
+        x_ref = wp.x 
+        v_ref = wp.v 
+        th_ref = wp.theta
+
+        # run v control
+        e_v = v_ref - self.state.v # error for controler
+        a = self.acc_control(e_v)
+
+        k_th_ref = 0.2 # amount to favour v direction
+        # run th control
+        x_ref_th = -self.get_xref_th(self.state.x, x_ref)
+        e_th = th_ref * k_th_ref + x_ref_th * (1- k_th_ref) # - self.state.theta
+        th = self.th_controll(e_th)
+
+        action = [a, th]
+        print(action)
         return action
+
+
+
+
+    def acc_control(self, e_v):
+        # this function is the actual controller
+        k = 0.2
+        return k * e_v
+
+    def th_controll(self, e_th):
+        # theta controller to come here when dth!= th
+        return e_th
+
+    def get_xref_th(self, x1, x2):
+        dy = x2[1] - x1[1]
+        dx = x2[0] - x1[0]
+        if dy != 0:
+            return np.arctan(dx / dy)
+        else:
+            return np.pi / 2
 
 
 

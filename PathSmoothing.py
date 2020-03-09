@@ -1,6 +1,7 @@
 import numpy as np 
 
 class TrackSmoothing:
+    # this class modifies the track route so that it is driveable
     def __init__(self, track, car):
         self.car = car
         self.track = track
