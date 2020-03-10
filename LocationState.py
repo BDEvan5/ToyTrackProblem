@@ -75,9 +75,10 @@ class Sensing:
             sense.dir = direc
         
     def get_sense_observation(self):
-        obs = np.zeros(len(self.n))
+        obs = np.zeros(self.n)
         for i, sense in enumerate(self.senses):
-            obs[i] = sense.sense_location
+            obs[i] = sense.val
+        # print(obs)
         return obs # should return an array of 1 or 0 for senses
 
 
@@ -89,13 +90,11 @@ class CarState(WayPoint, Sensing):
 
     def set_sense_locations(self, dx):
         # keep dx here so that the sensing distance can be set by the env
-        # print("Old sense")
-        # self.print_sense()
+
         self.update_sense_offsets(self.theta)
         for sense in self.senses:
             sense.sense_location = f.add_locations(self.x, sense.dir, dx)
-        # print("new Sense")
-        # self.print_sense()
+
 
 class EnvState:
     def __init__(self):

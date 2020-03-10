@@ -93,6 +93,12 @@ class Interface:
             self.canv.create_rectangle(o1, o2, fill='blue')
             self.canv.pack()
 
+        for obs in self.track.hidden_obstacles:
+            o1 = self._scale_input(obs[0:2])
+            o2 = self._scale_input(obs[2:4])
+            self.canv.create_rectangle(o1, o2, fill='blue')
+            self.canv.pack()
+
         x = self._scale_input(self.track.end_location)
         self.end_x = self.canv.create_text(x[0], x[1], text='X', fill='brown', font = "Times 20 italic bold")
         self.canv.pack()    
@@ -214,7 +220,7 @@ class ShowInterface:
 
         root = mp.Process(target=self.interface.setup_root)
         root.start()
-        time.sleep(15)
+        time.sleep(5)
         root.terminate()
 
     def show_route(self):

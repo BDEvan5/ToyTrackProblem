@@ -65,8 +65,9 @@ class PathPlanner:
                     change += abs(aux - new_path[i].x[j])
 
         self.track.route = new_path
-        for i in range(len(path)):
-            print('[' +', '.join('%.3f'%x for x in path[i].x) +'] -> [' +', '.join('%.3f'%x for x in new_path[i].x) + ']')
+
+        # for i in range(len(path)):
+        #     print('[' +', '.join('%.3f'%x for x in path[i].x) +'] -> [' +', '.join('%.3f'%x for x in new_path[i].x) + ']')
 
 
 
@@ -105,7 +106,7 @@ class A_StarPathFinder:
         for pos in self.position_list:
             pos[0] = pos[0] * self.ds
             pos[1] = pos[1] * self.ds
-        print(self.position_list)
+        # print(self.position_list)
 
     def run_search(self, ds, max_steps=4000):
         self.ds = ds

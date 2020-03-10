@@ -29,22 +29,24 @@ class RaceEnv:
         self.sim_mem = em.SimMem(self.logger)
 
     def step(self, action):
-        new_x = self.car_state.chech_new_state(action)
-        coll_flag = self._check_collision(new_x)
+        new_x = self.car.chech_new_state(self.car_state, action)
+        coll_flag = self.track._check_collision_hidden(new_x)
 
         if not coll_flag: # no collsions
-            a, t_dot = self.car.get_delta(action)
-            self.car_state.update_state(a, t_dot)
+            self.car.update_controlled_state(self.car_state, action, self.dt)
 
         self._update_senses()
         self.env_state.done = self._check_done()
         self._get_reward(coll_flag)
+        self.env_state.action = action
+
+        self.sim_mem.add_step(self.car_state, self.env_state)
 
         return self.car_state, self.env_state.reward, self.env_state.done
 
     def control_step(self, action):
         new_x = self.car.chech_new_state(self.car_state, action)
-        coll_flag = self.track._check_collision(new_x)
+        coll_flag = self.track._check_collision_hidden(new_x)
 
         if not coll_flag: # no collsions
             self.car.update_controlled_state(self.car_state, action, self.dt)
@@ -64,12 +66,13 @@ class RaceEnv:
         self.car_state.theta = 0
         self._update_senses()
         self.reward = 0
+        self.sim_mem.steps.clear()
         return self.car_state
 
     def _get_reward(self, coll_flag):
         dis = f.get_distance(self.car_state.x, self.track.end_location) 
 
-        reward = 100 - dis  # reward increases as distance decreases
+        reward = 0 # reward increases as distance decreases
         if coll_flag:
             reward = -50
 
@@ -102,6 +105,10 @@ class RaceEnv:
                     if o[1] < sense.sense_location[1] < o[3]:
                         sense.val = 1
                         # if it hits an obstacle   
+            for o in self.track.hidden_obstacles:
+                if o[0] < sense.sense_location[0] < o[2]:
+                    if o[1] < sense.sense_location[1] < o[3]:
+                        sense.val = 1
         # self.car_state.print_sense()
 
     def _get_next_state(self, action):
@@ -117,6 +124,7 @@ class TrackData(ls.Path):
         ls.Path.__init__(self)
         self.boundary = None
         self.obstacles = []
+        self.hidden_obstacles = []
 
         self.start_location = [0, 0]
         self.end_location = [0, 0]
@@ -130,6 +138,30 @@ class TrackData(ls.Path):
 
     def add_boundaries(self, b):
         self.boundary = b
+
+    def _check_collision_hidden(self, x):
+        b = self.boundary
+        ret = 0
+        for i, o in enumerate(self.obstacles):
+            if o[0] < x[0] < o[2]:
+                if o[1] < x[1] < o[3]:
+                    msg = "Obstacle collision %d --> x: %d;%d"%(i, x[0],x[1])
+                    ret = 1
+        for i, o in enumerate(self.hidden_obstacles):
+            if o[0] < x[0] < o[2]:
+                if o[1] < x[1] < o[3]:
+                    msg = "Hidden Obstacle collision %d --> x: %d;%d"%(i, x[0],x[1])
+                    ret = 1
+        if x[0] < b[0] or x[0] > b[2]:
+            msg = "X wall collision --> x: %d, b:%d;%d"%(x[0], b[0], b[2])
+            ret = 1
+        if x[1] < b[1] or x[1] > b[3]:
+            msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
+            ret = 1
+        # if ret == 1:
+            # print(msg)
+            # self.logger.info(msg)
+        return ret
 
     def _check_collision(self, x):
         b = self.boundary
@@ -159,6 +191,7 @@ class TrackData(ls.Path):
                 if o[1] < x1[1] < o[3]:
                     msg = "Obstacle collision %d --> x: %d;%d"%(i, x1[0],x1[1])
                     ret = 1
+        
         if x[0] < b[0] or x1[0] > b[2]:
             msg = "X wall collision --> x: %d, b:%d;%d"%(x1[0], b[0], b[2])
             ret = 1
@@ -169,6 +202,9 @@ class TrackData(ls.Path):
             # print(msg)
             # self.logger.info(msg)
         return ret
+
+    def add_hidden_obstacle(self, obs):
+        self.hidden_obstacles.append(obs)
 
 
 class CarModel:

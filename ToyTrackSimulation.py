@@ -49,3 +49,14 @@ class RacingSimulation:
         self.path_planner.plan_path()
         self.run_control()
         self.show_simulation()
+
+    def run_learning_sim(self, episodes):
+        self.path_planner.plan_path()
+        for i in range(episodes):
+            print("Episode: %d"%i)
+            self.controller.run_control()
+
+        print(self.controller.agent_q.q_table)
+        self.ep_mem = self.env.sim_mem
+        self.show_simulation()
+

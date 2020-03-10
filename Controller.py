@@ -3,6 +3,7 @@ import numpy as np
 import LibFunctions as f
 import EpisodeMem as em
 import TrackEnv1
+import random
 
 
 class Controller:
@@ -29,26 +30,51 @@ class Controller:
         while not self.at_target(wp) and i < max_steps: #keeps going till at each pt
             
             action = self.control_sys.get_controlled_action(self.state, wp)
-            self.state, done = self.env.control_step(action)
+            agent_action = self.check_action_rl(action)
+            action, dr = self.get_new_action(agent_action, action)
+
+            next_state, reward, done = self.env.step(action)
+
+            reward += dr
+            obs = self.state.get_sense_observation()
+            next_obs = next_state.get_sense_observation()
+            self.agent_q.update_q_table(obs, agent_action, reward, next_obs)
 
             if done:
                 break
 
-            # self.logger.debug("Current Target: " + str(wp.x) + "V_th" + str(wp.v) + "@" + str(wp.theta))
-            # self.logger.debug("")
+            
             i+=1 
 
     def at_target(self, wp):
         way_point_dis = f.get_distance(self.state.x, wp.x)
         # print(way_point_dis)
         if way_point_dis < 2:
-            print("Way point reached: " + str(wp.x))
+            # print("Way point reached: " + str(wp.x))
             return True
         return False
     
     def check_action_rl(self, action):
-        # write code here to check if the rl wants to act.   
-        pass     
+        observation = self.state.get_sense_observation()
+        agent_action = self.agent_q.get_action(observation)
+        return agent_action
+
+    def get_new_action(self, agent_action, action):
+        theta_swerve = 0.8
+        # interpret action
+        dr = -30
+        if agent_action == 1: # stay in the centre
+            dr = 0
+            return action, dr 
+        if agent_action == 0: # swerve left
+            action = [action[0], action[1] - theta_swerve]
+            print("Swerving left")
+            return action, dr
+        if agent_action == 2: # swerve right
+            action = [action[0], action[1] + theta_swerve]
+            print("Swerving right")
+            return action, dr
+
 
 
 class ControlSystem:
@@ -109,28 +135,49 @@ class AgentQ:
         self.learning_rate = 0.1
         self.discount_rate = 0.99
 
+        self.exploration_rate = 1
+        self.max_exploration_rate = 1
+        self.min_exploration_rate = 0.01
+        self.exploration_decay_rate = 0.05
+
+        self.step_counter = 0
+
+
     def get_action(self, observation):
         #observation is the sensor data 
-        obs_n = self._convert_obs(observation)
-        action = np.argmax(self.q_table[obs_n,:]) # select row for argmax
+        action_space = 3
+
+        exploration_rate_threshold = random.uniform(0, 1)
+        if exploration_rate_threshold > self.exploration_rate:            # print(q_table_avg)
+            obs_n = self._convert_obs(observation)
+            action_slice = self.q_table[0, :]
+            action = np.argmax(action_slice) # select row for argmax
+        else:
+            action = random.randint(0, 2)
+
         return action # should be a number from 0-2
 
     def _convert_obs(self, observation):
         # converts from sensor 1 or 0 to a state number
         # 1101 --> 13
         obs_n = 0
-        for i in range(observation):
-            obs_n += observation * (2**i)
-        return obs_n
+        for i in range(len(observation)-1): #last sense doesn't work
+            obs_n += observation[i] * (2**i)
+        return int(obs_n)
 
     def update_q_table(self, obs, action, reward, next_obs):
         obs_n = self._convert_obs(obs)
         next_obs_n = self._convert_obs(next_obs)
-
+        action_slice = self.q_table[next_obs_n,:]
         update_val = self.q_table[obs_n, action] * (1-self.learning_rate) + \
-            self.learning_rate * (reward + self.discount_rate * np.argmax(self.q_table[next_obs_n, :]))
+            self.learning_rate * (reward + self.discount_rate * np.argmax(action_slice))
 
         self.q_table[obs_n, action] = update_val
+
+        self.exploration_rate = self.min_exploration_rate + \
+                (self.max_exploration_rate - self.min_exploration_rate) * \
+                np.exp(-self.exploration_decay_rate * self.step_counter)
+        self.step_counter += 1
 
         # update exploration decay rate
         # code to come here when move away from greedy
