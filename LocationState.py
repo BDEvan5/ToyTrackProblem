@@ -74,10 +74,11 @@ class Sensing:
 
             sense.dir = direc
         
-
-
-
-
+    def get_sense_observation(self):
+        obs = np.zeros(len(self.n))
+        for i, sense in enumerate(self.senses):
+            obs[i] = sense.sense_location
+        return obs # should return an array of 1 or 0 for senses
 
 
 class CarState(WayPoint, Sensing):

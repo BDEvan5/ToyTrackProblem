@@ -13,7 +13,7 @@ from copy import deepcopy
 
 
 class RaceEnv:
-    def __init__(self, track, car, logger, dx=5, sense_dis=5):
+    def __init__(self, track, car, logger, dx=5, sense_dis=8):
         self.dx = dx # this is how close it must be to stop
         self.ds = sense_dis # this is how far the sensor can look ahead
         self.logger = logger
@@ -21,7 +21,7 @@ class RaceEnv:
         self.dt = 0.5 # update frequency
 
         self.state_space = 2
-        self.action_space = 10
+        self.action_space = 5
 
         self.car_state = ls.CarState(self.action_space)
         self.env_state = ls.EnvState()

@@ -1,7 +1,7 @@
 import numpy as np 
 
 import TrackEnv1
-import RL_controller
+# import RL_controller
 import TrackInterfac
 import matplotlib.pyplot as plt
 from tkinter import *
@@ -33,16 +33,6 @@ class RacingSimulation:
         self.player = None
         self.ep_mem = None
 
-    def find_optimal_route(self):
-        # self.path_planner.run_search()  # 
-
-        # planned_path, _ = self.path_planner.get_opti_path()
-        # self.smoothing.add_path(planned_path)
-        # self.smoothing.add_velocity()
-        # planned_path = self.smoothing.get_path()
-        # self.track.add_way_points(planned_path)
-        self.path_planner.plan_path()
-
 
     def run_control(self):
         self.controller.run_control()
@@ -56,6 +46,6 @@ class RacingSimulation:
         self.player.run_replay(self.ep_mem)
 
     def run_simulation(self):
-        self.find_optimal_route()
+        self.path_planner.plan_path()
         self.run_control()
         self.show_simulation()
