@@ -21,7 +21,44 @@ class Controller:
         self.state = self.env.reset()
         for w_pt in self.env.track.route: # steps through way points
             i = 0
-            self.control_to_wp(w_pt)
+            ret = self.control_to_wp(w_pt)
+
+            if not ret:
+                print("Episode finished due to crash")
+                break # it crashed
+
+    def run_replay_control(self):
+        self.state = self.env.reset()
+        for w_pt in self.env.track.route: # steps through way points
+            i = 0
+            ret = self.control_to_wp_replay(w_pt)
+
+            if not ret:
+                break # it crashed
+
+    def control_to_wp_replay(self, wp):
+        i = 0
+        max_steps = 100
+
+        while not self.at_target(wp) and i < max_steps: #keeps going till at each pt
+            
+            action = self.control_sys.get_controlled_action(self.state, wp)
+            agent_action = self.check_action_rl(action)
+            action, dr = self.get_new_action(agent_action, action)
+
+            next_state, reward, done = self.env.step(action)
+
+            reward += dr
+            obs = self.state.get_sense_observation()
+            next_obs = next_state.get_sense_observation()
+            self.agent_q.update_q_table(obs, agent_action, reward, next_obs)
+
+            if done:
+                return False
+                # break
+            i+=1 
+        return True # got to wp
+
 
     def control_to_wp(self, wp):
         i = 0
@@ -40,11 +77,12 @@ class Controller:
             next_obs = next_state.get_sense_observation()
             self.agent_q.update_q_table(obs, agent_action, reward, next_obs)
 
+            self.state = next_state
             if done:
-                break
-
-            
+                return False
+                # break
             i+=1 
+        return True # got to wp
 
     def at_target(self, wp):
         way_point_dis = f.get_distance(self.state.x, wp.x)
@@ -62,7 +100,7 @@ class Controller:
     def get_new_action(self, agent_action, action):
         theta_swerve = 0.8
         # interpret action
-        dr = -30
+        dr = -20
         if agent_action == 1: # stay in the centre
             dr = 0
             return action, dr 
@@ -138,10 +176,9 @@ class AgentQ:
         self.exploration_rate = 1
         self.max_exploration_rate = 1
         self.min_exploration_rate = 0.01
-        self.exploration_decay_rate = 0.05
+        self.exploration_decay_rate = 0.005
 
         self.step_counter = 0
-
 
     def get_action(self, observation):
         #observation is the sensor data 
@@ -181,3 +218,18 @@ class AgentQ:
 
         # update exploration decay rate
         # code to come here when move away from greedy
+
+    def save_q_table(self):
+        file_location = 'Documents/ToyTrackProblem/'
+        np.save(file_location + 'agent_q_table.npy', self.q_table)
+        
+        self.exploration_rate = self.min_exploration_rate
+
+
+    def load_q_table(self):
+        print("Loaded Q table")
+        self.q_table = np.load('agent_q_table.npy')
+
+
+
+

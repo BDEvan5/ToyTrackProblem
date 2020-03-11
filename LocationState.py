@@ -116,9 +116,9 @@ class SimulationState():
 
     def print_step(self, i):
         msg0 = str(i)
-        msg1 = " State; x: " + str(np.around(self.x,2)) + " v: " + str(self.v) + "@ " + str(self.theta)
-        msg2 = " Action: " + str(np.around(self.action,3))
-        msg3 = " Reward: " + str(self.reward)
+        msg1 = " State; x: " + str(np.around(self.car_state.x,2)) + " v: " + str(self.car_state.v) + "@ " + str(self.car_state.theta)
+        msg2 = " Action: " + str(np.around(self.env_state.action,3))
+        msg3 = " Reward: " + str(self.env_state.reward)
 
         print(msg0 + msg1 + msg2 + msg3)
         # self.print_sense()
