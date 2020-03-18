@@ -82,6 +82,21 @@ class Sensing:
         return obs # should return an array of 1 or 0 for senses
 
 
+class SingleRange:
+    def __init__(self):
+        distance_to_wall = 0
+
+class Ranger:
+    def __init__(self, n):
+        self.n = n
+        self.ranges = []
+
+        for i in range(n):
+            ran = SingleRange()
+            self.ranges.append(ran)
+
+
+
 class CarState(WayPoint, Sensing):
     def __init__(self, n=10):
         WayPoint.__init__(self)
@@ -116,9 +131,9 @@ class SimulationState():
 
     def print_step(self, i):
         msg0 = str(i)
-        msg1 = " State; x: " + str(np.around(self.car_state.x,2)) + " v: " + str(self.car_state.v) + "@ " + str(self.car_state.theta)
-        msg2 = " Action: " + str(np.around(self.env_state.action,3))
-        msg3 = " Reward: " + str(self.env_state.reward)
+        msg1 = " State; x: " + str(np.around(self.x,2)) + " v: " + str(self.v) + "@ " + str(self.theta)
+        msg2 = " Action: " + str(np.around(self.action,3))
+        msg3 = " Reward: " + str(self.reward)
 
         print(msg0 + msg1 + msg2 + msg3)
         # self.print_sense()

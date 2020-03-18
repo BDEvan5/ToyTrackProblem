@@ -5,7 +5,6 @@ import LibFunctions as f
 import EpisodeMem
 import time
 import numpy as np 
-from pyscreenshot import grab
 
 
 
@@ -219,11 +218,9 @@ class ShowInterface:
             # step.print_step()
             self.interface.step_q.put(step)
 
-        # self.interface.setup_root()
         root = mp.Process(target=self.interface.setup_root)
         root.start()
         time.sleep(10)
-        root.terminate()
 
     def show_route(self):
         root = mp.Process(target=self.interface.show_map)

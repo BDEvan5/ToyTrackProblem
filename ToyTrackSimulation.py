@@ -56,18 +56,7 @@ class RacingSimulation:
             print("Episode: %d"%i)
             self.controller.run_control()
 
-        # self.controller.agent_q.save_q_table()
-        # self.controller.agent_q.load_q_table()
-        print(self.controller.agent_q.q_table)
-        self.ep_mem = self.env.get_ep_mem()
-        self.show_simulation()
-
-    def show_sim(self):
-        self.path_planner.plan_path()
-        self.controller.agent_q.load_q_table()
-        self.controller.run_control()
         print(self.controller.agent_q.q_table)
         self.ep_mem = self.env.sim_mem
         self.show_simulation()
-
 
