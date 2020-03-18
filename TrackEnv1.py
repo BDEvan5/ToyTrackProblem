@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tkinter import *
 import time
-# import multiprocessing as mp 
 import LocationState as ls
 import EpisodeMem as em
 from copy import deepcopy
@@ -29,15 +28,16 @@ class RaceEnv:
         self.sim_mem = em.SimMem(self.logger)
 
     def step(self, action):
-        new_x = self.car.chech_new_state(self.car_state, action)
+        new_x = self.car.chech_new_state(self.car_state, action, self.dt)
         coll_flag = self.track._check_collision_hidden(new_x)
 
         if not coll_flag: # no collsions
             self.car.update_controlled_state(self.car_state, action, self.dt)
 
         self._update_senses()
-        self.env_state.done = self._check_done()
+        self.env_state.done = self._check_done(coll_flag)
         self._get_reward(coll_flag)
+        self._update_ranges()
         self.env_state.action = action
 
         self.sim_mem.add_step(self.car_state, self.env_state)
@@ -67,6 +67,7 @@ class RaceEnv:
         self._update_senses()
         self.reward = 0
         self.sim_mem.steps.clear()
+        print("Mem cleared" + str(self.sim_mem.steps))
         return self.car_state
 
     def _get_reward(self, coll_flag):
@@ -75,12 +76,18 @@ class RaceEnv:
         reward = 0 # reward increases as distance decreases
         if coll_flag:
             reward = -50
+        # if self.env_state.done:
+        #     reward = 50
 
         self.env_state.distance_to_target = dis
         self.env_state.reward = reward
 
-    def _check_done(self):
+    def _check_done(self, coll_flag):
         dis = f.get_distance(self.track.end_location, self.car_state.x)
+
+        if coll_flag:
+            print("Ended in collision")
+            return True
 
         if dis < self.dx:
             print("Final distance is: %d" % dis)
@@ -116,7 +123,24 @@ class RaceEnv:
         new_x = f.add_locations(action, self.car_state.x)
         return new_x
 
+    def get_ep_mem(self):
+        self.sim_mem.print_ep()
+        return self.sim_mem
 
+    def _update_ranges(self):
+        dx = 5 # search size
+        curr_x = self.car_state.x
+        th = self.car_state.theta
+        for ran in self.car_state.ranges:
+            val = 0
+            i = 0
+            while val == 0:
+                addx = [dx * i + np.sin(th), -dx * i * np.cos(th)] # check
+                x_search = f.add_locations(curr_x, addx)
+                val = self.track._check_collision_hidden(x_search)
+                i += 1
+            ran.val = (i - 1) * dx # sets the last distance before collision 
+                
 
 
 class TrackData(ls.Path):
@@ -177,9 +201,6 @@ class TrackData(ls.Path):
         if x[1] < b[1] or x[1] > b[3]:
             msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
             ret = 1
-        # if ret == 1:
-            # print(msg)
-            # self.logger.info(msg)
         return ret
 
     def _check_path_collision(self, x0, x1):
@@ -205,6 +226,24 @@ class TrackData(ls.Path):
 
     def add_hidden_obstacle(self, obs):
         self.hidden_obstacles.append(obs)
+
+    def get_ranges(self, x, th):
+        # x is location, th is orientation 
+        # given a range it determine the distance to each object 
+        b = self.boundary
+        ret = 0
+        for i, o in enumerate(self.obstacles):
+            if o[0] < x[0] < o[2]:
+                if o[1] < x[1] < o[3]:
+                    msg = "Obstacle collision %d --> x: %d;%d"%(i, x[0],x[1])
+                    ret = 1
+        if x[0] < b[0] or x[0] > b[2]:
+            msg = "X wall collision --> x: %d, b:%d;%d"%(x[0], b[0], b[2])
+            ret = 1
+        if x[1] < b[1] or x[1] > b[3]:
+            msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
+            ret = 1
+        return ret
 
 
 class CarModel:
@@ -232,7 +271,7 @@ class CarModel:
 
         state.update_sense_offsets(state.theta)
            
-    def chech_new_state(self, state, action, dt=1):
+    def chech_new_state(self, state, action, dt):
         x = [0.0, 0.0]
         a = action[0]
         th = action[1]
@@ -241,6 +280,7 @@ class CarModel:
         r = v * dt
         x[0] = r * np.sin(th) + state.x[0]
         x[1] = - r * np.cos(th) + state.x[1]
+        # print(x)
         return x
 
 

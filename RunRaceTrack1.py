@@ -62,8 +62,8 @@ def standard_car(myCar):
 
 def run_sim():
     myTrack = TrackEnv1.TrackData()
-    straight_track(myTrack)
-    # single_corner(myTrack)
+    # straight_track(myTrack)
+    single_corner(myTrack)
     # simple_maze(myTrack)
     # diag_path(myTrack)
 
@@ -71,7 +71,8 @@ def run_sim():
     standard_car(myCar)
 
     mySim = tts.RacingSimulation(myTrack, myCar)
-    mySim.run_learning_sim(200)
+    mySim.run_standard_simulation()
+    # mySim.run_learning_sim(10)
 
     
 if __name__ == "__main__":

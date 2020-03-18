@@ -33,21 +33,21 @@ class RacingSimulation:
         self.player = None
         self.ep_mem = None
 
-
     def run_control(self):
         self.controller.run_control()
         self.ep_mem = self.env.sim_mem
          # ep_mem.print_ep()
 
     def show_simulation(self):
-        self.player = TrackInterfac.ShowInterface(self.track)
+        self.player = TrackInterfac.ShowInterface(self.track, 100)
         # myPlayer.show_route()
 
         self.player.run_replay(self.ep_mem)
 
-    def run_simulation(self):
+    def run_standard_simulation(self):
         self.path_planner.plan_path()
-        self.run_control()
+        self.controller.run_standard_control()
+        self.ep_mem = self.env.sim_mem
         self.show_simulation()
 
     def run_learning_sim(self, episodes):
@@ -56,7 +56,18 @@ class RacingSimulation:
             print("Episode: %d"%i)
             self.controller.run_control()
 
+        # self.controller.agent_q.save_q_table()
+        # self.controller.agent_q.load_q_table()
+        print(self.controller.agent_q.q_table)
+        self.ep_mem = self.env.get_ep_mem()
+        self.show_simulation()
+
+    def show_sim(self):
+        self.path_planner.plan_path()
+        self.controller.agent_q.load_q_table()
+        self.controller.run_control()
         print(self.controller.agent_q.q_table)
         self.ep_mem = self.env.sim_mem
         self.show_simulation()
+
 

@@ -22,6 +22,7 @@ class Interface:
         self.step_q = mp.Queue()
         self.node_q = mp.Queue()
         self.sense_blocks = []
+        self.range_lines = []
         self.prev_px = [0, 0]
 
         self.setup_window()  
@@ -129,6 +130,7 @@ class Interface:
         self.get_step_info()
         self.update_position()
         self.draw_nodes()
+        self.draw_ranges()
         self.update_info()
         self.root.after(self.dt, self.run_interface_loop)
 
@@ -186,6 +188,9 @@ class Interface:
 
     def get_step_info(self):
         self.step_i = self.step_q.get()
+        if self.step_i.env_state.done is True:
+            print("Going to destroy tk inter")
+            self.root.destroy()
         # self.step_i.print_step()
         
     def show_map(self):
@@ -199,6 +204,21 @@ class Interface:
 
         self.root.mainloop()
 
+    def draw_ranges(self):
+        for obj in self.range_lines: # deletes old lines
+            self.canv.delete(obj)
+
+        x_scale = self._scale_input(self.step_i.car_state.x)
+        for ran in self.step_i.car_state.ranges:
+            th = ran.angle + self.step_i.car_state.theta
+            dx = [ran.val * np.sin(th), - ran.val * np.cos(th)]
+            x1 = f.add_locations(dx, self.step_i.car_state.x)
+
+            node = self._scale_input(x1)
+
+            l = self.canv.create_line(x_scale, node)
+            self.canv.pack()
+            self.range_lines.append(l)
 
 
 
@@ -218,9 +238,10 @@ class ShowInterface:
             # step.print_step()
             self.interface.step_q.put(step)
 
-        root = mp.Process(target=self.interface.setup_root)
-        root.start()
-        time.sleep(10)
+        self.interface.setup_root()
+        # root = mp.Process(target=self.interface.setup_root)
+        # root.start()
+        # time.sleep(10)
 
     def show_route(self):
         root = mp.Process(target=self.interface.show_map)

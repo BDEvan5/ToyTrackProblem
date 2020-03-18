@@ -19,6 +19,7 @@ class WayPoint:
     def print_point(self):
         print("X: " + str(self.x) + " -> v: " + str(self.v) + " -> theta: " +str(self.theta))
 
+
 class Path:
     def __init__(self):
         self.route = []
@@ -83,24 +84,40 @@ class Sensing:
 
 
 class SingleRange:
-    def __init__(self):
-        distance_to_wall = 0
+    def __init__(self, angle):
+        self.val = 0 # distance to wall
+        self.angle = angle
 
-class Ranger:
+class Ranging:
     def __init__(self, n):
         self.n = n
         self.ranges = []
 
+        dth = np.pi / n
+
         for i in range(n):
-            ran = SingleRange()
+            ran = SingleRange(dth * i - np.pi/2)
             self.ranges.append(ran)
 
+    def get_range_observation(self):
+        obs = np.zeros(self.n)
+        for i, ran in enumerate(self.ranges):
+            obs[i] = ran.val
+        
+        return obs # should be a list of ranges
+
+    def print_ranges(self):
+        obs = self.get_range_observation
+        print(obs)
 
 
-class CarState(WayPoint, Sensing):
+
+
+class CarState(WayPoint, Sensing, Ranging):
     def __init__(self, n=10):
         WayPoint.__init__(self)
         Sensing.__init__(self, n)
+        Ranging.__init__(self, n)
         self.car = None
 
     def set_sense_locations(self, dx):
@@ -121,6 +138,7 @@ class EnvState:
 class SimulationState():
     def __init__(self):
         self.car_state = CarState()
+        self.env_state = EnvState()
         self.step = 0
 
     def _add_car_state(self, car_state):
