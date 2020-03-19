@@ -124,23 +124,25 @@ class RaceEnv:
         return new_x
 
     def get_ep_mem(self):
-        self.sim_mem.print_ep()
+        # self.sim_mem.print_ep()
         return self.sim_mem
 
     def _update_ranges(self):
         dx = 5 # search size
         curr_x = self.car_state.x
-        th = self.car_state.theta
+        th_car = self.car_state.theta
         for ran in self.car_state.ranges:
-            val = 0
+            th = th_car + ran.angle
+            crash_val = 0
             i = 0
-            while val == 0:
-                addx = [dx * i + np.sin(th), -dx * i * np.cos(th)] # check
+            while crash_val == 0:
+                r = dx * i
+                addx = [dx * i * np.sin(th), -dx * i * np.cos(th)] # check
                 x_search = f.add_locations(curr_x, addx)
-                val = self.track._check_collision_hidden(x_search)
+                crash_val = self.track._check_collision_hidden(x_search)
                 i += 1
-            ran.val = (i - 1) * dx # sets the last distance before collision 
-                
+            ran.val = (i - 2) * dx # sets the last distance before collision 
+        # self.car_state.print_ranges()
 
 
 class TrackData(ls.Path):

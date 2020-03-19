@@ -216,7 +216,7 @@ class Interface:
 
             node = self._scale_input(x1)
 
-            l = self.canv.create_line(x_scale, node)
+            l = self.canv.create_line(x_scale, node, fill='red', width=4)
             self.canv.pack()
             self.range_lines.append(l)
 
@@ -224,7 +224,7 @@ class Interface:
 
 
 class ShowInterface:
-    def __init__(self, track, dt=25):
+    def __init__(self, track, dt):
         self.ep = None
         self.interface = Interface(track, dt)
         self.dt = dt

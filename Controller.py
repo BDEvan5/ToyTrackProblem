@@ -28,6 +28,7 @@ class Controller:
                 break # it crashed
 
     def run_standard_control(self):
+        # this is with no rl
         self.state = self.env.reset()
         for w_pt in self.env.track.route: # steps through way points
             i = 0
@@ -37,10 +38,11 @@ class Controller:
                 break # it crashed
 
     def standard_control(self, wp):
+        # no rl for testing
         i = 0
         max_steps = 100
 
-        while not self.at_target(wp) and i < max_steps: #keeps going till at each pt
+        while not self._check_if_at_target(wp) and i < max_steps: #keeps going till at each pt
             
             action = self.control_sys.get_controlled_action(self.state, wp)
             next_state, reward, done = self.env.step(action)
@@ -58,7 +60,7 @@ class Controller:
         i = 0
         max_steps = 100
 
-        while not self.at_target(wp) and i < max_steps: #keeps going till at each pt
+        while not self._check_if_at_target(wp) and i < max_steps: #keeps going till at each pt
             
             action = self.control_sys.get_controlled_action(self.state, wp)
             agent_action = self.check_action_rl(action)
@@ -74,11 +76,10 @@ class Controller:
             self.state = next_state
             if done:
                 return False
-                # break
             i+=1 
         return True # got to wp
 
-    def at_target(self, wp):
+    def _check_if_at_target(self, wp):
         way_point_dis = f.get_distance(self.state.x, wp.x)
         # print(way_point_dis)
         if way_point_dis < 2:
@@ -201,7 +202,8 @@ class AgentQ:
         next_obs_n = self._convert_obs(next_obs)
         action_slice = self.q_table[next_obs_n,:]
         update_val = self.q_table[obs_n, action] * (1-self.learning_rate) + \
-            self.learning_rate * (reward + self.discount_rate * np.argmax(action_slice))
+            self.learning_rate * (reward + self.discount_rate * np.max(action_slice))
+        # I am changing this to max, not arg max
 
         self.q_table[obs_n, action] = update_val
 

@@ -107,7 +107,7 @@ class Ranging:
         return obs # should be a list of ranges
 
     def print_ranges(self):
-        obs = self.get_range_observation
+        obs = self.get_range_observation()
         print(obs)
 
 
