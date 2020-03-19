@@ -12,7 +12,7 @@ from copy import deepcopy
 
 
 class RaceEnv:
-    def __init__(self, track, car, logger, dx=5, sense_dis=15):
+    def __init__(self, track, car, logger, dx=5, sense_dis=25):
         self.dx = dx # this is how close it must be to stop
         self.ds = sense_dis # this is how far the sensor can look ahead
         self.logger = logger
@@ -56,7 +56,7 @@ class RaceEnv:
     def get_new_action(self, agent_action, con_action):
         theta_swerve = 0.8
         # interpret action
-        dr = -20
+        dr = 1
         if agent_action == 1: # stay in the centre
             dr = 0
             action = con_action
@@ -101,10 +101,13 @@ class RaceEnv:
         beta = 0.01
         if coll_flag:
             reward = -50
+        elif self.env_state.done:
+            reward = 50
         else:
             reward = (100 - dis) * beta
 
-        reward += dr
+        swerve_cost = -0.0
+        reward += dr * swerve_cost
 
         self.env_state.distance_to_target = dis
         self.env_state.reward = reward

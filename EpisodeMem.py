@@ -1,11 +1,13 @@
 from copy import deepcopy
 import logging
 import LocationState as ls
-
+import pickle
+import datetime
+import os
 
 
 class SimMem:
-    def __init__(self, logger):
+    def __init__(self, logger=None):
         self.steps = []
         self.logger = logger
 
@@ -33,3 +35,22 @@ class SimMem:
     def print_ep(self):
         for i, step in enumerate(self.steps):
             step.print_step(i)
+
+    def save_ep(self):
+        save_file_name = "Documents/ToyTrackProblem/Last_ep" # + str(datetime.datetime.now())
+        
+        os.remove(save_file_name)
+        
+        s_file = open(save_file_name, 'ab')
+
+        pickle.dump(self.steps, s_file)
+
+        s_file.close()
+
+    def load_ep(self):
+        save_file_name = "Documents/ToyTrackProblem/Last_ep"
+        s_file = open(save_file_name, 'rb')
+
+        self.steps = pickle.load(s_file)
+
+        s_file.close()

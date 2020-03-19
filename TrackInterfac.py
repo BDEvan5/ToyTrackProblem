@@ -128,11 +128,15 @@ class Interface:
 
     def run_interface_loop(self):
         self.get_step_info()
-        self.update_position()
-        self.draw_nodes()
-        self.draw_ranges()
-        self.update_info()
-        self.root.after(self.dt, self.run_interface_loop)
+        if self.step_i.env_state.done is False:
+            self.update_position()
+            self.draw_nodes()
+            self.draw_ranges()
+            self.update_info()
+            self.root.after(self.dt, self.run_interface_loop)
+        else:
+            print("Going to destroy tk inter")
+            self.root.destroy()
 
     def _scale_input(self, x_in):
         x_out = [0, 0] # this creates same size vector
@@ -145,8 +149,8 @@ class Interface:
         # print("Current: " + str(current_pos) + " -> Prev: " + str(self.prev_px))
 
         px = f.sub_locations(current_pos, self.prev_px)
-        self.canv.move(self.o, px[0], px[1])
 
+        self.canv.move(self.o, px[0], px[1])
         self.canv.create_line(self.prev_px, current_pos, fill='purple')
 
         self.prev_px = current_pos
@@ -188,9 +192,8 @@ class Interface:
 
     def get_step_info(self):
         self.step_i = self.step_q.get()
-        if self.step_i.env_state.done is True:
-            print("Going to destroy tk inter")
-            self.root.destroy()
+        
+
         # self.step_i.print_step()
         
     def show_map(self):
@@ -249,6 +252,7 @@ class ShowInterface:
         time.sleep(10)
         root.terminate()
 
+    
 
         
 

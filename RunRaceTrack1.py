@@ -7,7 +7,8 @@ def straight_track(myTrack):
     end_location = [50.0, 15.0]
     o1 = (0, 0, 30, 100)
     o2 = (70, 0, 100, 100)
-    o3 = (35, 60, 51, 62)
+    o3 = (35, 60, 52, 70)
+    o4 = (48, 30, 65, 40)
     b = (1, 1, 99, 99)
 
     myTrack.add_locations(start_location, end_location)
@@ -15,6 +16,7 @@ def straight_track(myTrack):
     myTrack.add_obstacle(o1)
     myTrack.add_obstacle(o2)
     myTrack.add_hidden_obstacle(o3)
+    myTrack.add_hidden_obstacle(o4)
 
 def single_corner(myTrack):
     start_location = [80.0, 95.0]
@@ -72,7 +74,12 @@ def run_sim():
 
     mySim = tts.RacingSimulation(myTrack, myCar)
     # mySim.run_standard_simulation()
-    mySim.run_learning_sim(100)
+    mySim.run_learning_sim(400)
+    # mySim.run_learning_sim(1)
+    
+    myPlay = tts.ReplayEp(myTrack)
+    # myPlay.replay()
+
 
     
 if __name__ == "__main__":

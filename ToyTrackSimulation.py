@@ -30,7 +30,8 @@ class RacingSimulation:
 
         self.path_planner = PathPlanner.PathPlanner(self.track, self.car, self.logger)
         self.env = TrackEnv1.RaceEnv(self.track, self.car, self.logger)
-        self.agent = LearningAgent.AgentQ(3, 5)
+        # self.agent = LearningAgent.AgentQ(3, 5)
+        self.agent = LearningAgent.AgentLamTD(3, 5)
         
 
         self.player = None
@@ -53,12 +54,13 @@ class RacingSimulation:
             print("Episode: %d -> Reward: %d"%(i, ep_reward))
 
             self.rewards.append(np.min([ep_reward, max_allow_reward]))
-
-        self.plot_rewards()
+        
+        self.env.sim_mem.save_ep()
 
         print(self.agent.q_table)
         self.ep_mem = self.env.get_ep_mem()
         self.show_simulation()
+        self.plot_rewards()
 
     def run_episode(self):
         # this is the code to run a single episode
@@ -66,6 +68,8 @@ class RacingSimulation:
         ep_reward = 0
 
         car_state = self.env.reset()
+        self.agent.reset_agent()
+        self.agent.print_params()
         for i in range(max_steps):
             obs = car_state.get_sense_observation()
             agent_action = self.agent.get_action(obs)
@@ -73,6 +77,7 @@ class RacingSimulation:
             next_state, reward, done = self.env.step(agent_action)
 
             ep_reward += reward
+            # print(obs)
             next_obs = next_state.get_sense_observation()
             self.agent.update_q_table(obs, agent_action, reward, next_obs)
 
@@ -94,4 +99,14 @@ class RacingSimulation:
         self.player = TrackInterfac.ShowInterface(self.track, 100)
         self.player.run_replay(self.ep_mem)
 
+
+class ReplayEp:
+    def __init__(self, track):
+        self.player = TrackInterfac.ShowInterface(track, 50)
+        self.ep_history = EpisodeMem.SimMem()
+
+
+    def replay(self):
+        self.ep_history.load_ep()
+        self.player.run_replay(self.ep_history)
 

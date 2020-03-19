@@ -13,7 +13,7 @@ class PathPlanner:
         self.path_finder = A_StarPathFinder(track, logger)
 
     def plan_path(self):
-        self.path_finder.run_search(20)
+        self.path_finder.run_search(40)
         self.smooth_track()
         self.add_velocity()
 
