@@ -67,17 +67,18 @@ class RaceEnv:
         self._update_senses()
         self.reward = 0
         self.sim_mem.steps.clear()
-        print("Mem cleared" + str(self.sim_mem.steps))
         return self.car_state
 
     def _get_reward(self, coll_flag):
         dis = f.get_distance(self.car_state.x, self.track.end_location) 
 
         reward = 0 # reward increases as distance decreases
+        beta = 0.1
         if coll_flag:
             reward = -50
-        # if self.env_state.done:
-        #     reward = 50
+        else:
+            reward = (100 - dis) * beta
+
 
         self.env_state.distance_to_target = dis
         self.env_state.reward = reward

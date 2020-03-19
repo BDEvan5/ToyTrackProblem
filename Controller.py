@@ -19,22 +19,28 @@ class Controller:
 
     def run_control(self):
         self.state = self.env.reset()
+        ep_reward = 0
         for w_pt in self.env.track.route: # steps through way points
             i = 0
-            ret = self.control_to_wp(w_pt)
+
+            ret, wp_reward = self.control_to_wp(w_pt)
+            ep_reward += wp_reward
 
             if not ret:
-                print("Episode finished due to crash")
+                print("Episode finished due to crash: " + str(ep_reward))
                 break # it crashed
+        return ep_reward
 
     def run_standard_control(self):
         # this is with no rl
         self.state = self.env.reset()
+        ep_reward = 0
         for w_pt in self.env.track.route: # steps through way points
             i = 0
-            ret = self.standard_control(w_pt)
-
+            ret, wp_reward = self.standard_control(w_pt)
+            ep_reward += wp_reward
             if not ret:
+                print(ep_reward)
                 break # it crashed
 
     def standard_control(self, wp):
@@ -59,7 +65,7 @@ class Controller:
     def control_to_wp(self, wp):
         i = 0
         max_steps = 100
-
+        wp_reward = 0
         while not self._check_if_at_target(wp) and i < max_steps: #keeps going till at each pt
             
             action = self.control_sys.get_controlled_action(self.state, wp)
@@ -69,15 +75,16 @@ class Controller:
             next_state, reward, done = self.env.step(action)
 
             reward += dr
+            wp_reward += reward
             obs = self.state.get_sense_observation()
             next_obs = next_state.get_sense_observation()
             self.agent_q.update_q_table(obs, agent_action, reward, next_obs)
 
             self.state = next_state
             if done:
-                return False
+                return False, wp_reward
             i+=1 
-        return True # got to wp
+        return True, wp_reward # got to wp
 
     def _check_if_at_target(self, wp):
         way_point_dis = f.get_distance(self.state.x, wp.x)
@@ -101,11 +108,11 @@ class Controller:
             return action, dr 
         if agent_action == 0: # swerve left
             action = [action[0], action[1] - theta_swerve]
-            print("Swerving left")
+            # print("Swerving left")
             return action, dr
         if agent_action == 2: # swerve right
             action = [action[0], action[1] + theta_swerve]
-            print("Swerving right")
+            # print("Swerving right")
             return action, dr
 
 
@@ -182,7 +189,7 @@ class AgentQ:
         exploration_rate_threshold = random.uniform(0, 1)
         if exploration_rate_threshold > self.exploration_rate:            # print(q_table_avg)
             obs_n = self._convert_obs(observation)
-            action_slice = self.q_table[0, :]
+            action_slice = self.q_table[obs_n, :]
             action = np.argmax(action_slice) # select row for argmax
         else:
             action = random.randint(0, 2)
@@ -200,10 +207,9 @@ class AgentQ:
     def update_q_table(self, obs, action, reward, next_obs):
         obs_n = self._convert_obs(obs)
         next_obs_n = self._convert_obs(next_obs)
-        action_slice = self.q_table[next_obs_n,:]
+        q_s_prime = self.q_table[next_obs_n,:]
         update_val = self.q_table[obs_n, action] * (1-self.learning_rate) + \
-            self.learning_rate * (reward + self.discount_rate * np.max(action_slice))
-        # I am changing this to max, not arg max
+            self.learning_rate * (reward + self.discount_rate * np.max(q_s_prime))
 
         self.q_table[obs_n, action] = update_val
 
@@ -212,8 +218,6 @@ class AgentQ:
                 np.exp(-self.exploration_decay_rate * self.step_counter)
         self.step_counter += 1
 
-        # update exploration decay rate
-        # code to come here when move away from greedy
 
     def save_q_table(self):
         file_location = 'Documents/ToyTrackProblem/'
@@ -225,6 +229,8 @@ class AgentQ:
         print("Loaded Q table")
         self.q_table = np.load('agent_q_table.npy')
 
-
+    def print_q(self):
+        q = np.around(self.q_table, 3)
+        print(q)
 
 

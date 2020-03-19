@@ -1,4 +1,5 @@
 import numpy as np 
+from matplotlib import pyplot as plt
 
 import TrackEnv1
 # import RL_controller
@@ -33,6 +34,8 @@ class RacingSimulation:
         self.player = None
         self.ep_mem = None
 
+        self.rewards = []
+
     def run_control(self):
         self.controller.run_control()
         self.ep_mem = self.env.sim_mem
@@ -52,12 +55,14 @@ class RacingSimulation:
 
     def run_learning_sim(self, episodes):
         self.path_planner.plan_path()
+        max_allow_reward = 500
         for i in range(episodes):
             print("Episode: %d"%i)
-            self.controller.run_control()
+            ep_reward = self.controller.run_control()
+            self.rewards.append(np.min([ep_reward, max_allow_reward]))
 
-        # self.controller.agent_q.save_q_table()
-        # self.controller.agent_q.load_q_table()
+        self.plot_rewards()
+
         print(self.controller.agent_q.q_table)
         self.ep_mem = self.env.get_ep_mem()
         self.show_simulation()
@@ -70,4 +75,8 @@ class RacingSimulation:
         self.ep_mem = self.env.sim_mem
         self.show_simulation()
 
-
+    def plot_rewards(self):
+        i = range(len(self.rewards))
+        # print(self.rewards)
+        plt.plot(i, self.rewards)
+        plt.show()

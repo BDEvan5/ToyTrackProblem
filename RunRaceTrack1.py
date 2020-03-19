@@ -7,7 +7,7 @@ def straight_track(myTrack):
     end_location = [50.0, 15.0]
     o1 = (0, 0, 30, 100)
     o2 = (70, 0, 100, 100)
-    o3 = (35, 80, 52, 85)
+    o3 = (35, 60, 51, 62)
     b = (1, 1, 99, 99)
 
     myTrack.add_locations(start_location, end_location)
@@ -72,7 +72,7 @@ def run_sim():
 
     mySim = tts.RacingSimulation(myTrack, myCar)
     # mySim.run_standard_simulation()
-    mySim.run_learning_sim(10)
+    mySim.run_learning_sim(1000)
 
     
 if __name__ == "__main__":
