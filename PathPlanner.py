@@ -72,10 +72,6 @@ class PathPlanner:
 
 
 
-
-            
-
-
 class A_StarPathFinder:
     def __init__(self, track, logger):
         # ds is the search size around the current node

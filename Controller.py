@@ -27,7 +27,7 @@ class Controller:
             ep_reward += wp_reward
 
             if not ret:
-                print("Episode finished due to crash: " + str(ep_reward))
+                print("Episode finished : " + str(ep_reward))
                 break # it crashed
         return ep_reward
 
@@ -41,7 +41,7 @@ class Controller:
             ep_reward += wp_reward
             if not ret:
                 print(ep_reward)
-                break # it crashed
+                break # it crashed or
 
     def standard_control(self, wp):
         # no rl for testing
@@ -116,121 +116,5 @@ class Controller:
             return action, dr
 
 
-class ControlSystem:
-    def __init__(self):
-        self.k_th_ref = 0.1 # amount to favour v direction
-
-    def get_controlled_action(self, state, wp):
-        x_ref = wp.x 
-        v_ref = wp.v 
-        th_ref = wp.theta
-
-        # run v control
-        e_v = v_ref - state.v # error for controler
-        a = self._acc_control(e_v)
-
-        # run th control
-        x_ref_th = self._get_xref_th(state.x, x_ref)
-        e_th = th_ref * self.k_th_ref + x_ref_th * (1- self.k_th_ref) # no feedback
-        th = self._th_controll(e_th)
-
-        action = [a, th]
-        return action
-
-    def _acc_control(self, e_v):
-        # this function is the actual controller
-        k = 0.15
-        return k * e_v
-
-    def _th_controll(self, e_th):
-        # theta controller to come here when dth!= th
-        return e_th
-
-    def _get_xref_th(self, x1, x2):
-        dx = x2[0] - x1[0]
-        dy = x2[1] - x1[1]
-        # self.logger.debug("x1: " + str(x1) + " x2: " + str(x2))
-        # self.logger.debug("dxdy: %d, %d" %(dx,dy))
-        if dy != 0:
-            ret = np.abs(np.arctan(dx / dy))
-        else:
-            ret = np.pi / 2
-
-        # sort out the sin
-        sign = 1
-        if dx < 0:
-            sign = -1
-        if dy > 0: # dy is opposite to normal
-            ret = np.pi - np.abs(ret)
-        return ret * sign
-
-
-class AgentQ:
-    def __init__(self, action_space, sensors_n):
-        self.n_sensors = sensors_n
-
-        obs_space = 2 ** sensors_n
-        self.q_table = np.zeros((obs_space, action_space))
-
-        self.learning_rate = 0.1
-        self.discount_rate = 0.99
-
-        self.exploration_rate = 1
-        self.max_exploration_rate = 1
-        self.min_exploration_rate = 0.01
-        self.exploration_decay_rate = 0.005
-
-        self.step_counter = 0
-
-    def get_action(self, observation):
-        #observation is the sensor data 
-        action_space = 3
-
-        exploration_rate_threshold = random.uniform(0, 1)
-        if exploration_rate_threshold > self.exploration_rate:            # print(q_table_avg)
-            obs_n = self._convert_obs(observation)
-            action_slice = self.q_table[obs_n, :]
-            action = np.argmax(action_slice) # select row for argmax
-        else:
-            action = random.randint(0, 2)
-
-        return action # should be a number from 0-2
-
-    def _convert_obs(self, observation):
-        # converts from sensor 1 or 0 to a state number
-        # 1101 --> 13
-        obs_n = 0
-        for i in range(len(observation)-1): #last sense doesn't work
-            obs_n += observation[i] * (2**i)
-        return int(obs_n)
-
-    def update_q_table(self, obs, action, reward, next_obs):
-        obs_n = self._convert_obs(obs)
-        next_obs_n = self._convert_obs(next_obs)
-        q_s_prime = self.q_table[next_obs_n,:]
-        update_val = self.q_table[obs_n, action] * (1-self.learning_rate) + \
-            self.learning_rate * (reward + self.discount_rate * np.max(q_s_prime))
-
-        self.q_table[obs_n, action] = update_val
-
-        self.exploration_rate = self.min_exploration_rate + \
-                (self.max_exploration_rate - self.min_exploration_rate) * \
-                np.exp(-self.exploration_decay_rate * self.step_counter)
-        self.step_counter += 1
-
-
-    def save_q_table(self):
-        file_location = 'Documents/ToyTrackProblem/'
-        np.save(file_location + 'agent_q_table.npy', self.q_table)
-        
-        self.exploration_rate = self.min_exploration_rate
-
-    def load_q_table(self):
-        print("Loaded Q table")
-        self.q_table = np.load('agent_q_table.npy')
-
-    def print_q(self):
-        q = np.around(self.q_table, 3)
-        print(q)
 
 

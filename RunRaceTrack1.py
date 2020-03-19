@@ -72,7 +72,7 @@ def run_sim():
 
     mySim = tts.RacingSimulation(myTrack, myCar)
     # mySim.run_standard_simulation()
-    mySim.run_learning_sim(1000)
+    mySim.run_learning_sim(100)
 
     
 if __name__ == "__main__":

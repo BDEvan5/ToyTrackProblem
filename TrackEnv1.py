@@ -12,7 +12,7 @@ from copy import deepcopy
 
 
 class RaceEnv:
-    def __init__(self, track, car, logger, dx=5, sense_dis=8):
+    def __init__(self, track, car, logger, dx=5, sense_dis=15):
         self.dx = dx # this is how close it must be to stop
         self.ds = sense_dis # this is how far the sensor can look ahead
         self.logger = logger
@@ -26,8 +26,17 @@ class RaceEnv:
         self.env_state = ls.EnvState()
         self.car = car
         self.sim_mem = em.SimMem(self.logger)
+        self.c_sys = ControlSystem()
+        self.wp = ls.WayPoint()
+        self.wp_n = 1
 
-    def step(self, action):
+    def step(self, agent_action):
+        wp = self.track.route[self.wp_n]
+        control_action = self.c_sys.get_controlled_action(self.car_state, wp)
+        action, dr = self.get_new_action(agent_action, control_action)
+        # print("Control step: " + str(control_action))
+        # print("agent: " + str(agent_action))
+        # print("Action: "  + str(action))
         new_x = self.car.chech_new_state(self.car_state, action, self.dt)
         coll_flag = self.track._check_collision_hidden(new_x)
 
@@ -36,13 +45,28 @@ class RaceEnv:
 
         self._update_senses()
         self.env_state.done = self._check_done(coll_flag)
-        self._get_reward(coll_flag)
+        self._get_reward(coll_flag, dr)
         self._update_ranges()
         self.env_state.action = action
 
         self.sim_mem.add_step(self.car_state, self.env_state)
 
         return self.car_state, self.env_state.reward, self.env_state.done
+
+    def get_new_action(self, agent_action, con_action):
+        theta_swerve = 0.8
+        # interpret action
+        dr = -20
+        if agent_action == 1: # stay in the centre
+            dr = 0
+            action = con_action
+        elif agent_action == 0: # swerve left
+            action = [con_action[0], con_action[1] - theta_swerve]
+            # print("Swerving left")
+        elif agent_action == 2: # swerve right
+            action = [con_action[0], con_action[1] + theta_swerve]
+            # print("Swerving right")
+        return action, dr
 
     def control_step(self, action):
         new_x = self.car.chech_new_state(self.car_state, action)
@@ -67,32 +91,43 @@ class RaceEnv:
         self._update_senses()
         self.reward = 0
         self.sim_mem.steps.clear()
+        self.wp_n = 1
         return self.car_state
 
-    def _get_reward(self, coll_flag):
+    def _get_reward(self, coll_flag, dr):
         dis = f.get_distance(self.car_state.x, self.track.end_location) 
 
         reward = 0 # reward increases as distance decreases
-        beta = 0.1
+        beta = 0.01
         if coll_flag:
             reward = -50
         else:
             reward = (100 - dis) * beta
 
+        reward += dr
 
         self.env_state.distance_to_target = dis
         self.env_state.reward = reward
 
     def _check_done(self, coll_flag):
-        dis = f.get_distance(self.track.end_location, self.car_state.x)
-
+        # check colision is end
         if coll_flag:
             print("Ended in collision")
             return True
 
+        # if no collision, check end
+        dis = f.get_distance(self.track.end_location, self.car_state.x)
         if dis < self.dx:
             print("Final distance is: %d" % dis)
             return True
+        
+        # if not end, then update wp if needed
+        wp = self.track.route[self.wp_n]
+        wp_dis = f.get_distance(wp.x, self.car_state.x)
+        if wp_dis < (self.dx/2):
+            # print("Updating Wp")
+            self.wp_n += 1
+
         return False
 
     def _update_senses(self):
@@ -285,5 +320,55 @@ class CarModel:
         x[1] = - r * np.cos(th) + state.x[1]
         # print(x)
         return x
+
+
+class ControlSystem:
+    def __init__(self):
+        self.k_th_ref = 0.1 # amount to favour v direction
+
+    def get_controlled_action(self, state, wp):
+        # print(wp.x + state.x)
+        x_ref = wp.x 
+        v_ref = wp.v 
+        th_ref = wp.theta
+
+        # run v control
+        e_v = v_ref - state.v # error for controler
+        a = self._acc_control(e_v)
+
+        # run th control
+        x_ref_th = self._get_xref_th(state.x, x_ref)
+        e_th = th_ref * self.k_th_ref + x_ref_th * (1- self.k_th_ref) # no feedback
+        th = self._th_controll(e_th)
+
+        action = [a, th]
+        return action
+
+    def _acc_control(self, e_v):
+        # this function is the actual controller
+        k = 0.15
+        return k * e_v
+
+    def _th_controll(self, e_th):
+        # theta controller to come here when dth!= th
+        return e_th
+
+    def _get_xref_th(self, x1, x2):
+        dx = x2[0] - x1[0]
+        dy = x2[1] - x1[1]
+        # self.logger.debug("x1: " + str(x1) + " x2: " + str(x2))
+        # self.logger.debug("dxdy: %d, %d" %(dx,dy))
+        if dy != 0:
+            ret = np.abs(np.arctan(dx / dy))
+        else:
+            ret = np.pi / 2
+
+        # sort out the sin
+        sign = 1
+        if dx < 0:
+            sign = -1
+        if dy > 0: # dy is opposite to normal
+            ret = np.pi - np.abs(ret)
+        return ret * sign
 
 
