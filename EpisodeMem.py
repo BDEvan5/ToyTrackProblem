@@ -40,6 +40,7 @@ class SimMem:
         save_file_name = "Documents/ToyTrackProblem/"  + f_name # + str(datetime.datetime.now())
         
         if os.path.exists(save_file_name):
+            print("Old file removed")
             os.remove(save_file_name)
         
         s_file = open(save_file_name, 'ab')

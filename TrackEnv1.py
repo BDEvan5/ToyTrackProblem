@@ -19,10 +19,10 @@ class RaceEnv:
         self.track = track
         self.dt = 0.5 # update frequency
 
-        self.state_space = 2
-        self.action_space = 5
+        self.state_space = 5
+        self.action_space = 3
 
-        self.car_state = ls.CarState(self.action_space)
+        self.car_state = ls.CarState(self.state_space)
         self.env_state = ls.EnvState()
         self.car = car
         self.sim_mem = em.SimMem(self.logger)
@@ -56,32 +56,30 @@ class RaceEnv:
     def get_new_action(self, agent_action, con_action):
         theta_swerve = 0.8
         # interpret action
-        dr = 1
-        if agent_action == 1: # stay in the centre
-            dr = 0
-            action = con_action
-        elif agent_action == 0: # swerve left
-            action = [con_action[0], con_action[1] - theta_swerve]
+        # 0-m : left 
+        # m - straight
+        # m-n : right
+        agent_action += 1 # takes start from zero to 1
+
+        n_actions_side = (self.action_space -1)/2
+        m = n_actions_side + 1
+
+        if agent_action < m: # swerve left
+            swerve = agent_action / n_actions_side * theta_swerve
+            action = [con_action[0], con_action[1] -  swerve]
+            dr = 1
             # print("Swerving left")
-        elif agent_action == 2: # swerve right
-            action = [con_action[0], con_action[1] + theta_swerve]
+        elif agent_action == m: # stay in the centre
+            dr = 0
+            swerve = 0
+            action = con_action
+        elif agent_action > m: # swerve right
+            swerve = (agent_action - m) / n_actions_side * theta_swerve
+            action = [con_action[0], con_action[1] + swerve]
+            dr = 1
             # print("Swerving right")
+        # print(swerve)
         return action, dr
-
-    def control_step(self, action):
-        new_x = self.car.chech_new_state(self.car_state, action)
-        coll_flag = self.track._check_collision_hidden(new_x)
-
-        if not coll_flag: # no collsions
-            self.car.update_controlled_state(self.car_state, action, self.dt)
-
-        self._update_senses()
-        self.env_state.done = self._check_done()
-        self.env_state.action = action
-
-        self.sim_mem.add_step(self.car_state, self.env_state)
-
-        return self.car_state, self.env_state.done
 
     def reset(self):
         # resets to starting location
@@ -100,7 +98,7 @@ class RaceEnv:
         reward = 0 # reward increases as distance decreases
         
         beta = 0.01
-        swerve_cost = 0.5
+        swerve_cost = 0.0
         crash_cost = 50
 
         if coll_flag:
@@ -352,7 +350,7 @@ class ControlSystem:
 
     def _acc_control(self, e_v):
         # this function is the actual controller
-        k = 0.15
+        k = 0.25
         return k * e_v
 
     def _th_controll(self, e_th):

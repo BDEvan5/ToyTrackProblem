@@ -78,14 +78,14 @@ class AgentLamTD:
         self.q_table = np.zeros((self.obs_space, action_space))
         self.E = np.zeros((self.obs_space, action_space))
 
-        self.learning_rate = 0.1
+        self.learning_rate = 0.05
         self.discount_rate = 0.99
 
         self.exploration_rate = 1
         self.max_exploration_rate = 1
         self.min_exploration_rate = 0.05
         self.exploration_decay_rate = 0.0009
-        self.lam = 0.2
+        self.lam = 0.5
 
         self.step_counter = 0
 
@@ -98,7 +98,7 @@ class AgentLamTD:
             action_slice = self.q_table[obs_n, :]
             action = np.argmax(action_slice) # select row for argmax
         else:
-            action = random.randint(0, 2)
+            action = random.randint(0, self.action_space-1)
 
         return action # should be a number from 0-2
 

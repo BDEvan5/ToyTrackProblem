@@ -31,8 +31,9 @@ class RacingSimulation:
         self.path_planner = PathPlanner.PathPlanner(self.track, self.car, self.logger)
         self.env = TrackEnv1.RaceEnv(self.track, self.car, self.logger)
         # self.agent = LearningAgent.AgentQ(3, 5)
-        self.agent = LearningAgent.AgentLamTD(3, 5)
-        
+        action_space = 3
+        self.agent = LearningAgent.AgentLamTD(action_space, 5)
+        self.env.action_space = action_space
 
         self.player = None
         self.ep_mem = None
@@ -46,9 +47,11 @@ class RacingSimulation:
         self.show_simulation()
 
     def run_learning_sim(self, episodes):
-        self.path_planner.plan_path()
+        # self.path_planner.plan_path()
+        self.path_planner.get_single_path()
+
         max_allow_reward = 500
-        best_reward = 0
+        best_reward = -1000
 
         for i in range(episodes):
             ep_reward = self.run_episode()
@@ -56,11 +59,11 @@ class RacingSimulation:
 
             self.rewards.append(np.min([ep_reward, max_allow_reward]))
             
-            if ep_reward > best_reward:
-                ep_reward = best_reward
+            if ep_reward >= best_reward:
+                best_reward = ep_reward
                 self.env.sim_mem.save_ep("BestRun")
             
-
+        print("Best rewards: %d" % best_reward)
         self.env.sim_mem.save_ep("Last_ep")
 
         self.agent.print_q()
@@ -93,7 +96,7 @@ class RacingSimulation:
     def plot_rewards(self):
         i = range(len(self.rewards))
         # print(self.rewards)
-        plt.plot(i, self.rewards)
+        plt.plot(i, self.rewards, 'x')
         plt.show()
 
     def show_simulation(self):

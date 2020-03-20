@@ -13,9 +13,14 @@ class PathPlanner:
         self.path_finder = A_StarPathFinder(track, logger)
 
     def plan_path(self):
-        self.path_finder.run_search(40)
+        self.path_finder.run_search(100)
         self.smooth_track()
         self.add_velocity()
+
+    def get_single_path(self):
+        self.track.add_way_point(self.track.start_location)
+        self.track.add_way_point(self.track.end_location)
+        self.track.route[1].v = self.car.max_v
 
     def add_velocity(self):
         # set up last wp in each cycle
