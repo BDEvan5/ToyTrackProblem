@@ -45,22 +45,35 @@ class SingleSense:
 
 
 class Sensing:
-    def __init__(self, n=10):
+    def __init__(self, n):
         self.n = n  # number of senses
         self.senses = []
+        # self.senses.append(SingleSense((0, 0), 0))
 
         d_angle = np.pi / (n - 1)
 
         direc = [0, 0]
+        angle = 0
+        for i in range(n):
+            sense = SingleSense()
+            self.senses.append(sense)
+
         for i in range(n):
             angle =  i * d_angle - np.pi /2 # -90 to +90
             direc[0] = np.sin(angle)
             direc[1] = - np.cos(angle)  # the - deal with positive being down
             direc = np.around(direc, decimals=4)
 
-            sense = SingleSense(direc, angle)
-            self.senses.append(sense)
-                
+            self.senses[i].dir = direc
+            self.senses[i].angle = angle
+            # print(self.senses[i].dir)
+        
+        # self.senses[0].print_sense()
+        # for i in range(n):
+            # print(self.senses[i].dir)
+            # print(self.senses[i].angle)
+
+
     def print_sense(self):
         for e in self.senses:
             e.print_sense()
@@ -83,6 +96,11 @@ class Sensing:
         # self.print_sense()
         return obs # should return an array of 1 or 0 for senses
 
+    def print_directions(self):
+        arr = np.zeros((self.n, 2))
+        for i, sen in enumerate(self.senses):
+            arr[i] = sen.dir
+        print(arr)
 
 class SingleRange:
     def __init__(self, angle):
@@ -115,7 +133,7 @@ class Ranging:
 
 
 class CarState(WayPoint, Sensing, Ranging):
-    def __init__(self, n=10):
+    def __init__(self, n):
         WayPoint.__init__(self)
         Sensing.__init__(self, n)
         Ranging.__init__(self, n)

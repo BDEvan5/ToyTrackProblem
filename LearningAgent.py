@@ -78,12 +78,12 @@ class AgentLamTD:
         self.q_table = np.zeros((self.obs_space, action_space))
         self.E = np.zeros((self.obs_space, action_space))
 
-        self.learning_rate = 0.05
+        self.learning_rate = 0.1
         self.discount_rate = 0.99
 
         self.exploration_rate = 1
         self.max_exploration_rate = 1
-        self.min_exploration_rate = 0.05
+        self.min_exploration_rate = 0.01
         self.exploration_decay_rate = 0.0009
         self.lam = 0.5
 
@@ -161,3 +161,14 @@ class AgentLamTD:
             v_msg = " --> Value: " + str(np.around(np.max(self.q_table[i, :]),3))
             print(s_msg + v_msg)
 
+
+# class LearnedModel:
+#     def __init__(self, state_n, action_n):
+#         self.r_table = np.zeros((state_n, action_n))
+#         self.sp_table = np.zeros((state_n, action_n))
+
+#         self.alpha = 0.1
+
+#     def update_table(self, s, a, r, s_p):
+#         self.r_table[s, a] += self.alpha * (r - self.r_table[s,a])
+#         # self.sp_table[s, a] += self.alpha * (s_p - self.sp_table[s,a])

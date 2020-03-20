@@ -17,12 +17,13 @@ class RaceEnv:
         self.ds = sense_dis # this is how far the sensor can look ahead
         self.logger = logger
         self.track = track
-        self.dt = 0.5 # update frequency
+        self.dt = 1 # update frequency
 
         self.state_space = 5
         self.action_space = 3
 
         self.car_state = ls.CarState(self.state_space)
+        self.car_state.get_sense_observation
         self.env_state = ls.EnvState()
         self.car = car
         self.sim_mem = em.SimMem(self.logger)
@@ -97,9 +98,9 @@ class RaceEnv:
 
         reward = 0 # reward increases as distance decreases
         
-        beta = 0.01
-        swerve_cost = 0.0
-        crash_cost = 50
+        beta = 0.05
+        swerve_cost = 1
+        crash_cost = 100
 
         if coll_flag:
             reward = - crash_cost

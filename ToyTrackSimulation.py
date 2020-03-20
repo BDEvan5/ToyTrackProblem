@@ -59,6 +59,7 @@ class RacingSimulation:
 
             self.rewards.append(np.min([ep_reward, max_allow_reward]))
             
+            self.agent.print_params()
             if ep_reward >= best_reward:
                 best_reward = ep_reward
                 self.env.sim_mem.save_ep("BestRun")
@@ -106,7 +107,8 @@ class RacingSimulation:
 
 class ReplayEp:
     def __init__(self, track):
-        self.player = TrackInterfac.ShowInterface(track, 50)
+        dt = 60
+        self.player = TrackInterfac.ShowInterface(track, dt)
         self.ep_history = EpisodeMem.SimMem()
 
 

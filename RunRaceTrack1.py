@@ -74,7 +74,7 @@ def run_sim():
 
     mySim = tts.RacingSimulation(myTrack, myCar)
     # mySim.run_standard_simulation()
-    mySim.run_learning_sim(200)
+    mySim.run_learning_sim(400)
     # mySim.run_learning_sim(1)
 
     

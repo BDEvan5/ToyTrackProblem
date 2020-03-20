@@ -26,8 +26,11 @@ class Interface:
         self.range_lines = []
         self.prev_px = [0, 0]
 
+        self.pause_flag = False
+
         self.setup_window()  
         self.set_up_track()   
+        self.set_up_buttons()
 
     def setup_window(self):
         self.canv = Canvas(self.root, height=self.size[0], width=self.size[1])
@@ -35,8 +38,10 @@ class Interface:
         p1 = [30, 30]
         p2 = [70, 70]
         self.o = self.canv.create_oval(p1, p2, fill='red')
+        self.th = self.canv.create_line(50, 50, 20, 20, fill='green', width=4) 
 
-        self.info_p = Frame(self.root, height=self.size[0], width=(self.size[1]/10))
+
+        self.info_p = Frame(self.root, height=self.size[0]/2, width=(self.size[1]/10))
         self.info_p.pack(side= RIGHT)
 
         self.step_name = Label(self.info_p, text="Step")
@@ -59,7 +64,6 @@ class Interface:
         self.sense_name.pack()
         self.sense_canv = Canvas(self.info_p, height=100, width=100)
         self.sense_canv.pack(side=BOTTOM)
-
         
         for i in range(3):
             for j in range(3):
@@ -83,6 +87,25 @@ class Interface:
         self.distance = Label(self.info_p, text="0")
         self.distance.pack()
         
+    def set_up_buttons(self):
+        self.b = Frame(self.info_p, height=self.size[0]/2, width=(self.size[1]/10))
+        self.b.pack(side= BOTTOM)
+
+        self.pause = Button(self.b, text='Pause', command=self.pause_set)
+        self.pause.pack()
+        
+        self.play = Button(self.b, text="Play", command=self.play_set)
+        self.play.pack()
+
+        # self.quit = Button(self.b, text='Quit', command=)
+        # self.quit.pack()
+
+    def pause_set(self):
+        self.pause_flag = True
+
+    def play_set(self):
+        self.pause_flag = False
+
     def set_up_track(self):
         # self.canv.create_rectangle([0, 0], self.size, fill='blue')
         # self.canv.pack()
@@ -128,17 +151,20 @@ class Interface:
         self.root.mainloop()
 
     def run_interface_loop(self):
-        self.get_step_info()
-        if self.step_i.env_state.done is False:
-            self.update_position()
-            self.draw_nodes()
-            # self.draw_ranges()
-            self.update_info()
-            self.root.after(self.dt, self.run_interface_loop)
+        if  not self.pause_flag:
+            self.get_step_info()
+            if self.step_i.env_state.done is False:
+                self.update_position()
+                self.draw_nodes()
+                # self.draw_ranges()
+                self.update_info()
+                self.root.after(self.dt, self.run_interface_loop)
+            else:
+                print("Going to destroy tk inter")
+                self.take_screenshot()
+                self.root.destroy()
         else:
-            print("Going to destroy tk inter")
-            self.take_screenshot()
-            self.root.destroy()
+            self.root.after(self.dt, self.run_interface_loop)
 
     def _scale_input(self, x_in):
         x_out = [0, 0] # this creates same size vector
@@ -157,10 +183,18 @@ class Interface:
 
         self.prev_px = current_pos
 
+        length = 40
+        self.canv.delete(self.th)
+        add_coord = [length * np.sin(self.step_i.car_state.theta), -length * np.cos(self.step_i.car_state.theta)]
+        new_pos = f.add_locations(self.prev_px, add_coord)
+        self.th = self.canv.create_line(self.prev_px, new_pos, fill='green', width=6)
+
     def draw_nodes(self):
         # print(self.step_i.car_state.get_sense_observation())
+        # self.step_i.car_state.print_directions()
         for sense in self.step_i.car_state.senses:
             node = sense.sense_location
+            # print(node)
             # node = f.add_locations(self.step_i.x, sense.dir, dx)
             node = self._scale_input(node)
             if sense.val == 0:
@@ -177,13 +211,6 @@ class Interface:
         self.loc.config(text=location_text)
         velocity_text = str(self.step_i.car_state.v) + " @ " + str(self.step_i.car_state.theta)
         self.velocity.config(text=velocity_text)
-
-        # self.step_i.print_sense()
-        # for s, block in zip(self.step_i.senses, self.sense_blocks):
-        #     if s.val == 1:
-        #         self.sense_canv.itemconfig(block, fill='black')
-        #     elif s.val == 0:
-        #         self.sense_canv.itemconfig(block, fill='white')
 
         reward_text = str(self.step_i.env_state.reward)
         self.reward.config(text=reward_text)
