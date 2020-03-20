@@ -5,6 +5,7 @@ import LibFunctions as f
 import EpisodeMem
 import time
 import numpy as np 
+import pyautogui 
 
 
 
@@ -131,11 +132,12 @@ class Interface:
         if self.step_i.env_state.done is False:
             self.update_position()
             self.draw_nodes()
-            self.draw_ranges()
+            # self.draw_ranges()
             self.update_info()
             self.root.after(self.dt, self.run_interface_loop)
         else:
             print("Going to destroy tk inter")
+            self.take_screenshot()
             self.root.destroy()
 
     def _scale_input(self, x_in):
@@ -151,11 +153,12 @@ class Interface:
         px = f.sub_locations(current_pos, self.prev_px)
 
         self.canv.move(self.o, px[0], px[1])
-        self.canv.create_line(self.prev_px, current_pos, fill='purple')
+        self.canv.create_line(self.prev_px, current_pos, fill='purple', width=4)
 
         self.prev_px = current_pos
 
     def draw_nodes(self):
+        # print(self.step_i.car_state.get_sense_observation())
         for sense in self.step_i.car_state.senses:
             node = sense.sense_location
             # node = f.add_locations(self.step_i.x, sense.dir, dx)
@@ -223,7 +226,9 @@ class Interface:
             self.canv.pack()
             self.range_lines.append(l)
 
-
+    def take_screenshot(self, screen_name="end_shot.png"):
+        path = "Documents/ToyTrackProblem/" + screen_name
+        pyautogui.screenshot(path)
 
 
 class ShowInterface:

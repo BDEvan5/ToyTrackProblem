@@ -36,10 +36,11 @@ class SimMem:
         for i, step in enumerate(self.steps):
             step.print_step(i)
 
-    def save_ep(self):
-        save_file_name = "Documents/ToyTrackProblem/Last_ep" # + str(datetime.datetime.now())
+    def save_ep(self, f_name="Last_ep"):
+        save_file_name = "Documents/ToyTrackProblem/"  + f_name # + str(datetime.datetime.now())
         
-        os.remove(save_file_name)
+        if os.path.exists(save_file_name):
+            os.remove(save_file_name)
         
         s_file = open(save_file_name, 'ab')
 
@@ -47,8 +48,8 @@ class SimMem:
 
         s_file.close()
 
-    def load_ep(self):
-        save_file_name = "Documents/ToyTrackProblem/Last_ep"
+    def load_ep(self, f_name="Last_ep"):
+        save_file_name = "Documents/ToyTrackProblem/" + f_name
         s_file = open(save_file_name, 'rb')
 
         self.steps = pickle.load(s_file)

@@ -73,7 +73,7 @@ class AgentLamTD:
     def __init__(self, action_space, sensors_n):
         self.n_sensors = sensors_n
 
-        self.obs_space = 2 ** sensors_n
+        self.obs_space = 2 ** (sensors_n)
         self.action_space = action_space
         self.q_table = np.zeros((self.obs_space, action_space))
         self.E = np.zeros((self.obs_space, action_space))
@@ -84,12 +84,14 @@ class AgentLamTD:
         self.exploration_rate = 1
         self.max_exploration_rate = 1
         self.min_exploration_rate = 0.05
-        self.exploration_decay_rate = 0.0001
+        self.exploration_decay_rate = 0.0009
         self.lam = 0.2
 
         self.step_counter = 0
 
-    def get_action(self, observation):
+    def get_action(self, state):
+        # print("ag" + str(type(state)))
+        observation = state.get_sense_observation()
         exploration_rate_threshold = random.uniform(0, 1)
         if exploration_rate_threshold > self.exploration_rate:            # print(q_table_avg)
             obs_n = self._convert_obs(observation)
@@ -104,15 +106,18 @@ class AgentLamTD:
         # converts from sensor 1 or 0 to a state number
         # 1101 --> 13
         obs_n = 0
-        for i in range(len(observation)-1): #last sense doesn't work
+        for i in range(len(observation)): 
             obs_n += observation[i] * (2**i)
         return int(obs_n)
 
-    def update_q_table(self, obs, action, reward, next_obs):     
+    def update_q_table(self, state, action, reward, next_state): 
+        obs = state.get_sense_observation()
+        next_obs = next_state.get_sense_observation()
+
         obs_n = self._convert_obs(obs)
         next_obs_n = self._convert_obs(next_obs)
 
-        a_prime = self.get_action(next_obs)
+        a_prime = self.get_action(next_state)
         q_s_prime = self.q_table[next_obs_n,:]
         a_star = np.argmax(q_s_prime)
 
@@ -132,6 +137,7 @@ class AgentLamTD:
                 (self.max_exploration_rate - self.min_exploration_rate) * \
                 np.exp(-self.exploration_decay_rate * self.step_counter)
         self.step_counter += 1
+        return a_prime
 
     def save_q_table(self):
         file_location = 'Documents/ToyTrackProblem/'
@@ -143,12 +149,15 @@ class AgentLamTD:
         print("Loaded Q table")
         self.q_table = np.load('agent_q_table.npy')
 
-    def print_q(self):
-        q = np.around(self.q_table, 3)
-        print(q)
-
     def reset_agent(self):
         self.E = np.zeros((self.obs_space, self.action_space))
 
     def print_params(self):
         print("Explore Rate: " + str(self.exploration_rate))
+
+    def print_q(self):
+        for i in range(self.obs_space):
+            s_msg = "State: %d "%i + str(np.around(self.q_table[i,:], 3))
+            v_msg = " --> Value: " + str(np.around(np.max(self.q_table[i, :]),3))
+            print(s_msg + v_msg)
+

@@ -49,7 +49,7 @@ class Sensing:
         self.n = n  # number of senses
         self.senses = []
 
-        d_angle = np.pi / n
+        d_angle = np.pi / (n - 1)
 
         direc = [0, 0]
         for i in range(n):
@@ -80,6 +80,7 @@ class Sensing:
         for i, sense in enumerate(self.senses):
             obs[i] = sense.val
         # print(obs)
+        # self.print_sense()
         return obs # should return an array of 1 or 0 for senses
 
 
@@ -137,7 +138,7 @@ class EnvState:
 
 class SimulationState():
     def __init__(self):
-        self.car_state = CarState()
+        self.car_state = CarState(5)
         self.env_state = EnvState()
         self.step = 0
 

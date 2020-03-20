@@ -48,43 +48,44 @@ class RacingSimulation:
     def run_learning_sim(self, episodes):
         self.path_planner.plan_path()
         max_allow_reward = 500
+        best_reward = 0
 
         for i in range(episodes):
             ep_reward = self.run_episode()
             print("Episode: %d -> Reward: %d"%(i, ep_reward))
 
             self.rewards.append(np.min([ep_reward, max_allow_reward]))
-        
-        self.env.sim_mem.save_ep()
+            
+            if ep_reward > best_reward:
+                ep_reward = best_reward
+                self.env.sim_mem.save_ep("BestRun")
+            
 
-        print(self.agent.q_table)
-        self.ep_mem = self.env.get_ep_mem()
-        self.show_simulation()
-        self.plot_rewards()
+        self.env.sim_mem.save_ep("Last_ep")
+
+        self.agent.print_q()
+        # self.plot_rewards()
 
     def run_episode(self):
         # this is the code to run a single episode
-        max_steps = 100
+        max_steps = 200
         ep_reward = 0
 
         car_state = self.env.reset()
         self.agent.reset_agent()
-        self.agent.print_params()
+        # print("ep" + str(type(car_state)))
+        agent_action = self.agent.get_action(car_state)
         for i in range(max_steps):
-            obs = car_state.get_sense_observation()
-            agent_action = self.agent.get_action(obs)
             # agent_action = 1 # do nothing
+
             next_state, reward, done = self.env.step(agent_action)
 
             ep_reward += reward
-            # print(obs)
-            next_obs = next_state.get_sense_observation()
-            self.agent.update_q_table(obs, agent_action, reward, next_obs)
-
+            agent_action = self.agent.update_q_table(car_state, agent_action, reward, next_state)
             car_state = next_state
 
             if done:
-                print(ep_reward)
+                # print(ep_reward)
                 break
         return ep_reward
 
@@ -106,7 +107,11 @@ class ReplayEp:
         self.ep_history = EpisodeMem.SimMem()
 
 
-    def replay(self):
-        self.ep_history.load_ep()
+    def replay_last(self):
+        self.ep_history.load_ep("Last_ep")
+        self.player.run_replay(self.ep_history)
+
+    def replay_best(self):
+        self.ep_history.load_ep("BestRun")
         self.player.run_replay(self.ep_history)
 
