@@ -174,4 +174,3 @@ class AgentLamTD:
 #         # self.sp_table[s, a] += self.alpha * (s_p - self.sp_table[s,a])
 
 # I have merged
-# comment
