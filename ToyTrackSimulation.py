@@ -111,7 +111,6 @@ class ReplayEp:
         self.player = TrackInterfac.ShowInterface(track, dt)
         self.ep_history = EpisodeMem.SimMem()
 
-
     def replay_last(self):
         self.ep_history.load_ep("Last_ep")
         self.player.run_replay(self.ep_history)

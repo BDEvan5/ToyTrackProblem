@@ -1,4 +1,5 @@
 import ToyTrackSimulation as tts
+import DQN_agent
 import TrackEnv1
 
 
@@ -7,8 +8,8 @@ def straight_track(myTrack):
     end_location = [50.0, 15.0]
     o1 = (0, 0, 30, 100)
     o2 = (70, 0, 100, 100)
-    o3 = (35, 60, 52, 70)
-    o4 = (48, 30, 65, 40)
+    o3 = (35, 60, 51, 70)
+    o4 = (49, 30, 65, 40)
     b = (1, 1, 99, 99)
 
     myTrack.add_locations(start_location, end_location)
@@ -72,17 +73,20 @@ def run_sim():
     myCar = TrackEnv1.CarModel()
     standard_car(myCar)
 
-    mySim = tts.RacingSimulation(myTrack, myCar)
+    # mySim = tts.RacingSimulation(myTrack, myCar)
     # mySim.run_standard_simulation()
-    mySim.run_learning_sim(400)
+    # mySim.run_learning_sim(200)
     # mySim.run_learning_sim(1)
 
+    mySimA = DQN_agent.AgentDQN(myTrack, myCar)
+    mySimA.run_learning(300)
+    mySimA.plot_rewards()
     
     myPlay = tts.ReplayEp(myTrack)
-    myPlay.replay_best()
-    # myPlay.replay_last()
+    # myPlay.replay_best()
+    myPlay.replay_last()
 
-    mySim.plot_rewards()
+    # mySim.plot_rewards()
 
     
 if __name__ == "__main__":
