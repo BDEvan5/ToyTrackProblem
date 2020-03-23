@@ -172,3 +172,5 @@ class AgentLamTD:
 #     def update_table(self, s, a, r, s_p):
 #         self.r_table[s, a] += self.alpha * (r - self.r_table[s,a])
 #         # self.sp_table[s, a] += self.alpha * (s_p - self.sp_table[s,a])
+
+# I have merged
