@@ -162,15 +162,3 @@ class AgentLamTD:
             print(s_msg + v_msg)
 
 
-# class LearnedModel:
-#     def __init__(self, state_n, action_n):
-#         self.r_table = np.zeros((state_n, action_n))
-#         self.sp_table = np.zeros((state_n, action_n))
-
-#         self.alpha = 0.1
-
-#     def update_table(self, s, a, r, s_p):
-#         self.r_table[s, a] += self.alpha * (r - self.r_table[s,a])
-#         # self.sp_table[s, a] += self.alpha * (s_p - self.sp_table[s,a])
-
-# I have merged

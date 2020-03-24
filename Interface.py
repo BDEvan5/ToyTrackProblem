@@ -1,11 +1,12 @@
 from tkinter import *
 import multiprocessing as mp
-import LocationState as ls
+import StateStructs as ls
 import LibFunctions as f
-import EpisodeMem
 import time
 import numpy as np 
 import pyautogui 
+import RaceEnv
+import SimulationMem as SimMem
 
 
 
@@ -254,7 +255,7 @@ class Interface:
             self.range_lines.append(l)
 
     def take_screenshot(self, screen_name="end_shot.png"):
-        path = "Documents/ToyTrackProblem/" + screen_name
+        path = screen_name
         pyautogui.screenshot(path)
 
 
@@ -285,6 +286,19 @@ class ShowInterface:
         root.terminate()
 
     
+class ReplayEp: #todo: combine these two classes into a single interface handler
+    def __init__(self, track):
+        dt = 60
+        self.player = ShowInterface(track, dt)
+        self.ep_history = SimMem.SimMem()
+
+    def replay_last(self):
+        self.ep_history.load_ep("Last_ep")
+        self.player.run_replay(self.ep_history)
+
+    def replay_best(self):
+        self.ep_history.load_ep("BestRun")
+        self.player.run_replay(self.ep_history)
 
         
 

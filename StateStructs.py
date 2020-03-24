@@ -1,9 +1,6 @@
-    
-# these are minor helper data structures for the env
 from copy import deepcopy
 import LibFunctions as f
 import numpy as np
-
 
 class WayPoint:
     def __init__(self):
@@ -20,19 +17,6 @@ class WayPoint:
         print("X: " + str(self.x) + " -> v: " + str(self.v) + " -> theta: " +str(self.theta))
 
 
-class Path:
-    def __init__(self):
-        self.route = []
-    
-    def add_way_point(self, x, v=0, theta=0):
-        wp = WayPoint()
-        wp.set_point(x, v, theta)
-        self.route.append(wp)
-
-    def print_route(self):
-        for wp in self.route:
-            print("X: (%d;%d), v: %d, th: %d" %(wp.x[0], wp.x[1], wp.v, wp.theta))
-
 class SingleSense:
     def __init__(self, direc=[0, 0], angle=0):
         self.dir = direc
@@ -42,7 +26,6 @@ class SingleSense:
 
     def print_sense(self):
         print(str(self.dir) + " --> Val: " + str(self.val) + " --> Loc: " + str(self.sense_location))
-
 
 class Sensing:
     def __init__(self, n):
@@ -102,6 +85,7 @@ class Sensing:
             arr[i] = sen.dir
         print(arr)
 
+
 class SingleRange:
     def __init__(self, angle):
         self.val = 0 # distance to wall
@@ -128,8 +112,6 @@ class Ranging:
     def print_ranges(self):
         obs = self.get_range_observation()
         print(obs)
-
-
 
 
 class CarState(WayPoint, Sensing, Ranging):
@@ -174,4 +156,16 @@ class SimulationState():
 
         print(msg0 + msg1 + msg2 + msg3)
         # self.print_sense()
+
+
+
+
+
+
+
+
+
+
+
+
 

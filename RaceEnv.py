@@ -1,15 +1,16 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from tkinter import *
 import time
-import LocationState as ls
-import EpisodeMem as em
+import StateStructs as ls
 from copy import deepcopy
 import LibFunctions as f
 import logging
 from copy import deepcopy
-
-
+import pickle
+import datetime
+import os
+import PathPlanner
+import SimulationMem as SimMem
 
 class RaceEnv:
     def __init__(self, track, car, logger, dx=5, sense_dis=10):
@@ -26,10 +27,12 @@ class RaceEnv:
         self.car_state.get_sense_observation
         self.env_state = ls.EnvState()
         self.car = car
-        self.sim_mem = em.SimMem(self.logger)
+        self.sim_mem = SimMem.SimMem(self.logger)
         self.c_sys = ControlSystem()
         self.wp = ls.WayPoint()
         self.wp_n = 1
+
+        self.planner = PathPlanner.PathPlanner(track, car, logger)
 
     def step(self, agent_action):
         wp = self.track.route[self.wp_n]
@@ -91,6 +94,7 @@ class RaceEnv:
         self.reward = 0
         self.sim_mem.steps.clear()
         self.wp_n = 1
+        self.planner.get_single_path()
         return self.car_state
 
     def _get_reward(self, coll_flag, dr):
@@ -184,147 +188,6 @@ class RaceEnv:
                 i += 1
             ran.val = (i - 2) * dx # sets the last distance before collision 
         # self.car_state.print_ranges()
-
-
-class TrackData(ls.Path):
-    def __init__(self):
-        ls.Path.__init__(self)
-        self.boundary = None
-        self.obstacles = []
-        self.hidden_obstacles = []
-
-        self.start_location = [0, 0]
-        self.end_location = [0, 0]
-
-    def add_locations(self, x_start, x_end):
-        self.start_location = x_start
-        self.end_location = x_end
-
-    def add_obstacle(self, obs):
-        self.obstacles.append(obs)
-
-    def add_boundaries(self, b):
-        self.boundary = b
-
-    def _check_collision_hidden(self, x):
-        b = self.boundary
-        ret = 0
-        for i, o in enumerate(self.obstacles):
-            if o[0] < x[0] < o[2]:
-                if o[1] < x[1] < o[3]:
-                    msg = "Obstacle collision %d --> x: %d;%d"%(i, x[0],x[1])
-                    ret = 1
-        for i, o in enumerate(self.hidden_obstacles):
-            if o[0] < x[0] < o[2]:
-                if o[1] < x[1] < o[3]:
-                    msg = "Hidden Obstacle collision %d --> x: %d;%d"%(i, x[0],x[1])
-                    ret = 1
-        if x[0] < b[0] or x[0] > b[2]:
-            msg = "X wall collision --> x: %d, b:%d;%d"%(x[0], b[0], b[2])
-            ret = 1
-        if x[1] < b[1] or x[1] > b[3]:
-            msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
-            ret = 1
-        # if ret == 1:
-            # print(msg)
-            # self.logger.info(msg)
-        return ret
-
-    def _check_collision(self, x):
-        b = self.boundary
-        ret = 0
-        for i, o in enumerate(self.obstacles):
-            if o[0] < x[0] < o[2]:
-                if o[1] < x[1] < o[3]:
-                    msg = "Obstacle collision %d --> x: %d;%d"%(i, x[0],x[1])
-                    ret = 1
-        if x[0] < b[0] or x[0] > b[2]:
-            msg = "X wall collision --> x: %d, b:%d;%d"%(x[0], b[0], b[2])
-            ret = 1
-        if x[1] < b[1] or x[1] > b[3]:
-            msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
-            ret = 1
-        return ret
-
-    def _check_path_collision(self, x0, x1):
-        # write this one day to check  points along line
-        b = self.boundary
-        ret = 0
-        for i, o in enumerate(self.obstacles):
-            if o[0] < x1[0] < o[2]:
-                if o[1] < x1[1] < o[3]:
-                    msg = "Obstacle collision %d --> x: %d;%d"%(i, x1[0],x1[1])
-                    ret = 1
-        
-        if x[0] < b[0] or x1[0] > b[2]:
-            msg = "X wall collision --> x: %d, b:%d;%d"%(x1[0], b[0], b[2])
-            ret = 1
-        if x1[1] < b[1] or x1[1] > b[3]:
-            msg = "Y wall collision --> y: %d, b:%d;%d"%(x1[1], b[1], b[3])
-            ret = 1
-        # if ret == 1:
-            # print(msg)
-            # self.logger.info(msg)
-        return ret
-
-    def add_hidden_obstacle(self, obs):
-        self.hidden_obstacles.append(obs)
-
-    def get_ranges(self, x, th):
-        # x is location, th is orientation 
-        # given a range it determine the distance to each object 
-        b = self.boundary
-        ret = 0
-        for i, o in enumerate(self.obstacles):
-            if o[0] < x[0] < o[2]:
-                if o[1] < x[1] < o[3]:
-                    msg = "Obstacle collision %d --> x: %d;%d"%(i, x[0],x[1])
-                    ret = 1
-        if x[0] < b[0] or x[0] > b[2]:
-            msg = "X wall collision --> x: %d, b:%d;%d"%(x[0], b[0], b[2])
-            ret = 1
-        if x[1] < b[1] or x[1] > b[3]:
-            msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
-            ret = 1
-        return ret
-
-
-class CarModel:
-    def __init__(self):
-        self.m = 1
-        self.L = 1
-        self.J = 5
-        self.b = [0.5, 0.2]
-
-        self.max_v = 0
-        self.friction = 0.1
-        
-    def set_up_car(self, max_v):
-        self.max_v = max_v
-    
-    def update_controlled_state(self, state, action, dt):
-        a = action[0]
-        th = action[1]
-        state.v += a * dt - self.friction * state.v
-
-        state.theta = th # assume no th integration to start
-        r = state.v * dt
-        state.x[0] += r * np.sin(state.theta)
-        state.x[1] += - r * np.cos(state.theta)
-
-        state.update_sense_offsets(state.theta)
-           
-    def chech_new_state(self, state, action, dt):
-        x = [0.0, 0.0]
-        a = action[0]
-        th = action[1]
-        v = a * dt - self.friction * state.v + state.v
-
-        r = v * dt
-        x[0] = r * np.sin(th) + state.x[0]
-        x[1] = - r * np.cos(th) + state.x[1]
-        # print(x)
-        return x
 
 
 class ControlSystem:
