@@ -15,8 +15,8 @@ def run_sim():
     config.standard_car(myCar)
 
     mySim = sim.RaceSimulation(myTrack, myCar)
-    # mySim.run_learning_sim(200)
-    mySim.run_learning_sim(1)
+    mySim.run_learning_sim(200)
+    # mySim.run_learning_sim(1)
 
 
     
@@ -24,7 +24,7 @@ def run_sim():
     # myPlay.replay_best()
     myPlay.replay_last()
 
-    # mySim.plot_rewards()
+    mySim.plot_rewards()
 
     
 if __name__ == "__main__":

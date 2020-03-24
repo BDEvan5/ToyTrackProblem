@@ -8,11 +8,6 @@ class WayPoint:
         self.v = 0.0
         self.theta = 0.0
 
-    def set_point(self, x, v, theta):
-        self.x = x
-        self.v = v
-        self.theta = theta
-
     def print_point(self):
         print("X: " + str(self.x) + " -> v: " + str(self.v) + " -> theta: " +str(self.theta))
 
@@ -90,6 +85,7 @@ class SingleRange:
     def __init__(self, angle):
         self.val = 0 # distance to wall
         self.angle = angle
+        self.dr = 0 # derivative of change of length
 
 class Ranging:
     def __init__(self, n):
@@ -102,28 +98,56 @@ class Ranging:
             ran = SingleRange(dth * i - np.pi/2)
             self.ranges.append(ran)
 
-    def get_range_observation(self):
+    def _get_range_obs(self):
         obs = np.zeros(self.n)
         for i, ran in enumerate(self.ranges):
             obs[i] = ran.val
-        
-        return obs # should be a list of ranges
+
+        return obs
+
+    def get_range_state_num(self):
+        obs = self._get_range_obs()
+
+        num = 0
+        for i in range(len(obs)-1): #last sense doesn't work
+            num += obs[i] * (2**i)
+        return int(num)
 
     def print_ranges(self):
-        obs = self.get_range_observation()
+        obs = self._get_range_obs()
         print(obs)
 
 
 class CarState(WayPoint, Sensing, Ranging):
     def __init__(self, n):
         WayPoint.__init__(self)
-        Sensing.__init__(self, n)
         Ranging.__init__(self, n)
-        self.car = None
+        Sensing.__init__(self, n)
+
+    def get_state_observation(self):
+        bin_scale = 10
+        state = []
+        state.append(self.v)
+        state.append(self.theta)
+        # consider adding action here
+        for ran in self.ranges:
+            r_val = np.around((ran.val/bin_scale), 0)
+            state.append(r_val)
+            dr_val = np.around(ran.dr, 0)
+            state.append(dr_val)
+
+    def get_sense_state_num(self):
+        # state = []
+        # state.append(self.v)
+        # state.append(self.theta)
+
+        obs = self.get_sense_observation()
+        obs_n = 0
+        for i in range(len(obs)): 
+            obs_n += obs[i] * (2**i)
+        return int(obs_n)
 
     def set_sense_locations(self, dx):
-        # keep dx here so that the sensing distance can be set by the env
-
         self.update_sense_offsets(self.theta)
         for sense in self.senses:
             sense.sense_location = f.add_locations(self.x, sense.dir, dx)
@@ -148,14 +172,14 @@ class SimulationState():
     def _add_env_state(self, env_state):
         self.env_state = env_state
 
-    def print_step(self, i):
-        msg0 = str(i)
-        msg1 = " State; x: " + str(np.around(self.x,2)) + " v: " + str(self.v) + "@ " + str(self.theta)
-        msg2 = " Action: " + str(np.around(self.action,3))
-        msg3 = " Reward: " + str(self.reward)
+    # def print_step(self, i):
+    #     msg0 = str(i)
+    #     msg1 = " State; x: " + str(np.around(self.x,2)) + " v: " + str(self.v) + "@ " + str(self.theta)
+    #     msg2 = " Action: " + str(np.around(self.action,3))
+    #     msg3 = " Reward: " + str(self.reward)
 
-        print(msg0 + msg1 + msg2 + msg3)
-        # self.print_sense()
+    #     print(msg0 + msg1 + msg2 + msg3)
+    #     # self.print_sense()
 
 
 
