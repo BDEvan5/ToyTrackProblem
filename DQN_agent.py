@@ -57,7 +57,7 @@ class DQN:
 class AgentDQN:
     # basically rewriting the simulation class
     def __init__(self, track, car):
-        logging.basicConfig(filename="Documents/ToyTrackProblem/AgentLog.log", 
+        logging.basicConfig(filename="AgentLogdqn.log", 
                     format='%(asctime)s %(message)s', 
                     filemode='w') 
         self.logger = logging.getLogger()

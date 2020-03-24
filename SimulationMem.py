@@ -1,6 +1,11 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import time
+import StateStructs as ls
 from copy import deepcopy
+import LibFunctions as f
 import logging
-import LocationState as ls
+from copy import deepcopy
 import pickle
 import datetime
 import os
@@ -37,7 +42,7 @@ class SimMem:
             step.print_step(i)
 
     def save_ep(self, f_name="Last_ep"):
-        save_file_name = "Documents/ToyTrackProblem/"  + f_name # + str(datetime.datetime.now())
+        save_file_name =  f_name # + str(datetime.datetime.now())
         
         if os.path.exists(save_file_name):
             print("Old file removed")
@@ -50,9 +55,10 @@ class SimMem:
         s_file.close()
 
     def load_ep(self, f_name="Last_ep"):
-        save_file_name = "Documents/ToyTrackProblem/" + f_name
+        save_file_name = f_name
         s_file = open(save_file_name, 'rb')
 
         self.steps = pickle.load(s_file)
 
         s_file.close()
+
