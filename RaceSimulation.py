@@ -20,9 +20,7 @@ class RaceSimulation:
         self.car = car
 
         self.env = RaceEnv.RaceEnv(self.track, self.car, self.logger)
-        action_space = 3 # todo: move to config file
-        self.agent = LearningAgent.AgentLamTD(action_space, 5)
-        self.env.action_space = action_space
+        self.agent = LearningAgent.AgentLamTD(self.env.action_space, self.env.state_space)
 
         self.player = None
         self.ep_mem = None

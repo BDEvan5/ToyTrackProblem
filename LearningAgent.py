@@ -2,7 +2,7 @@ import numpy as np
 import random
 
 class AgentQ_TD:
-    def __init__(self, action_space, sensors_n):
+    def __init__(self, action_space, state_space):
         self.n_sensors = sensors_n
 
         obs_space = 2 ** sensors_n
@@ -70,13 +70,11 @@ class AgentQ_TD:
 
 
 class AgentLamTD:
-    def __init__(self, action_space, sensors_n):
-        self.n_sensors = sensors_n
-
-        self.obs_space = 2 ** (sensors_n)
+    def __init__(self, action_space, state_space):
+        self.state_space = state_space
         self.action_space = action_space
-        self.q_table = np.zeros((self.obs_space, action_space))
-        self.E = np.zeros((self.obs_space, action_space))
+        self.q_table = np.zeros((state_space, action_space))
+        self.E = np.zeros((state_space, action_space))
 
         self.learning_rate = 0.1
         self.discount_rate = 0.99
@@ -91,10 +89,9 @@ class AgentLamTD:
 
     def get_action(self, state):
         # print("ag" + str(type(state)))
-        observation = state.get_sense_observation()
+        obs_n = state.get_sense_state_num()
         exploration_rate_threshold = random.uniform(0, 1)
         if exploration_rate_threshold > self.exploration_rate:            # print(q_table_avg)
-            obs_n = self._convert_obs(observation)
             action_slice = self.q_table[obs_n, :]
             action = np.argmax(action_slice) # select row for argmax
         else:
@@ -102,20 +99,9 @@ class AgentLamTD:
 
         return action # should be a number from 0-2
 
-    def _convert_obs(self, observation):
-        # converts from sensor 1 or 0 to a state number
-        # 1101 --> 13
-        obs_n = 0
-        for i in range(len(observation)): 
-            obs_n += observation[i] * (2**i)
-        return int(obs_n)
-
     def update_q_table(self, state, action, reward, next_state): 
-        obs = state.get_sense_observation()
-        next_obs = next_state.get_sense_observation()
-
-        obs_n = self._convert_obs(obs)
-        next_obs_n = self._convert_obs(next_obs)
+        obs_n = state.get_sense_state_num()
+        next_obs_n = next_state.get_sense_state_num()
 
         a_prime = self.get_action(next_state)
         q_s_prime = self.q_table[next_obs_n,:]
@@ -124,7 +110,7 @@ class AgentLamTD:
         delta = reward + self.discount_rate * self.q_table[next_obs_n, a_star] - self.q_table[obs_n, action]
         self.E[obs_n, action] += 1 # using accumulating traces
 
-        for s in range(self.obs_space):
+        for s in range(self.state_space):
             for a in range(self.action_space):
                 self.q_table[s, a] += self.learning_rate * delta * self.E[s, a]
                 if a_star == a_prime:
@@ -150,13 +136,13 @@ class AgentLamTD:
         self.q_table = np.load('agent_q_table.npy')
 
     def reset_agent(self):
-        self.E = np.zeros((self.obs_space, self.action_space))
+        self.E = np.zeros((self.state_space, self.action_space))
 
     def print_params(self):
         print("Explore Rate: " + str(self.exploration_rate))
 
     def print_q(self):
-        for i in range(self.obs_space):
+        for i in range(self.state_space):
             s_msg = "State: %d "%i + str(np.around(self.q_table[i,:], 3))
             v_msg = " --> Value: " + str(np.around(np.max(self.q_table[i, :]),3))
             print(s_msg + v_msg)

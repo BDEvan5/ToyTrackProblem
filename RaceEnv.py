@@ -18,21 +18,24 @@ class RaceEnv:
         self.ds = sense_dis # this is how far the sensor can look ahead
         self.logger = logger
         self.track = track
-        self.dt = 1 # update frequency
-
-        self.state_space = 5
-        self.action_space = 3
-
-        self.car_state = ls.CarState(self.state_space)
-        self.car_state.get_sense_observation
-        self.env_state = ls.EnvState()
         self.car = car
+
+        # configurable
+        self.dt = 1 # update frequency
+        self.num_ranges = 3
+        self.state_space_n = 2 + self.num_ranges
+        self.action_space = 3
+        self.state_space = 2 + self.num_ranges ** 2
+
+        self.planner = PathPlanner.PathPlanner(track, car, logger)
+        self.car_state = ls.CarState(self.num_ranges)
+        # self.car_state.get_sense_observation
+        self.env_state = ls.EnvState()
         self.sim_mem = SimMem.SimMem(self.logger)
         self.c_sys = ControlSystem()
         self.wp = ls.WayPoint()
         self.wp_n = 1
 
-        self.planner = PathPlanner.PathPlanner(track, car, logger)
 
     def step(self, agent_action):
         wp = self.track.route[self.wp_n]
@@ -186,7 +189,9 @@ class RaceEnv:
                 x_search = f.add_locations(curr_x, addx)
                 crash_val = self.track._check_collision_hidden(x_search)
                 i += 1
-            ran.val = (i - 2) * dx # sets the last distance before collision 
+            update_val = (i - 2) * dx # sets the last distance before collision 
+            ran.dr = update_val - ran.val # possibly take more than two terms
+            ran.val = update_val
         # self.car_state.print_ranges()
 
 
