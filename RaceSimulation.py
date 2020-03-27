@@ -1,6 +1,7 @@
 import numpy as np 
 from matplotlib import pyplot as plt
 import logging
+import tensorflow as tf
 
 import RaceEnv 
 import Models
@@ -29,13 +30,15 @@ class RaceSimulation:
 
     def run_learning_sim(self, episodes):
         max_allow_reward = 500
-        best_reward = -1000
+        best_reward = -200
 
         for i in range(episodes):
-            ep_reward = self.run_episode()
+            ep_reward = self.run_episode(i)
             print("Episode: %d -> Reward: %d"%(i, ep_reward))
 
             self.rewards.append(np.min([ep_reward, max_allow_reward]))
+
+            plot(self.rewards)
             
             self.agent.print_params()
             if ep_reward >= best_reward:
@@ -47,7 +50,7 @@ class RaceSimulation:
 
         self.agent.print_q()
 
-    def run_episode(self):
+    def run_episode(self, j=0):
         max_steps = 200
         ep_reward = 0
 
@@ -75,3 +78,24 @@ class RaceSimulation:
         plt.show()
 
 
+
+def plot(values, moving_avg_period = 10):
+    plt.figure(2)
+    plt.clf()        
+    plt.title('Training...')
+    plt.xlabel('Episode')
+    plt.ylabel('Duration')
+    plt.plot(values)
+
+    moving_avg = get_moving_average(moving_avg_period, values)
+    plt.plot(moving_avg)    
+    plt.pause(0.001)
+    print("Episode", (len(values)), "\n", \
+        moving_avg_period, "episode moving avg:", moving_avg)
+
+def get_moving_average(period, values):
+    moving_avg = 0
+    if len(values) >= period:
+        for i in reversed(range(period)):
+            moving_avg += values[i] # adds the last 10 values
+    return moving_avg
