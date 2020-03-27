@@ -15,7 +15,7 @@ def run_sim():
     config.standard_car(myCar)
 
     mySim = sim.RaceSimulation(myTrack, myCar)
-    mySim.run_learning_sim(204)
+    mySim.run_learning_sim(200)
     # mySim.run_learning_sim(1)
 
 
