@@ -23,25 +23,23 @@ class Interface:
         self.step_i = SimulationState()
 
         self.step_q = mp.Queue()
-        self.node_q = mp.Queue()
-        self.sense_blocks = []
         self.range_lines = []
         self.prev_px = [0, 0]
 
-        self.pause_flag = False
+        self.pause_flag = True # start in b_pause mode
 
-        self.setup_window()  
+        self.set_up_info_pannel()  
         self.set_up_track()   
         self.set_up_buttons()
 
-    def setup_window(self):
+# setup functions
+    def set_up_info_pannel(self):
         self.canv = Canvas(self.root, height=self.size[0], width=self.size[1])
 
         p1 = [30, 30]
         p2 = [70, 70]
         self.o = self.canv.create_oval(p1, p2, fill='red')
         self.th = self.canv.create_line(50, 50, 20, 20, fill='green', width=4) 
-
 
         self.info_p = Frame(self.root, height=self.size[0]/2, width=(self.size[1]/10))
         self.info_p.pack(side= RIGHT)
@@ -61,24 +59,6 @@ class Interface:
         self.velocity = Label(self.info_p, text="0 @ 0")
         self.velocity.pack()
 
-        # this is a canvas to hold the senses
-        self.sense_name = Label(self.info_p, text="Sensing")
-        self.sense_name.pack()
-        self.sense_canv = Canvas(self.info_p, height=100, width=100)
-        self.sense_canv.pack(side=BOTTOM)
-        
-        for i in range(3):
-            for j in range(3):
-                p1 = (33*j, 33*i)
-                p2 = (33*j+30, 33*i + 30)
-                s = self.sense_canv.create_rectangle(p1, p2, fill='black')
-                self.sense_blocks.append(s)
-
-        self.reward_name = Label(self.info_p, text="Reward")
-        self.reward_name.pack()
-        self.reward = Label(self.info_p, text="0")
-        self.reward.pack()
-
         self.action_name = Label(self.info_p, text="Action")
         self.action_name.pack()
         self.action = Label(self.info_p, text="[0, 0]")
@@ -88,32 +68,39 @@ class Interface:
         self.distance_name.pack()
         self.distance = Label(self.info_p, text="0")
         self.distance.pack()
+
+        self.state_name = Label(self.info_p, text="State Vector")
+        self.state_name.pack()
+        self.state_vec = Label(self.info_p, text="0")
+        self.state_vec.pack()
+
+        self.agent_name = Label(self.info_p, text="Agent Action")
+        self.agent_name.pack()
+        self.agent_action = Label(self.info_p, text="0")
+        self.agent_action.pack()
+
+        self.reward_name = Label(self.info_p, text="Reward")
+        self.reward_name.pack()
+        self.reward = Label(self.info_p, text="0")
+        self.reward.pack()
         
     def set_up_buttons(self):
         self.b = Frame(self.info_p, height=self.size[0]/2, width=(self.size[1]/10))
         self.b.pack(side= BOTTOM)
 
-        self.pause = Button(self.b, text='Pause', command=self.pause_set)
-        self.pause.pack()
+        self.b_pause = Button(self.b, text='Pause', command=self.pause_set)
+        self.b_pause.pack()
         
-        self.play = Button(self.b, text="Play", command=self.play_set)
-        self.play.pack()
+        self.b_play = Button(self.b, text="Play", command=self.play_set)
+        self.b_play.pack()
 
-        # self.quit = Button(self.b, text='Quit', command=)
-        # self.quit.pack()
+        self.b_quit = Button(self.b, text='Quit', command=self.root.destroy) 
+        self.b_quit.pack()
 
-    def pause_set(self):
-        self.pause_flag = True
-
-    def play_set(self):
-        self.pause_flag = False
+        self.b_step = Button(self.b, text='SingleStep', command=self.single_step) 
+        self.b_step.pack()
 
     def set_up_track(self):
-        # self.canv.create_rectangle([0, 0], self.size, fill='blue')
-        # self.canv.pack()
-        # self.canv.create_rectangle(self.track.boundary, fill='white')
-        # self.canv.pack()
-
         for obs in self.track.obstacles:
             o1 = self._scale_input(obs[0:2])
             o2 = self._scale_input(obs[2:4])
@@ -123,26 +110,24 @@ class Interface:
         for obs in self.track.hidden_obstacles:
             o1 = self._scale_input(obs[0:2])
             o2 = self._scale_input(obs[2:4])
-            self.canv.create_rectangle(o1, o2, fill='blue')
+            self.canv.create_rectangle(o1, o2, fill='cyan')
             self.canv.pack()
 
         x = self._scale_input(self.track.end_location)
-        self.end_x = self.canv.create_text(x[0], x[1], text='X', fill='brown', font = "Times 20 italic bold")
+        self.end_x = self.canv.create_text(x[0], x[1], text='X', fill='brown', font = "Times 20 bold")
         self.canv.pack()    
 
         self.prev_px = self._scale_input(self.track.start_location)   
 
         for i, point in enumerate(self.track.route):
-            # print(point)
             x = self._scale_input(point.x)
             str_msg = str(i)
-            # self.end_x = self.canv.create_text(x[0], x[1], text="-", fill='black', font = "Times 20 bold")
             self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
 
             self.canv.pack()   
 
     def setup_root(self):
-        print("Setup root called")
+        # print("Setup root called")
         p0 = [50, 50]
         px = f.sub_locations(self.prev_px, p0)
 
@@ -152,38 +137,51 @@ class Interface:
         self.root.after(0, self.run_interface_loop)
         self.root.mainloop()
 
+# main function with logic
     def run_interface_loop(self):
         if  not self.pause_flag:
-            self.get_step_info()
-            if self.step_i.env_state.done is False:
-                self.update_position()
-                # self.draw_ranges()
-                self.update_info()
-                self.root.after(self.dt, self.run_interface_loop)
-            else:
-                print("Going to destroy tk inter")
-                self.take_screenshot()
-                self.root.destroy()
+            self.single_step()
         else:
             self.root.after(self.dt, self.run_interface_loop)
 
+# button functions
+    def pause_set(self):
+        self.pause_flag = True
+
+    def play_set(self):
+        self.pause_flag = False
+
+    def single_step(self):
+        self.step_i = self.step_q.get()
+        if self.step_i.env_state.done is False:
+            self.update_car_position()
+            self.draw_ranges()
+            self.update_info()
+            self.root.after(self.dt, self.run_interface_loop)
+        else:
+            print("Going to destroy tk inter")
+            self.take_screenshot()
+            self.root.destroy()
+
+# admin functions
     def _scale_input(self, x_in):
         x_out = [0, 0] # this creates same size vector
         for i in range(2):
             x_out[i] = x_in[i] * self.fs
         return x_out
   
-    def update_position(self):
+    def update_car_position(self):
+        # move dot
         current_pos = self._scale_input(self.step_i.car_state.x)
-        # print("Current: " + str(current_pos) + " -> Prev: " + str(self.prev_px))
-
         px = f.sub_locations(current_pos, self.prev_px)
-
         self.canv.move(self.o, px[0], px[1])
+
+        # add line segment
         self.canv.create_line(self.prev_px, current_pos, fill='purple', width=4)
 
         self.prev_px = current_pos
 
+        # direction line
         length = 40
         self.canv.delete(self.th)
         add_coord = [length * np.sin(self.step_i.car_state.theta), -length * np.cos(self.step_i.car_state.theta)]
@@ -191,39 +189,35 @@ class Interface:
         self.th = self.canv.create_line(self.prev_px, new_pos, fill='green', width=6)
 
     def update_info(self):
-        step_text = str(self.step_i.step)
+        step = self.step_i.step
+        x = np.around(self.step_i.car_state.x, 2)
+        v = np.around(self.step_i.car_state.v, 2)
+        th = np.around(self.step_i.car_state.theta)
+        reward = np.around(self.step_i.env_state.reward, 3)
+        action = np.around(self.step_i.env_state.control_action, 2)
+        distance = np.around(self.step_i.env_state.distance_to_target)
+        state_vec = np.around(self.step_i.car_state.get_state_observation(), 1)
+        agent_action = np.around(self.step_i.env_state.agent_action)
+
+        step_text = str(step)
         self.step.config(text=step_text)
 
-        location_text = str(np.around(self.step_i.car_state.x, 3))
+        location_text = str(x)
         self.loc.config(text=location_text)
-        velocity_text = str(self.step_i.car_state.v) + " @ " + str(self.step_i.car_state.theta)
+        velocity_text = str(v) + " @ " + str(th)
         self.velocity.config(text=velocity_text)
 
-        reward_text = str(self.step_i.env_state.reward)
+        reward_text = str(reward)
         self.reward.config(text=reward_text)
 
-        action_text = str(np.around(self.step_i.env_state.action, 2))
+        action_text = str(action)
         self.action.config(text=action_text)
 
-        self.distance.config(text=str(self.step_i.env_state.distance_to_target))
+        self.distance.config(text=str(distance))
 
-    def get_step_info(self):
-        self.step_i = self.step_q.get()
+        self.state_vec.config(text=str(state_vec))
+        self.agent_action.config(text=str(agent_action))
         
-
-        # self.step_i.print_step()
-        
-    def show_map(self):
-        print("Show Map called")
-        p0 = [50, 50]
-        px = f.sub_locations(self.prev_px, p0)
-
-        self.canv.move(self.o, px[0], px[1])
-        
-        self.canv.pack()
-
-        self.root.mainloop()
-
     def draw_ranges(self):
         for obj in self.range_lines: # deletes old lines
             self.canv.delete(obj)
@@ -241,8 +235,14 @@ class Interface:
             self.range_lines.append(l)
 
     def take_screenshot(self, screen_name="RunFiles/end_shot.png"):
+        x = self.root.winfo_x()
+        y = self.root.winfo_y()
+        width = self.root.winfo_reqwidth()
+        height = self.root.winfo_reqheight()
+        arr = [x, y, x+width, y+height]
+        # print(arr)
         path = screen_name
-        pyautogui.screenshot(path)
+        pyautogui.screenshot(path, region=arr)
 
 
 class InterfaceManager:
@@ -279,16 +279,7 @@ class InterfaceManager:
             print("File could not be opened: " + str(file_name))
             print(e)
         
-        
-
-    def show_route(self): # to be removed in future versions.
-        root = mp.Process(target=self.interface.show_map)
-        root.start()
-        time.sleep(10)
-        root.terminate()
-
-    def replay_tests(self):
-        
+    def replay_tests(self):   
         for file_name in os.listdir(os.getcwd() + "/SimulationTests/"):
             self.replay_ep("SimulationTests/" + file_name)
 

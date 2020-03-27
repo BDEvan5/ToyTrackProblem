@@ -31,10 +31,11 @@ class Ranging:
         self.n = n
         self.ranges = []
 
-        dth = np.pi / n
+        dth = np.pi / (n-1)
 
         for i in range(n):
-            ran = SingleRange(dth * i - np.pi/2)
+            angle = dth * i - np.pi/2
+            ran = SingleRange(angle)
             self.ranges.append(ran)
 
     def _get_range_obs(self):
@@ -59,7 +60,7 @@ class CarState(WayPoint, Ranging):
         state = []
         # state.append(self.v)
         # state.append(self.theta)
-        # consider adding action here
+        # consider adding control_action here
         for ran in self.ranges:
             r_val = np.around((ran.val/bin_scale), 0)
             state.append(r_val)
@@ -68,11 +69,10 @@ class CarState(WayPoint, Ranging):
 
         return state
 
-
-
 class EnvState:
     def __init__(self):
-        self.action = [0, 0]
+        self.control_action = [0, 0]
+        self.agent_action = 1 # straight
         self.reward = 0
         self.distance_to_target = 0
         self.done = False
@@ -92,7 +92,7 @@ class SimulationState():
     # def print_step(self, i):
     #     msg0 = str(i)
     #     msg1 = " State; x: " + str(np.around(self.x,2)) + " v: " + str(self.v) + "@ " + str(self.theta)
-    #     msg2 = " Action: " + str(np.around(self.action,3))
+    #     msg2 = " Action: " + str(np.around(self.control_action,3))
     #     msg3 = " Reward: " + str(self.reward)
 
     #     print(msg0 + msg1 + msg2 + msg3)
@@ -117,7 +117,7 @@ class SimMem:
     def log_step(self, step):
         msg0 =  str(step.step) + ": ----------------------" + str(step.step)
         msg1 = "State: x->" + str(step.car_state.x) + "v-> [" + str(step.car_state.v) + "] theta->" + str(step.car_state.theta)
-        msg2 = "Action: " + str(step.env_state.action)
+        msg2 = "Action: " + str(step.env_state.control_action)
         # msg3 = "Reward: " + str(step.reward)
 
         self.logger.debug(msg0)

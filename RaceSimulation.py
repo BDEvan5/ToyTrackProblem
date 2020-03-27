@@ -41,10 +41,11 @@ class RaceSimulation:
 
     def test_agent(self):
         standard_car(self.car)
+        single_obstacle(self.env.track)
         straight_track(self.track)
-        self.agent.train(self.env, 1, 100)
+        # self.agent.train(self.env, 1, 100)
         self.agent.test(self.env, 1)
-        self.agent.test(self.env, 2)
+        # self.agent.test(self.env, 2)
 
 
 

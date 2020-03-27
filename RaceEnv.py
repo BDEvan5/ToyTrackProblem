@@ -35,7 +35,6 @@ class RaceEnv:
         self.wp = WayPoint()
         self.wp_n = 1
 
-
     def step(self, agent_action):
         wp = self.track.route[self.wp_n]
         control_action = self.c_sys.get_controlled_action(self.car_state, wp)
@@ -52,7 +51,8 @@ class RaceEnv:
         self.env_state.done = self._check_done(coll_flag)
         self._get_reward(coll_flag, dr)
         self._update_ranges()
-        self.env_state.action = action
+        self.env_state.control_action = control_action
+        self.env_state.agent_action = agent_action
 
         self.sim_mem.add_step(self.car_state, self.env_state)
         obs = self.car_state.get_state_observation()

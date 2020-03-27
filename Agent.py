@@ -9,6 +9,7 @@ from collections import deque
 import logging
 from matplotlib import pyplot as plt 
 from copy import deepcopy
+import os
 
 batch_size = 16
 
@@ -58,6 +59,10 @@ class Agent:
         self.model = Model(6, 3)
         self.actions_n = action_space_n
         self.state_n = state_space_n
+
+        for file_name in os.listdir(os.getcwd() + "/SimulationTests/"):
+            os.remove("SimulationTests/" + file_name) # deletes old files
+            print("File deleted: " + str(file_name))
 
     def train(self, env, updates, batch_size):
         # set up arrays to store data in
