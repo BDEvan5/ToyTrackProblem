@@ -1,101 +1,114 @@
 import numpy as np 
 from matplotlib import pyplot as plt
 import logging
-import tensorflow as tf
 
-import RaceEnv 
-import Models
-import Interface
-import LearningAgent
+from RaceEnv import RaceEnv
+from Models import TrackData, CarModel
+from Agent import Agent
 
 class RaceSimulation:
-    def __init__(self, track, car):
-        logging.basicConfig(filename="AgentLogger.log", 
+    def __init__(self):
+        logging.basicConfig(filename="RunFiles/AgentLogger.log", 
                     format='%(asctime)s %(message)s', 
                     filemode='w') 
 
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
 
-        self.track = track
-        self.car = car
+        self.track = TrackData()
+        self.car = CarModel()
 
-        self.env = RaceEnv.RaceEnv(self.track, self.car, self.logger)
-        self.agent = LearningAgent.AgentLamTD(self.env.action_space, self.env.state_space)
-
-        self.player = None
-        self.ep_mem = None
+        self.env = RaceEnv(self.track, self.car, self.logger)
+        self.agent = Agent(self.env.action_space, self.env.state_space)
 
         self.rewards = []
 
-    def run_learning_sim(self, episodes):
-        max_allow_reward = 500
-        best_reward = -200
+    def run_sim_course(self):
+        standard_car(self.car)
+        straight_track(self.track)
 
-        for i in range(episodes):
-            ep_reward = self.run_episode(i)
-            print("Episode: %d -> Reward: %d"%(i, ep_reward))
+        self.agent.train(self.env, 5, 24)
+        self.agent.test(self.env, 1)
 
-            self.rewards.append(np.min([ep_reward, max_allow_reward]))
+        single_obstacle(self.env.track)
 
-            plot(self.rewards)
-            
-            self.agent.print_params()
-            if ep_reward >= best_reward:
-                best_reward = ep_reward
-                self.env.sim_mem.save_ep("BestRun")
-            
-        print("Best rewards: %d" % best_reward)
-        self.env.sim_mem.save_ep("Last_ep")
+        self.agent.train(self.env, 24, 64)
+        self.agent.test(self.env, 2)
 
-        self.agent.print_q()
+        double_obstacle(self.env.track)
+        self.agent.train(self.env, 100, 64)
+        self.agent.test(self.env, 3)
 
-    def run_episode(self, j=0):
-        max_steps = 200
-        ep_reward = 0
-
-        car_state = self.env.reset()
-        self.agent.reset_agent()
-
-        agent_action = self.agent.get_action(car_state)
-        for i in range(max_steps):
-            # agent_action = 1 # do nothing
-
-            next_state, reward, done = self.env.step(agent_action)
-
-            ep_reward += reward
-            agent_action = self.agent.update_q_table(car_state, agent_action, reward, next_state)
-            car_state = next_state
-
-            if done:
-                # print(ep_reward)
-                break
-        return ep_reward
-
-    def plot_rewards(self):
-        i = range(len(self.rewards))
-        plt.plot(i, self.rewards, 'x')
-        plt.show()
+    def test_agent(self):
+        standard_car(self.car)
+        straight_track(self.track)
+        self.agent.train(self.env, 1, 100)
+        self.agent.test(self.env, 1)
+        self.agent.test(self.env, 2)
 
 
 
-def plot(values, moving_avg_period = 10):
-    plt.figure(2)
-    plt.clf()        
-    plt.title('Training...')
-    plt.xlabel('Episode')
-    plt.ylabel('Duration')
-    plt.plot(values)
+def straight_track(myTrack):
+    start_location = [50.0, 95.0]
+    end_location = [50.0, 15.0]
+    o1 = (0, 0, 30, 100)
+    o2 = (70, 0, 100, 100)
+    o3 = (35, 60, 51, 70)
+    o4 = (49, 30, 65, 40)
+    b = (1, 1, 99, 99)
 
-    moving_avg = get_moving_average(moving_avg_period, values)
-    plt.plot(moving_avg)    
-    plt.pause(0.001)
-    print("Episode", (len(values)), "\n", \
-        moving_avg_period, "episode moving avg:", moving_avg)
+    myTrack.add_locations(start_location, end_location)
+    myTrack.boundary = b
+    myTrack.add_obstacle(o1)
+    myTrack.add_obstacle(o2)
 
-def get_moving_average(period, values):
-    moving_avg = 0
-    if len(values) >= period:
-        for i in reversed(range(period)):
-            moving_avg += values[i] # adds the last 10 values
-    return moving_avg
+def single_corner(myTrack):
+    start_location = [80.0, 95.0]
+    end_location = [5.0, 20.0]
+    o1 = (0, 0, 100, 5)
+    o2 = (0, 35, 65, 100)
+    o3 = (95, 0, 100, 100)
+    b = (1, 1, 99, 99)
+
+    myTrack.add_locations(start_location, end_location)
+    myTrack.boundary = b
+    myTrack.add_obstacle(o1)
+    myTrack.add_obstacle(o2)
+    myTrack.add_obstacle(o3)
+
+def simple_maze(myTrack):
+    start_location = [95.0, 85.0]
+    end_location = [10.0, 10.0]
+    o1 = (20, 0, 40, 70)
+    o2 = (60, 30, 80, 100)
+    b = (1, 1, 99, 99)
+
+    myTrack.add_locations(start_location, end_location)
+    myTrack.boundary = b
+    myTrack.add_obstacle(o1)
+    myTrack.add_obstacle(o2)
+
+def diag_path(myTrack):
+    start_location = [95.0, 85.0]
+    end_location = [10.0, 10.0]
+    # o1 = (20, 0, 40, 70)
+    # o2 = (60, 30, 80, 100)
+    b = (1, 1, 99, 99)
+
+    myTrack.add_locations(start_location, end_location)
+    myTrack.boundary = b
+    # myTrack.add_obstacle(o1)
+    # myTrack.add_obstacle(o2)
+
+def standard_car(myCar):
+    max_v = 5
+
+    myCar.set_up_car(max_v)
+
+def single_obstacle(myTrack):
+    o1 = (35, 60, 51, 70)
+    myTrack.add_hidden_obstacle(o1)
+
+def double_obstacle(track):
+    o2 = (49, 30, 65, 40)
+    track.add_hidden_obstacle(o2)

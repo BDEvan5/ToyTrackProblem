@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-import StateStructs as ls
 from copy import deepcopy
 import LibFunctions as f
 import logging
@@ -149,7 +148,7 @@ class CarModel:
         state.x[0] += r * np.sin(state.theta)
         state.x[1] += - r * np.cos(state.theta)
 
-        state.update_sense_offsets(state.theta)
+        # update range offsets somewhere
            
     def chech_new_state(self, state, action, dt):
         x = [0.0, 0.0]

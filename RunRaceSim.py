@@ -1,30 +1,18 @@
-import RaceSimulation as sim
-import Models
-import Interface
-
-import Configurations as config
+from RaceSimulation import RaceSimulation
+from Interface import InterfaceManager
 
 def run_sim():
-    myTrack = Models.TrackData()
-    config.straight_track(myTrack)
-    # single_corner(myTrack)
-    # simple_maze(myTrack)
-    # diag_path(myTrack)
-
-    myCar = Models.CarModel()
-    config.standard_car(myCar)
-
-    mySim = sim.RaceSimulation(myTrack, myCar)
-    mySim.run_learning_sim(200)
-    # mySim.run_learning_sim(1)
+    mySim = RaceSimulation()
+    # mySim.run_sim_course()
+    mySim.test_agent()
 
 
     
-    myPlay = Interface.ReplayEp(myTrack)
+    myPlay = InterfaceManager(mySim.env.track, 100)
     # myPlay.replay_best()
-    myPlay.replay_last()
+    myPlay.replay_tests()
 
-    mySim.plot_rewards()
+
 
     
 if __name__ == "__main__":

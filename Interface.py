@@ -1,12 +1,13 @@
 from tkinter import *
 import multiprocessing as mp
-import StateStructs as ls
+from StateStructs import SimMem, SimulationState
 import LibFunctions as f
 import time
 import numpy as np 
 import pyautogui 
 import RaceEnv
-import SimulationMem as SimMem
+import os
+
 
 
 
@@ -19,7 +20,7 @@ class Interface:
 
         self.root = Tk()
 
-        self.step_i = ls.SimulationState()
+        self.step_i = SimulationState()
 
         self.step_q = mp.Queue()
         self.node_q = mp.Queue()
@@ -156,7 +157,6 @@ class Interface:
             self.get_step_info()
             if self.step_i.env_state.done is False:
                 self.update_position()
-                self.draw_nodes()
                 # self.draw_ranges()
                 self.update_info()
                 self.root.after(self.dt, self.run_interface_loop)
@@ -189,20 +189,6 @@ class Interface:
         add_coord = [length * np.sin(self.step_i.car_state.theta), -length * np.cos(self.step_i.car_state.theta)]
         new_pos = f.add_locations(self.prev_px, add_coord)
         self.th = self.canv.create_line(self.prev_px, new_pos, fill='green', width=6)
-
-    def draw_nodes(self):
-        # print(self.step_i.car_state.get_sense_observation())
-        # self.step_i.car_state.print_directions()
-        for sense in self.step_i.car_state.senses:
-            node = sense.sense_location
-            # print(node)
-            # node = f.add_locations(self.step_i.x, sense.dir, dx)
-            node = self._scale_input(node)
-            if sense.val == 0:
-                self.canv.create_text(node[0], node[1], text='X', fill='green')
-            else:
-                self.canv.create_text(node[0], node[1], text='X', fill='red')
-            self.canv.pack()
 
     def update_info(self):
         step_text = str(self.step_i.step)
@@ -254,53 +240,57 @@ class Interface:
             self.canv.pack()
             self.range_lines.append(l)
 
-    def take_screenshot(self, screen_name="end_shot.png"):
+    def take_screenshot(self, screen_name="RunFiles/end_shot.png"):
         path = screen_name
         pyautogui.screenshot(path)
 
 
-class ShowInterface:
+class InterfaceManager:
     def __init__(self, track, dt):
-        self.ep = None
-        self.interface = Interface(track, dt)
+        self.ep = SimMem()
+        self.interface = None
         self.dt = dt
+        self.track = track
 
     def run_replay(self, ep_mem):
+        #Creates new interface for each ep that is played
+        self.interface = Interface(self.track, self.dt)
         self.ep = ep_mem
 
-        print("Starting Replay")
-        # add steps to q
+        # print("Starting Replay")
         for step in self.ep.steps:
-            # step.print_step()
             self.interface.step_q.put(step)
 
         self.interface.setup_root()
-        # root = mp.Process(target=self.interface.setup_root)
-        # root.start()
-        # time.sleep(10)
 
-    def show_route(self):
+    def replay_last(self):
+        self.ep.load_ep("RunFiles/Last_ep")
+        self.run_replay(self.ep)
+
+    def replay_best(self):
+        self.ep.load_ep("RunFiles/BestRun")
+        self.run_replay(self.ep)
+
+    def replay_ep(self, file_name):
+        try:
+            self.ep.load_ep(file_name)
+            self.run_replay(self.ep)
+        except Exception as e:
+            print("File could not be opened: " + str(file_name))
+            print(e)
+        
+        
+
+    def show_route(self): # to be removed in future versions.
         root = mp.Process(target=self.interface.show_map)
         root.start()
         time.sleep(10)
         root.terminate()
 
-    
-class ReplayEp: #todo: combine these two classes into a single interface handler
-    def __init__(self, track):
-        dt = 60
-        self.player = ShowInterface(track, dt)
-        self.ep_history = SimMem.SimMem()
-
-    def replay_last(self):
-        self.ep_history.load_ep("Last_ep")
-        self.player.run_replay(self.ep_history)
-
-    def replay_best(self):
-        self.ep_history.load_ep("BestRun")
-        self.player.run_replay(self.ep_history)
-
+    def replay_tests(self):
         
+        for file_name in os.listdir(os.getcwd() + "/SimulationTests/"):
+            self.replay_ep("SimulationTests/" + file_name)
 
 
 

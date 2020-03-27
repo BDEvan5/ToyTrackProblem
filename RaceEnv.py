@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-import StateStructs as ls
 from copy import deepcopy
 import LibFunctions as f
 import logging
@@ -10,7 +9,7 @@ import pickle
 import datetime
 import os
 import PathPlanner
-import SimulationMem as SimMem
+from StateStructs import SimMem, CarState, EnvState, SimulationState, WayPoint
 
 class RaceEnv:
     def __init__(self, track, car, logger, dx=5, sense_dis=10):
@@ -28,12 +27,12 @@ class RaceEnv:
         self.state_space = 2 + self.num_ranges ** 2
 
         self.planner = PathPlanner.PathPlanner(track, car, logger)
-        self.car_state = ls.CarState(self.num_ranges)
+        self.car_state = CarState(self.num_ranges)
         # self.car_state.get_sense_observation
-        self.env_state = ls.EnvState()
-        self.sim_mem = SimMem.SimMem(self.logger)
+        self.env_state = EnvState()
+        self.sim_mem = SimMem(self.logger)
         self.c_sys = ControlSystem()
-        self.wp = ls.WayPoint()
+        self.wp = WayPoint()
         self.wp_n = 1
 
 
@@ -50,15 +49,14 @@ class RaceEnv:
         if not coll_flag: # no collsions
             self.car.update_controlled_state(self.car_state, action, self.dt)
 
-        self._update_senses()
         self.env_state.done = self._check_done(coll_flag)
         self._get_reward(coll_flag, dr)
         self._update_ranges()
         self.env_state.action = action
 
         self.sim_mem.add_step(self.car_state, self.env_state)
-
-        return self.car_state, self.env_state.reward, self.env_state.done
+        obs = self.car_state.get_state_observation()
+        return obs, self.env_state.reward, self.env_state.done
 
     def get_new_action(self, agent_action, con_action):
         theta_swerve = 0.8
@@ -93,12 +91,12 @@ class RaceEnv:
         self.car_state.x = deepcopy(self.track.start_location)
         self.car_state.v = 0
         self.car_state.theta = 0
-        self._update_senses()
         self.reward = 0
         self.sim_mem.steps.clear()
         self.wp_n = 1
         self.planner.get_single_path()
-        return self.car_state
+        obs = self.car_state.get_state_observation()
+        return obs
 
     def _get_reward(self, coll_flag, dr):
         dis = f.get_distance(self.car_state.x, self.track.end_location) 
@@ -141,30 +139,6 @@ class RaceEnv:
             self.wp_n += 1
 
         return False
-
-    def _update_senses(self):
-        self.car_state.set_sense_locations(self.ds)
-        b = self.track.boundary
-        # self.car_state.print_sense()
-        for sense in self.car_state.senses:
-            if b[0] < sense.sense_location[0] < b[2]:
-                if b[1] < sense.sense_location[1] < b[3]:
-                    sense.val = 0
-                    # It is within the boundary
-                else:
-                    # hits te wall boundary
-                    sense.val = 1
-
-            for o in self.track.obstacles:
-                if o[0] < sense.sense_location[0] < o[2]:
-                    if o[1] < sense.sense_location[1] < o[3]:
-                        sense.val = 1
-                        # if it hits an obstacle   
-            for o in self.track.hidden_obstacles:
-                if o[0] < sense.sense_location[0] < o[2]:
-                    if o[1] < sense.sense_location[1] < o[3]:
-                        sense.val = 1
-        # self.car_state.print_sense()
 
     def _get_next_state(self, action):
         # this takes a direction to move in and moves there
