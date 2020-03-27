@@ -6,8 +6,6 @@ def run_sim():
     # mySim.run_sim_course()
     mySim.test_agent()
 
-
-    
     myPlay = InterfaceManager(mySim.env.track, 100)
     # myPlay.replay_best()
     myPlay.replay_tests()

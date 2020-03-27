@@ -8,7 +8,7 @@ from copy import deepcopy
 import pickle
 import datetime
 import os
-import PathPlanner
+from PathPlanner import PathPlanner
 from StateStructs import SimMem, CarState, EnvState, SimulationState, WayPoint
 
 class RaceEnv:
@@ -18,20 +18,20 @@ class RaceEnv:
         self.logger = logger
         self.track = track
         self.car = car
+        self.planner = PathPlanner(track, car, logger)
+        self.c_sys = ControlSystem()
 
         # configurable
-        self.dt = 1 # update frequency
-        self.num_ranges = 3
-        self.state_space_n = 2 + self.num_ranges
+        self.dt = 1 # Control system frequency
+        self.num_ranges = 5
+        self.state_space = self.num_ranges
         self.action_space = 3
-        self.state_space = 2 + self.num_ranges ** 2
 
-        self.planner = PathPlanner.PathPlanner(track, car, logger)
+
+        # memory structures
         self.car_state = CarState(self.num_ranges)
-        # self.car_state.get_sense_observation
         self.env_state = EnvState()
         self.sim_mem = SimMem(self.logger)
-        self.c_sys = ControlSystem()
         self.wp = WayPoint()
         self.wp_n = 1
 
@@ -39,9 +39,6 @@ class RaceEnv:
         wp = self.track.route[self.wp_n]
         control_action = self.c_sys.get_controlled_action(self.car_state, wp)
         action, dr = self.get_new_action(agent_action, control_action)
-        # print("Control step: " + str(control_action))
-        # print("agent: " + str(agent_action))
-        # print("Action: "  + str(action))
         new_x = self.car.chech_new_state(self.car_state, action, self.dt)
         coll_flag = self.track._check_collision_hidden(new_x)
 
@@ -49,10 +46,10 @@ class RaceEnv:
             self.car.update_controlled_state(self.car_state, action, self.dt)
 
         self.env_state.done = self._check_done(coll_flag)
-        self._get_reward(coll_flag, dr)
-        self._update_ranges()
         self.env_state.control_action = control_action
         self.env_state.agent_action = agent_action
+        self._get_reward(coll_flag, dr)
+        self._update_ranges()
 
         self.sim_mem.add_step(self.car_state, self.env_state)
         obs = self.car_state.get_state_observation()
@@ -103,7 +100,8 @@ class RaceEnv:
 
         reward = 0 # reward increases as distance decreases
         
-        beta = 0.05
+        beta1 = 0.05
+        beta2 = 0.2
         swerve_cost = 1
         crash_cost = 100
 
@@ -112,7 +110,12 @@ class RaceEnv:
         elif self.env_state.done:
             reward = 50
         else:
-            reward = (100 - dis) * beta
+            min_range = self.car_state.ranges[0].val
+            for ran in self.car_state.ranges:
+                if ran.val < min_range:
+                    min_range = ran.val
+            reward = (100 - dis) * beta1
+            reward += (min_range - 10) * beta2
 
         reward += -dr * swerve_cost
 
