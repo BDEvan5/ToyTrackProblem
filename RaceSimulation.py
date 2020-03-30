@@ -27,7 +27,7 @@ class RaceSimulation:
         standard_car(self.car)
         straight_track(self.track)
 
-        self.agent.train(self.env, 5, 24)
+        self.agent.train(self.env, 5, 64)
         self.agent.test(self.env, 1)
 
         single_obstacle(self.env.track)
