@@ -1,6 +1,7 @@
 import numpy as np 
 from matplotlib import pyplot as plt
 import logging
+import time
 
 from RaceEnv import RaceEnv
 from Models import TrackData, CarModel
@@ -19,7 +20,8 @@ class RaceSimulation:
         self.car = CarModel()
 
         self.env = RaceEnv(self.track, self.car, self.logger)
-        self.agent = Agent(self.env.action_space, self.env.state_space)
+        self.agent = Agent(self.env.state_space, self.env.action_space)
+        print("Space sizes: state:%d -> action:%d"%(self.env.state_space, self.env.action_space))
 
         self.rewards = []
 
@@ -27,12 +29,14 @@ class RaceSimulation:
         standard_car(self.car)
         straight_track(self.track)
 
-        self.agent.train(self.env, 5, 64)
+        self.agent.train(self.env, 20, 64)
         self.agent.test(self.env, 1)
+
+        time.sleep(3)
 
         single_obstacle(self.env.track)
 
-        self.agent.train(self.env, 24, 64)
+        self.agent.train(self.env, 54, 64)
         self.agent.test(self.env, 2)
 
         double_obstacle(self.env.track)

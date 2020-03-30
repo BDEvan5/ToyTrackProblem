@@ -3,8 +3,8 @@ from Interface import InterfaceManager
 
 def run_sim():
     mySim = RaceSimulation()
-    # mySim.run_sim_course()
-    mySim.test_agent()
+    mySim.run_sim_course()
+    # mySim.test_agent()
 
     myPlay = InterfaceManager(mySim.env.track, 100)
     # myPlay.replay_best()
