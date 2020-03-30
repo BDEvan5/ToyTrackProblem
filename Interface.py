@@ -192,11 +192,11 @@ class Interface:
         step = self.step_i.step
         x = np.around(self.step_i.car_state.x, 2)
         v = np.around(self.step_i.car_state.v, 2)
-        th = np.around(self.step_i.car_state.theta)
+        th = np.around(self.step_i.car_state.theta, 2)
         reward = np.around(self.step_i.env_state.reward, 3)
         action = np.around(self.step_i.env_state.control_action, 2)
-        distance = np.around(self.step_i.env_state.distance_to_target)
-        state_vec = np.around(self.step_i.car_state.get_state_observation(), 1)
+        distance = np.around(self.step_i.car_state.cur_distance)
+        state_vec = np.around(self.step_i.car_state.get_state_observation(), 2)
         agent_action = np.around(self.step_i.env_state.agent_action)
 
         step_text = str(step)

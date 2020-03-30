@@ -54,20 +54,29 @@ class CarState(WayPoint, Ranging):
     def __init__(self, n):
         WayPoint.__init__(self)
         Ranging.__init__(self, n)
+        self.cur_distance = 0.0
+        self.prev_distance = 0.0
 
     def get_state_observation(self):
-        bin_scale = 10
+        # max normalisation constants
+        max_v = 5
+        max_theta = np.pi
+        max_range = 100
+
         state = []
-        # state.append(self.v)
-        # state.append(self.theta)
+        state.append(self.v/max_v)
+        state.append(self.theta/max_theta)
         # consider adding control_action here
         for ran in self.ranges:
-            r_val = np.around((ran.val/bin_scale), 0)
+            r_val = np.around((ran.val/max_range), 4)
             state.append(r_val)
-            dr_val = np.around(ran.dr, 0)
+            dr_val = np.around(ran.dr/max_range, 4)
             state.append(dr_val)
 
         return state
+
+    def get_distance_difference(self):
+        return self.cur_distance - self.prev_distance
 
 class EnvState:
     def __init__(self):

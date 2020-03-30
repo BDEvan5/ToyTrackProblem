@@ -56,7 +56,7 @@ class RaceEnv:
         return obs, self.env_state.reward, self.env_state.done
 
     def get_new_action(self, agent_action, con_action):
-        theta_swerve = 0.8
+        theta_swerve = 1.2
         # interpret action
         # 0-m : left 
         # m - straight
@@ -96,31 +96,31 @@ class RaceEnv:
         return obs
 
     def _get_reward(self, coll_flag, dr):
-        dis = f.get_distance(self.car_state.x, self.track.end_location) 
+        self.car_state.cur_distance = f.get_distance(self.car_state.x, self.track.end_location) 
 
         reward = 0 # reward increases as distance decreases
         
-        beta1 = 0.05
-        beta2 = 0.2
+        beta1 = 1
+        beta2 = 0.5
         swerve_cost = 1
         crash_cost = 100
+        goal_reward = 100
 
         if coll_flag:
             reward = - crash_cost
         elif self.env_state.done:
-            reward = 50
+            reward = goal_reward
         else:
-            min_range = self.car_state.ranges[0].val
-            for ran in self.car_state.ranges:
-                if ran.val < min_range:
-                    min_range = ran.val
-            reward = (100 - dis) * beta1
-            reward += (min_range - 10) * beta2
+            ranges = [ran.val for ran in self.car_state.ranges]
+            min_range = np.min(ranges)
+
+            reward = beta1 * self.car_state.get_distance_difference()
+            reward += (min_range) * beta2
 
         reward += -dr * swerve_cost
 
-        self.env_state.distance_to_target = dis
         self.env_state.reward = reward
+        self.car_state.prev_distance = deepcopy(self.car_state.cur_distance)
 
     def _check_done(self, coll_flag):
         # check colision is end
@@ -129,9 +129,9 @@ class RaceEnv:
             return True
 
         # if no collision, check end
-        dis = f.get_distance(self.track.end_location, self.car_state.x)
-        if dis < self.dx:
-            print("Final distance is: %d" % dis)
+        cur_dis = f.get_distance(self.track.end_location, self.car_state.x)
+        if cur_dis < self.dx:
+            print("Final distance is: %d" % cur_dis)
             return True
         
         # if not end, then update wp if needed
