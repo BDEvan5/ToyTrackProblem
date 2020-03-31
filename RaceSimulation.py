@@ -26,22 +26,19 @@ class RaceSimulation:
         self.rewards = []
 
     def run_sim_course(self):
+        self.agent.clear_test_files()
         standard_car(self.car)
         straight_track(self.track)
 
-        self.agent.train(self.env, 20, 64)
-        self.agent.test(self.env, 1)
-
-        time.sleep(3)
+        self.agent.train(self.env, 1200, "Train1: StraightTrack")
 
         single_obstacle(self.env.track)
 
-        self.agent.train(self.env, 54, 64)
-        self.agent.test(self.env, 2)
+        self.agent.train(self.env, 3000, "Train2: SingleObstacle")
 
         double_obstacle(self.env.track)
-        self.agent.train(self.env, 100, 64)
-        self.agent.test(self.env, 3)
+        self.agent.train(self.env, 5000, "Train3: DoubleObstacle")
+
 
     def test_agent(self):
         standard_car(self.car)

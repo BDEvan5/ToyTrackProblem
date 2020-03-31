@@ -74,6 +74,7 @@ class CarState(WayPoint, Ranging):
             state.append(dr_val)
 
         state = np.array(state)
+        state = state[None, :]
         return state
 
     def get_distance_difference(self):

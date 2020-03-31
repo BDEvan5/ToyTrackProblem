@@ -10,6 +10,7 @@ import datetime
 import os
 from PathPlanner import PathPlanner
 from StateStructs import SimMem, CarState, EnvState, SimulationState, WayPoint
+from Interface import Interface
 
 class RaceEnv:
     def __init__(self, track, car, logger, dx=5, sense_dis=10):
@@ -171,6 +172,16 @@ class RaceEnv:
             ran.dr = update_val - ran.val # possibly take more than two terms
             ran.val = update_val
         # self.car_state.print_ranges()
+
+    def render_episode(self):
+        dt = 30
+        self.interface = Interface(self.track, dt)
+
+        self.interface.pause_flag = False # starts in play mode
+        for step in self.sim_mem.steps:
+            self.interface.step_q.put(step)
+
+        self.interface.setup_root()
 
 
 class ControlSystem:

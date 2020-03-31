@@ -3,7 +3,7 @@ from Interface import InterfaceManager
 
 def run_sim():
     mySim = RaceSimulation()
-    mySim.run_sim_course()
+    mySim.run_sim_course()  
     # mySim.test_agent()
 
     myPlay = InterfaceManager(mySim.env.track, 100)
