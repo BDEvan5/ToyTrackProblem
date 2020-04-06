@@ -15,7 +15,7 @@ from Models import CarModel, TrackData
 
 class RaceEnv:
     def __init__(self, config: myConfig):
-        self.dx = 5 self.config = config
+        self.config = config
 
         # set up and create
         logging.basicConfig(filename="AgentLogger.log", 
