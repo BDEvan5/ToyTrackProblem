@@ -169,53 +169,6 @@ class SearchNode:
 		return v_score + prior score
 
 
-# class EnvModel:
-#     def __init__(self):
-
-#     def predict(self, state):
-#         v = state[0]
-#         th = state[1]
-#         ac = state[2]
-#         dth = state[3]
-
-#         dt = 1 # from env
-#         r = dt * v
-#         dx = r * np.sin(dth)
-#         dy = r * np.cos(dth)
-
-#         vp = v + ac * dt - 0.1 * v
-#         thp = dth
-#         # assume action remains const
-
-#         new_state = [vp, thp, ac, dth]
-
-#         dth = np.pi / len(state[3:])
-#         for i in range(len(state) - 4):
-#             th_r = i * dth - np.pi / 2
-#             if th_r < 0.001:
-#                 new_state.append(state[i + 3])
-#             else:
-#                 rp = r + dy / np.cos(th_r)
-#                 new_state.append(rp)
-
 
 	
-
-class ReplayBuffer:
-    def __init__(self, config):
-        self.memory_size = config.memory_size
-        self.batch_size = config.batch_size
-        self.buffer = []
-
-    def save_step(self, step):
-        if len(self.buffer) > self.window_size:
-            self.buffer.pop(0)
-        self.buffer.append(episode)
-
-    def sample_batch(self):
-        if len(self.buffer) > self.batch_size:
-            sample_batch = random.sample(self.buffer, self.batch_size)
-            return sample_batch
-        sample_batch = random.sample(self.buffer, len(self.buffer)-1)
-        return sample_batch
 

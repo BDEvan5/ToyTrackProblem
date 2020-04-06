@@ -107,7 +107,6 @@ class SimulationState():
         self.env_state = env_state
 
 
-
 class SimMem:
     def __init__(self, logger=None):
         self.steps = []

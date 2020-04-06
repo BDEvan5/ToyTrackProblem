@@ -17,6 +17,11 @@ class Configuration:
         self.memory_size = memory_size
         self.batch_size = batch_size
 
+        # set training
+        self.network_update = 5
+        self.render = True
+        self.render_rate = 20
+
         # learning parameters
         self.lr = lr
         self.gamma = gamma
