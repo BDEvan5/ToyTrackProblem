@@ -57,7 +57,7 @@ class CarState(WayPoint, Ranging):
         self.cur_distance = 0.0
         self.prev_distance = 0.0
 
-    def get_state_observation(self):
+    def get_state_observation(self, control_action=[0,0]):
         # max normalisation constants
         max_v = 5
         max_theta = np.pi
@@ -66,17 +66,25 @@ class CarState(WayPoint, Ranging):
         state = []
         state.append(self.v/max_v)
         state.append(self.theta/max_theta)
+        state.append(control_action[0])
+        state.append(control_action[1])
         # consider adding control_action here
         for ran in self.ranges:
             r_val = np.around((ran.val/max_range), 4)
             state.append(r_val)
-            dr_val = np.around(ran.dr/max_range, 4)
-            state.append(dr_val)
-
+            # dr_val = np.around(ran.dr/max_range, 4)
+            # state.append(dr_val)
+        state = np.array(state)
+        state = state[None, :]
         return state
 
     def get_distance_difference(self):
         return self.cur_distance - self.prev_distance
+
+    def reset_state(self, start_location):
+        self.x = deepcopy(start_location)
+        self.v = 0
+        self.theta = 0
 
 class EnvState:
     def __init__(self):
@@ -98,14 +106,6 @@ class SimulationState():
     def _add_env_state(self, env_state):
         self.env_state = env_state
 
-    # def print_step(self, i):
-    #     msg0 = str(i)
-    #     msg1 = " State; x: " + str(np.around(self.x,2)) + " v: " + str(self.v) + "@ " + str(self.theta)
-    #     msg2 = " Action: " + str(np.around(self.control_action,3))
-    #     msg3 = " Reward: " + str(self.reward)
-
-    #     print(msg0 + msg1 + msg2 + msg3)
-    #     # self.print_sense()
 
 
 class SimMem:
@@ -140,10 +140,6 @@ class SimMem:
 
     def save_ep(self, f_name):
         save_file_name =  f_name # + str(datetime.datetime.now())
-        
-        if os.path.exists(save_file_name):
-            print("Old file removed")
-            os.remove(save_file_name)
         
         s_file = open(save_file_name, 'ab')
 

@@ -1,14 +1,15 @@
-from RaceSimulation import RaceSimulation
-from Interface import InterfaceManager
+from RaceSimulation import RaceSimulation, AgentComparison
 
 def run_sim():
     mySim = RaceSimulation()
-    # mySim.run_sim_course()
-    mySim.test_agent()
+    mySim.run_agent_training()
+    # mySim.test_agent()
 
-    myPlay = InterfaceManager(mySim.env.track, 100)
-    # myPlay.replay_best()
-    myPlay.replay_tests()
+    # myComp = AgentComparison()
+    # myComp.train_agents()
+    # myComp.run_agent_comparison()  
+
+
 
 
 

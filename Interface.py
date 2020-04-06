@@ -32,6 +32,8 @@ class Interface:
         self.set_up_track()   
         self.set_up_buttons()
 
+        self.save_shot_path = "EndShot"
+
 # setup functions
     def set_up_info_pannel(self):
         self.canv = Canvas(self.root, height=self.size[0], width=self.size[1])
@@ -102,12 +104,14 @@ class Interface:
 
     def set_up_track(self):
         for obs in self.track.obstacles:
+            # obs = obstacle.get_obstacle_shape()
             o1 = self._scale_input(obs[0:2])
             o2 = self._scale_input(obs[2:4])
             self.canv.create_rectangle(o1, o2, fill='blue')
             self.canv.pack()
 
-        for obs in self.track.hidden_obstacles:
+        for obstacle in self.track.hidden_obstacles:
+            obs = obstacle.get_obstacle_shape()
             o1 = self._scale_input(obs[0:2])
             o2 = self._scale_input(obs[2:4])
             self.canv.create_rectangle(o1, o2, fill='cyan')
@@ -152,14 +156,19 @@ class Interface:
         self.pause_flag = False
 
     def single_step(self):
-        self.step_i = self.step_q.get()
-        if self.step_i.env_state.done is False:
-            self.update_car_position()
-            self.draw_ranges()
-            self.update_info()
-            self.root.after(self.dt, self.run_interface_loop)
+        if not self.step_q.empty():
+            self.step_i = self.step_q.get()
+            if self.step_i.env_state.done is False:
+                self.update_car_position()
+                self.draw_ranges()
+                self.update_info()
+                self.root.after(self.dt, self.run_interface_loop)
+            else:
+                # print("Going to destroy tk inter")
+                self.take_screenshot()
+                self.root.destroy()
         else:
-            print("Going to destroy tk inter")
+            # print("Going to destroy tk inter")
             self.take_screenshot()
             self.root.destroy()
 
@@ -234,14 +243,14 @@ class Interface:
             self.canv.pack()
             self.range_lines.append(l)
 
-    def take_screenshot(self, screen_name="RunFiles/end_shot.png"):
+    def take_screenshot(self):
         x = self.root.winfo_x()
         y = self.root.winfo_y()
         width = self.root.winfo_reqwidth()
         height = self.root.winfo_reqheight()
         arr = [x, y, x+width, y+height]
         # print(arr)
-        path = screen_name
+        path = self.save_shot_path + ".png"
         pyautogui.screenshot(path, region=arr)
 
 
