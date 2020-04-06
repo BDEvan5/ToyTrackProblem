@@ -12,3 +12,7 @@ SimulationTests/
 myToyProblemEnv2/lib/python3.7/site-packages/wrapt/
 
 myToyProblemEnv2/
+
+Agent_AV_SimTests/ModelWeights/
+
+*.log

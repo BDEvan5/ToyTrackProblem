@@ -1,7 +1,9 @@
 from RaceSimulation import RaceSimulation, AgentComparison
+from Config import create_sim_config
 
 def run_sim():
-    mySim = RaceSimulation()
+    config = create_sim_config()
+    mySim = RaceSimulation(config)
     mySim.run_agent_training()
     # mySim.test_agent()
 

@@ -112,7 +112,7 @@ class AgentMCTS_AV:
     def expand_node(self, node):
         # generates child nodes
         policy_sum = sum(node.action_values)
-        for action in range(self.config.action_space):
+        # for action in range(self.config.action_space):
             
 
         for i, action_val in enumerate(node.action_values):

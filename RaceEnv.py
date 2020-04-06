@@ -14,7 +14,7 @@ from Interface import Interface
 from Models import CarModel, TrackData
 
 class RaceEnv:
-    def __init__(self, config: myConfig):
+    def __init__(self, config):
         self.config = config
 
         # set up and create
@@ -176,14 +176,14 @@ class RaceEnv:
 
         # if no collision, check end
         cur_dis = f.get_distance(self.track.end_location, self.car_state.x)
-        if cur_dis < self.dx:
+        if cur_dis < self.config.dx:
             # print("Final distance is: %d" % cur_dis)
             return True
         
         # if not end, then update wp if needed
         wp = self.track.route[self.wp_n]
         wp_dis = f.get_distance(wp.x, self.car_state.x)
-        if wp_dis < (self.dx/2):
+        if wp_dis < (self.config.dx/2):
             # print("Updating Wp")
             self.wp_n += 1
 

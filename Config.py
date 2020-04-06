@@ -46,6 +46,7 @@ def create_sim_config():
     config = Configuration(2000,
                             32,
                             7e-3,
+                            0.99,
                             0.999,
                             0.995,
                             0.05,

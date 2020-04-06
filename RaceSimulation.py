@@ -1,13 +1,12 @@
 import numpy as np 
-from matplotlib import pyplot as plt
 import logging
 import time
-
+from matplotlib import pyplot as plt
 from RaceEnv import RaceEnv
 from Models import TrackData, CarModel, Obstacle
 from Agent_A2C import Agent_A2C
 from Agent_ActionValue import Agent_ActionValue
-from AgentMCTS_AV import AgentMCTS_AV, ReplayBuffer
+# from AgentMCTS_AV import AgentMCTS_AV, ReplayBuffer
 
 class RaceSimulation: # for single agent testing
     def __init__(self, config):
@@ -23,18 +22,18 @@ class RaceSimulation: # for single agent testing
         agent = self.agent_av
         agent.clear_test_files()
         
-        self.track.straight_track()
+        self.env.track.straight_track()
 
 
         agent.train(self.env, 800, "Train1: StraightTrack", f_test=20)
 
-        self.track.add_obstacle()
+        self.env.track.add_obstacle()
         agent.train(self.env, 3000, "Train2: SingleObstacle")
 
-        self.track.add_obstacle()
+        self.env.track.add_obstacle()
         agent.train(self.env, 5000, "Train3: DoubleObstacle")
 
-        self.track.add_obstacle()
+        self.env.track.add_obstacle()
         agent.train(self.env, 5000, "Train4: TripleObstacle")
 
     def test_agent(self):
