@@ -11,16 +11,23 @@ import os
 from PathPlanner import PathPlanner
 from StateStructs import SimMem, CarState, EnvState, SimulationState, WayPoint
 from Interface import Interface
+from Models import CarModel, TrackData
 
 class RaceEnv:
-    def __init__(self, track, car, logger, dx=5, sense_dis=10):
-        self.dx = dx # this is how close it must be to stop
-        self.ds = sense_dis # this is how far the sensor can look ahead
-        self.logger = logger
-        self.track = track
-        self.car = car
-        self.planner = PathPlanner(track, car, logger)
+    def __init__(self, config: myConfig):
+        self.dx = 5 self.config = config
+
+        # set up and create
+        logging.basicConfig(filename="AgentLogger.log", 
+                    format='%(asctime)s %(message)s', 
+                    filemode='w') 
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.DEBUG)
+        self.track = TrackData()
+        self.car = CarModel()
+        self.planner = PathPlanner(self.track, self.car, self.logger)
         self.c_sys = ControlSystem()
+
 
         # configurable
         self.dt = 1 # Control system frequency
@@ -35,6 +42,7 @@ class RaceEnv:
         self.sim_mem = SimMem(self.logger)
         self.wp = WayPoint()
         self.wp_n = 1
+
 
     def step(self, agent_action):
         wp = self.track.route[self.wp_n]
