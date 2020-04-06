@@ -1,9 +1,4 @@
 import numpy as np 
-import tensorflow as tf
-import tensorflow.keras as k
-import tensorflow.keras.layers as kl
-import tensorflow.keras.optimizers as ko
-import tensorflow.keras.losses as kls
 
 import random 
 from collections import deque

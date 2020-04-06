@@ -36,7 +36,7 @@ class Configuration:
         self.ranges_n = ranges_n
         self.state_space = state_space
         self.action_space = action_space
-        self.dx = 1 # distance it must be from final target
+        self.dx = 3 # distance it must be from final target
 
         # agent parameters
         self.max_steps = 200

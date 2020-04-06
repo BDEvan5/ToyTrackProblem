@@ -22,3 +22,7 @@ Agent_A2C_SimTests/AgentTests/
 Agent_A2C_SimTests/ModelWeights/
 
 Agent_A2C_SimTests/Plots/
+
+Agent_AV_SimTests/TrainingImages/
+
+Agent_AV_SimTests/Plots/
