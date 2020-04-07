@@ -108,9 +108,9 @@ class TrackData(Path, TrackConfig):
         if x[0] < b[0] or x[0] > b[2]:
             msg = "X wall collision --> x: %d, b:%d;%d"%(x[0], b[0], b[2])
             ret = 1
-        # if x[1] < b[1] or x[1] > b[3]:
-        #     msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
-        #     ret = 1
+        if x[1] < b[1] or x[1] > b[3]:
+            msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
+            ret = 1 
         # if ret == 1:
             # print(msg)
             # self.logger.info(msg)

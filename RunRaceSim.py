@@ -4,8 +4,8 @@ from Config import create_sim_config
 def run_sim():
     config = create_sim_config()
     mySim = RaceSimulation(config)
-    mySim.debug_agent_test()
-    # mySim.run_classical_agent()
+    # mySim.debug_agent_test()
+    mySim.run_classical_agent()
     # mySim.run_agent_training()
     # mySim.test_agent()
 

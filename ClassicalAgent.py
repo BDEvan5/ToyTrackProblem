@@ -19,15 +19,18 @@ class ClassicalAgent:
 
     def choose_action(self, state):
         # write function to choose logical action 
+        state = state[0]
         # v = state[0]
         # th = state[1]
-        # wp_x = state[2]
-        # wp_y = state[3]
+        wp_x = state[2]
+        wp_y = state[3]
         # print(state)
         r = []
         for i in range(self.config.ranges_n):
             # range values
-            r.append(state[0][4 + i])
+            r.append(state[4 + i])
+
+        dis = (wp_x ** 2 + wp_y**2) ** 0.5
 
         r_left = min([r[0] + r[1]])
         r_right = min([r[3] + r[4]])
@@ -35,15 +38,17 @@ class ClassicalAgent:
 
         min_r = min([r_left, r_right])
         action = 1 # default to straight
-        # if r_mid < 3 *min_r: # obstacle ahead
-        #     if r_left > r_right:
-        #         action = 0 # go left
-        #     else:
-        #         action = 2 #go right
-        # if r_left < 2* r_right: 
-        #     action = 2
-        # if r_right < 2*r_left:
-        #     action = 0
+
+        if dis > min_r * 1.2:
+            if r_mid < 3 *min_r: # obstacle ahead
+                if r_left > r_right:
+                    action = 0 # go left
+                else:
+                    action = 2 #go right
+            if r_left < 2* r_right: 
+                action = 2
+            if r_right < 2*r_left:
+                action = 0
 
         return action
 

@@ -39,7 +39,7 @@ class Configuration:
         self.action_space = action_space
 
         # model parameters
-        self.dx = 3 # distance it must be from final target
+        self.dx = 8 # distance it must be from final target
         self.dt = 1 # controller frequency
 
         # agent parameters

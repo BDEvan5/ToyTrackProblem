@@ -154,7 +154,7 @@ class RaceEnv:
         
         beta1 = 0.08
         beta2 = 0.05
-        beta3 = 1
+        beta3 = 2
         swerve_cost = 1
         crash_cost = 100
         goal_reward = 100
@@ -182,10 +182,13 @@ class RaceEnv:
             return True
 
         # if no collision, check end
-        end_dis = f.get_distance(self.track.end_location, self.car_state.x)
-        if end_dis < self.config.dx:
-            # print("Final distance is: %d" % end_dis)
-            return True
+        # end_dis = f.get_distance(self.track.end_location, self.car_state.x)
+        # if end_dis < self.config.dx:
+        #     # print("Final distance is: %d" % end_dis)
+        #     return True
+
+        if self.car_state.x[1] < 10 + self.config.dx:
+            return True # this makes it a finish line not a point
         
         # if not end, then update glbl_wp if needed
         wp_dis = f.get_distance(self.car_state.glbl_wp.x, self.car_state.x)

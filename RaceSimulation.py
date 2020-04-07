@@ -12,6 +12,7 @@ from ReplayBuffer import ReplayBuffer
 from Networks import Network_AV
 from ClassicalAgent import ClassicalAgent
 
+
 class RaceSimulation: # for single agent testing
     def __init__(self, config):
         self.config = config
@@ -49,7 +50,6 @@ class RaceSimulation: # for single agent testing
         ep_loss = []
         for i in range(num_sets):
             rewards = self.agent_av.run_sim()
-            print(i)
             ep_rewards.append(rewards)
             plot(ep_rewards, 10, set_name, 2)
 
@@ -108,7 +108,6 @@ class RaceSimulation: # for single agent testing
             rewards = self.classical_agent.run_sim()
             ep_rewards.append(rewards)
             plot(ep_rewards, 10, set_name, 2)
-            print(ep_rewards)
             if i % self.config.render_rate == 1 and self.config.render:
                 self.env.render_episode(self.agent_file_path + "TrainingImages/" + set_name + ":%d"%i)
 
@@ -120,8 +119,11 @@ class RaceSimulation: # for single agent testing
 
         plt.figure(2)
         plt.savefig(self.agent_file_path + "Plots/" + set_name + ":training")
-        plt.figure(3)
-        plt.savefig(self.agent_file_path + "Plots/" + set_name + ":loss")
+        # plt.figure(3)
+        # plt.savefig(self.agent_file_path + "Plots/" + set_name + ":loss")
+
+        print(set_name + " ->  Complete: %d" %np.mean(ep_rewards))
+
         return ep_rewards
 
     def run_classical_agent(self):
@@ -129,12 +131,12 @@ class RaceSimulation: # for single agent testing
         
         self.env.track.straight_track()
 
-        self.run_classical_set(30, "ClassicSet1")
+        self.run_classical_set(50, "ClassicSet1")
 
         self.env.track.add_obstacle()
-        self.run_classical_set(30, "ClassicSet Obstacle")
+        self.run_classical_set(50, "ClassicSet Obstacle")
         self.env.track.add_obstacle()
-        self.run_classical_set(30, "ClassicSet Two Obstacles")
+        self.run_classical_set(50, "ClassicSet Two Obstacles")
 
 
 
