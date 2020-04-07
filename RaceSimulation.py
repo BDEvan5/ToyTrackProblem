@@ -10,6 +10,7 @@ from Agent_A2C import Agent_A2C
 from Agent_ActionValue import Agent_ActionValue, Trainer_AV
 from ReplayBuffer import ReplayBuffer
 from Networks import Network_AV
+from ClassicalAgent import ClassicalAgent
 
 class RaceSimulation: # for single agent testing
     def __init__(self, config):
@@ -27,7 +28,7 @@ class RaceSimulation: # for single agent testing
         self.agent_av = Agent_ActionValue(self.config, self.network_av_model, self.buffer, self.env)
         self.trainer_av = Trainer_AV(self.config, self.network_av_model)
 
-        print("Space sizes: state:%d -> action:%d"%(self.config.state_space, self.config.action_space))
+        self.classical_agent = ClassicalAgent(self.config, self.buffer, self.env)
 
         self.agent_file_path = "Agent_AV_SimTests/"
         # self.agent_test_path = "Agent_A2C_SimTests/AgentTests/"
@@ -48,6 +49,7 @@ class RaceSimulation: # for single agent testing
         ep_loss = []
         for i in range(num_sets):
             rewards = self.agent_av.run_sim()
+            print(i)
             ep_rewards.append(rewards)
             plot(ep_rewards, 10, set_name, 2)
 
@@ -73,22 +75,66 @@ class RaceSimulation: # for single agent testing
         plt.savefig(self.agent_file_path + "Plots/" + set_name + ":loss")
         return ep_rewards
 
+
     def run_agent_training(self):
         self.clear_test_files()
         
         self.env.track.straight_track()
 
-        self.run_training_set(50, "Train1: StraightTrack")
+        self.run_training_set(300, "Train1: StraightTrack")
 
         self.env.track.add_obstacle()
-        self.run_training_set(600, "Train2: SingleObstacle")
+        self.run_training_set(1500, "Train2: SingleObstacle")
+
+        # self.env.track.add_obstacle()
+        # self.run_training_set(800, "Train3: DoubleObstacle")
+
+        # self.env.track.add_obstacle()
+        # self.run_training_set(1000, "Train4: TripleObstacle")
+
+    def debug_agent_test(self):
+        self.clear_test_files()
+        
+        self.env.track.straight_track()
+
+        self.run_training_set(2, "Debugging...")
+
+    def run_classical_set(self, num_sets, set_name=""):
+        print(set_name)
+        # run a training set
+        ep_rewards = []
+        ep_loss = []
+        for i in range(num_sets):
+            rewards = self.classical_agent.run_sim()
+            ep_rewards.append(rewards)
+            plot(ep_rewards, 10, set_name, 2)
+            print(ep_rewards)
+            if i % self.config.render_rate == 1 and self.config.render:
+                self.env.render_episode(self.agent_file_path + "TrainingImages/" + set_name + ":%d"%i)
+
+            # if i% self.config.test_rate == 1:
+            #     minibatch = self.buffer.sample_batch()
+            #     avg_loss = self.trainer_av.test_network(minibatch)
+            #     ep_loss.append(avg_loss)
+            #     plot(ep_loss, 5, set_name + "Loss", 3)
+
+        plt.figure(2)
+        plt.savefig(self.agent_file_path + "Plots/" + set_name + ":training")
+        plt.figure(3)
+        plt.savefig(self.agent_file_path + "Plots/" + set_name + ":loss")
+        return ep_rewards
+
+    def run_classical_agent(self):
+        self.clear_test_files()
+        
+        self.env.track.straight_track()
+
+        self.run_classical_set(30, "ClassicSet1")
 
         self.env.track.add_obstacle()
-        self.run_training_set(800, "Train3: DoubleObstacle")
-
+        self.run_classical_set(30, "ClassicSet Obstacle")
         self.env.track.add_obstacle()
-        self.run_training_set(1000, "Train4: TripleObstacle")
-
+        self.run_classical_set(30, "ClassicSet Two Obstacles")
 
 
 
@@ -160,6 +206,7 @@ class AgentComparison: # for testing agents against other agents
         plt.show()
         plt.savefig("AgentTest")
 
+    
 
 
 

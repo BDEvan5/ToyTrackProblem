@@ -23,6 +23,7 @@ class RaceEnv:
                     filemode='w') 
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
+
         self.track = TrackData()
         self.car = CarModel()
         self.planner = PathPlanner(self.track, self.car, self.logger)
@@ -30,44 +31,50 @@ class RaceEnv:
 
 
         # configurable
-        self.dt = 1 # Control system frequency
-        self.num_ranges = 5
-        self.state_space = self.num_ranges + 2
-        self.action_space = 3
-
+        self.dt = 1 # Control system frequency 
+        # TODO: replace with config dt
 
         # memory structures
-        self.car_state = CarState(self.num_ranges)
+        self.car_state = CarState(self.config.ranges_n)
         self.env_state = EnvState()
         self.sim_mem = SimMem(self.logger)
-        self.wp = WayPoint()
-        self.wp_n = 1
+        self.glbl_wp_n = 0 # waypoint number in the list of global way points
 
 
     def step(self, agent_action):
-        wp = self.track.route[self.wp_n]
-        control_action = self.c_sys.get_controlled_action(self.car_state, wp)
-        action, dr = self.get_new_action(agent_action, control_action)
-        new_x = self.car.chech_new_state(self.car_state, action, self.dt)
+        #TODO: move this to a get lcl_wp function call that returns lcl_wp
+        # agent action is in form of th for set r = 10
+        r = 10 # possibly make more flexible later on
+        th = (agent_action - 1) * 0.6 # 0.6 radians to the right or left of current pos
+        lcl_x = [ r * np.sin(th), -r * np.cos(th)]
+        lcl_wp = WayPoint()
+        lcl_wp.x = f.add_locations(self.car_state.x, lcl_x)
+        # print(lcl_wp.x)
+        lcl_wp.v = self.car.max_v # this will be changed later
+        lcl_wp.theta = th # orientation of lcl_wp. It is as if you go straight through it
+
+        control_action = self.c_sys.get_controlled_action(self.car_state, lcl_wp)
+        # action, dr = self.get_new_action(agent_action, control_action)
+        new_x = self.car.chech_new_state(self.car_state, control_action, self.config.dt)
         coll_flag = self.track._check_collision_hidden(new_x)
 
         if not coll_flag: # no collsions
-            self.car.update_controlled_state(self.car_state, action, self.dt)
+            self.car.update_controlled_state(self.car_state, control_action, self.dt)
 
         self.env_state.done = self._check_done(coll_flag)
         self.env_state.control_action = control_action
         self.env_state.agent_action = agent_action
-        self._get_reward(coll_flag, dr)
+        self._get_reward(coll_flag, agent_action)
         self._update_ranges()
 
         self.sim_mem.add_step(self.car_state, self.env_state)
-        obs = self.car_state.get_state_observation(control_action)
+        obs = self.car_state.get_state_observation()
         self.sim_mem.step += 1
         return obs, self.env_state.reward, self.env_state.done
 
     def model_step(self, state, agent_action):
-        wp = self.track.route[self.wp_n]
-        control_action = self.c_sys.get_controlled_action(self.car_state, wp)
+        glbl_wp = self.track.route[self.glbl_wp_n]
+        control_action = self.c_sys.get_controlled_action(self.car_state, glbl_wp)
         action, dr = self.get_new_action(agent_action, control_action)
         new_x = self.car.chech_new_state(self.car_state, action, self.dt)
         coll_flag = self.track._check_collision_hidden(new_x)
@@ -97,7 +104,6 @@ class RaceEnv:
         obs = state.get_state_observation(control_action)
 
         return obs
-
 
     def get_new_action(self, agent_action, con_action):
         theta_swerve = 0.8
@@ -131,22 +137,23 @@ class RaceEnv:
         # resets to starting location
         self.car_state.prev_distance = f.get_distance(self.track.start_location, self.track.end_location)
         self.car_state.reset_state(self.track.start_location)
+        self.planner.get_single_path() # plans the path to be followed
+        self.glbl_wp_n = 0
+        self.car_state.glbl_wp = self.track.route[self.glbl_wp_n] # sets current goal
         self.reward = 0
         self.sim_mem.steps.clear()
         self.sim_mem.step = 0
-        self.wp_n = 1
-        self.planner.get_single_path() # plans the path to be followed
         self.track.set_up_random_obstacles()
 
         return self.car_state.get_state_observation()
 
-    def _get_reward(self, coll_flag, dr):
+    def _get_reward(self, coll_flag, agent_action):
         self.car_state.cur_distance = f.get_distance(self.car_state.x, self.track.end_location) 
 
         reward = 0 # reward increases as distance decreases
         
         beta1 = 0.08
-        beta2 = 0.2
+        beta2 = 0.05
         beta3 = 1
         swerve_cost = 1
         crash_cost = 100
@@ -154,8 +161,8 @@ class RaceEnv:
 
         if coll_flag:
             reward = - crash_cost
-        # elif self.env_state.done:
-        #     reward = beta3 * ( goal_reward - self.sim_mem.step) # gives reward * number of steps
+        elif self.env_state.done:
+            reward = beta3 * ( goal_reward - self.sim_mem.step) # gives reward * number of steps
         else:
             ranges = [ran.val for ran in self.car_state.ranges]
             min_range = np.min(ranges)
@@ -163,7 +170,7 @@ class RaceEnv:
             # reward = beta1 * self.car_state.get_distance_difference()
             reward = (min_range) * beta2
 
-        reward += -dr * swerve_cost
+        reward += - np.abs(agent_action - 1) * swerve_cost
 
         self.env_state.reward = reward
         self.car_state.prev_distance = deepcopy(self.car_state.cur_distance)
@@ -175,17 +182,16 @@ class RaceEnv:
             return True
 
         # if no collision, check end
-        cur_dis = f.get_distance(self.track.end_location, self.car_state.x)
-        if cur_dis < self.config.dx:
-            # print("Final distance is: %d" % cur_dis)
+        end_dis = f.get_distance(self.track.end_location, self.car_state.x)
+        if end_dis < self.config.dx:
+            # print("Final distance is: %d" % end_dis)
             return True
         
-        # if not end, then update wp if needed
-        wp = self.track.route[self.wp_n]
-        wp_dis = f.get_distance(wp.x, self.car_state.x)
+        # if not end, then update glbl_wp if needed
+        wp_dis = f.get_distance(self.car_state.glbl_wp.x, self.car_state.x)
         if wp_dis < (self.config.dx/2):
-            # print("Updating Wp")
-            self.wp_n += 1
+            self.glbl_wp_n += 1
+            self.car_state.glbl_wp = self.track.route[self.glbl_wp_n]
 
         return False
 
@@ -233,12 +239,12 @@ class ControlSystem:
     def __init__(self):
         self.k_th_ref = 0.1 # amount to favour v direction
 
-    def get_controlled_action(self, state, wp):
-        # print(wp.x)
+    def get_controlled_action(self, state, glbl_wp):
+        # print(glbl_wp.x)
         # print(state.x)
-        x_ref = wp.x 
-        v_ref = wp.v 
-        th_ref = wp.theta
+        x_ref = glbl_wp.x 
+        v_ref = glbl_wp.v 
+        th_ref = glbl_wp.theta
 
         # run v control
         e_v = v_ref - state.v # error for controler

@@ -56,27 +56,39 @@ class CarState(WayPoint, Ranging):
         Ranging.__init__(self, n)
         self.cur_distance = 0.0
         self.prev_distance = 0.0
+        self.glbl_wp = WayPoint() # this is what is being navigated towards
 
-    def get_state_observation(self, control_action=[0,0]):
+    def get_state_observation(self):
         # max normalisation constants
         max_v = 5
         max_theta = np.pi
         max_range = 100
+        max_dis_glbl_wp = 100 # distance to next wp
 
         state = []
         state.append(self.v/max_v)
         state.append(self.theta/max_theta)
-        state.append(control_action[0])
-        state.append(control_action[1])
-        # consider adding control_action here
+
+        x_glbl_bf = self.relocate_glbl_wp()
+        state.append(x_glbl_bf[0]/max_dis_glbl_wp)
+        state.append(x_glbl_bf[1]/max_dis_glbl_wp)
         for ran in self.ranges:
             r_val = np.around((ran.val/max_range), 4)
             state.append(r_val)
-            # dr_val = np.around(ran.dr/max_range, 4)
-            # state.append(dr_val)
+
         state = np.array(state)
         state = state[None, :]
         return state
+
+    def relocate_glbl_wp(self):
+        # convers the glbl wp to the relative frame of the car
+        #only worry about position of glbl wp, do orientation later #TODO 
+        r = f.get_distance(self.glbl_wp.x, self.x)
+        x = [0, 0]
+        x[0] = - np.sin(self.theta) * r #toCheck sin convention
+        x[1] = - np.cos(self.theta) * r
+        # print("relocated x: " + str(x) + " -> th: " + str(self.theta) + " -> x: " + str(self.x))
+        return x
 
     def get_distance_difference(self):
         return self.cur_distance - self.prev_distance
@@ -85,6 +97,7 @@ class CarState(WayPoint, Ranging):
         self.x = deepcopy(start_location)
         self.v = 0
         self.theta = 0
+
 
 class EnvState:
     def __init__(self):

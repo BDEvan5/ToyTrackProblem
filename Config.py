@@ -37,7 +37,10 @@ class Configuration:
         self.ranges_n = ranges_n
         self.state_space = state_space
         self.action_space = action_space
+
+        # model parameters
         self.dx = 3 # distance it must be from final target
+        self.dt = 1 # controller frequency
 
         # agent parameters
         self.max_steps = 200
@@ -57,7 +60,7 @@ def create_sim_config():
                             0.995,
                             0.05,
                             5,
-                            7,
+                            9,
                             3)
     
     return config
