@@ -21,6 +21,7 @@ class Configuration:
         self.network_update = 5
         self.render = True
         self.render_rate = 20
+        self.test_rate = 10
 
         # learning parameters
         self.lr = lr

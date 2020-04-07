@@ -45,11 +45,11 @@ class RaceSimulation: # for single agent testing
         print(set_name)
         # run a training set
         ep_rewards = []
+        ep_loss = []
         for i in range(num_sets):
-            ep, rewards = self.agent_av.run_sim()
-            # self.buffer.add_ep(ep)
+            rewards = self.agent_av.run_sim()
             ep_rewards.append(rewards)
-            plot(ep_rewards, 10, set_name)
+            plot(ep_rewards, 10, set_name, 2)
 
             minibatch = self.buffer.sample_batch()
             self.trainer_av.train_network(minibatch)
@@ -61,8 +61,16 @@ class RaceSimulation: # for single agent testing
             if i % self.config.render_rate == 1 and self.config.render:
                 self.env.render_episode(self.agent_file_path + "TrainingImages/" + set_name + ":%d"%i)
 
+            if i% self.config.test_rate == 1:
+                minibatch = self.buffer.sample_batch()
+                avg_loss = self.trainer_av.test_network(minibatch)
+                ep_loss.append(avg_loss)
+                plot(ep_loss, 5, set_name + "Loss", 3)
+
         plt.figure(2)
-        plt.savefig(self.agent_file_path + "Plots/" + set_name)
+        plt.savefig(self.agent_file_path + "Plots/" + set_name + ":training")
+        plt.figure(3)
+        plt.savefig(self.agent_file_path + "Plots/" + set_name + ":loss")
         return ep_rewards
 
     def run_agent_training(self):
@@ -80,6 +88,7 @@ class RaceSimulation: # for single agent testing
 
         self.env.track.add_obstacle()
         self.run_training_set(1000, "Train4: TripleObstacle")
+
 
 
 
@@ -154,8 +163,8 @@ class AgentComparison: # for testing agents against other agents
 
 
 
-def plot(values, moving_avg_period, title):
-    plt.figure(2)
+def plot(values, moving_avg_period, title, figure_n):
+    plt.figure(figure_n)
     plt.clf()        
     plt.title(title)
     plt.xlabel('Episode')
@@ -164,7 +173,7 @@ def plot(values, moving_avg_period, title):
 
     moving_avg = get_moving_average(moving_avg_period, values)
     plt.plot(moving_avg)    
-    moving_avg = get_moving_average(moving_avg_period * 2, values)
+    moving_avg = get_moving_average(moving_avg_period * 5, values)
     plt.plot(moving_avg)    
     plt.pause(0.001)
     # print("Episode", (len(values)), "\n", \
