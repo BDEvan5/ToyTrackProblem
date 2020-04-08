@@ -29,7 +29,6 @@ class RaceEnv:
         self.planner = PathPlanner(self.track, self.car, self.logger)
         self.c_sys = ControlSystem()
 
-
         # configurable
         self.dt = 1 # Control system frequency 
         # TODO: replace with config dt
@@ -38,7 +37,7 @@ class RaceEnv:
         self.car_state = CarState(self.config.ranges_n)
         self.env_state = EnvState()
         self.sim_mem = SimMem(self.logger)
-        self.glbl_wp_n = 0 # waypoint number in the list of global way points
+        self.wp_n = 0 # waypoint number in the list of global way points
 
 
     def step(self, agent_action):
@@ -72,39 +71,6 @@ class RaceEnv:
         self.sim_mem.step += 1
         return obs, self.env_state.reward, self.env_state.done
 
-    def model_step(self, state, agent_action):
-        glbl_wp = self.track.route[self.glbl_wp_n]
-        control_action = self.c_sys.get_controlled_action(self.car_state, glbl_wp)
-        action, dr = self.get_new_action(agent_action, control_action)
-        new_x = self.car.chech_new_state(self.car_state, action, self.dt)
-        coll_flag = self.track._check_collision_hidden(new_x)
-
-        if not coll_flag: # no collsions
-            state = self.car.update_modelled_state(self.car_state, action, self.dt)
-        else:
-            state = deepcopy(self.car_state)
-
-        dx = 5 # search size
-        curr_x = state.x
-        th_car = state.theta
-        for ran in state.ranges:
-            th = th_car + ran.angle
-            crash_val = 0
-            i = 0
-            while crash_val == 0:
-                r = dx * i
-                addx = [dx * i * np.sin(th), -dx * i * np.cos(th)] # check
-                x_search = f.add_locations(curr_x, addx)
-                crash_val = self.track._check_collision_hidden(x_search)
-                i += 1
-            update_val = (i - 2) * dx # sets the last distance before collision 
-            ran.dr = update_val - ran.val # possibly take more than two terms
-            ran.val = update_val
-
-        obs = state.get_state_observation(control_action)
-
-        return obs
-
     def get_new_action(self, agent_action, con_action):
         theta_swerve = 0.8
         # interpret action
@@ -134,44 +100,25 @@ class RaceEnv:
         return action, dr
 
     def reset(self):
-        # resets to starting location
-        self.car_state.prev_distance = f.get_distance(self.track.start_location, self.track.end_location)
-        self.car_state.reset_state(self.track.start_location)
-        self.planner.get_single_path() # plans the path to be followed
-        self.glbl_wp_n = 0
-        self.car_state.glbl_wp = self.track.route[self.glbl_wp_n] # sets current goal
+        self.car_state.reset_state(self.track.start_location, self.track.end_location)
+        self.planner.plan_path()
+        self.wp_n = 0
+        self.car_state.glbl_wp = self.track.route[self.wp_n] # sets current goal
         self.reward = 0
-        self.sim_mem.steps.clear()
-        self.sim_mem.step = 0
-        # self.track.set_up_random_obstacles() # turn back on
+        self.sim_mem.clear_mem()
+        self.track.set_up_random_obstacles() # turn back on
 
         return self.car_state.get_state_observation()
 
     def _get_reward(self, coll_flag, agent_action):
         self.car_state.cur_distance = f.get_distance(self.car_state.x, self.track.end_location) 
 
-        reward = 0 # reward increases as distance decreases
-        
-        beta1 = 0.08
-        beta2 = 0.05
-        beta3 = 2
-        swerve_cost = 1
-        crash_cost = 100
-        goal_reward = 100
+        reward = 0 
+        crash_cost = 1
 
         if coll_flag:
             reward = - crash_cost
-        elif self.env_state.done:
-            reward = beta3 * ( goal_reward - self.sim_mem.step) # gives reward * number of steps
-        else:
-            ranges = [ran.val for ran in self.car_state.ranges]
-            min_range = np.min(ranges)
-
-            # reward = beta1 * self.car_state.get_distance_difference()
-            reward = (min_range) * beta2
-
-        reward += - np.abs(agent_action - 1) * swerve_cost
-
+        
         self.env_state.reward = reward
         self.car_state.prev_distance = deepcopy(self.car_state.cur_distance)
 
@@ -181,20 +128,14 @@ class RaceEnv:
             # print("Ended in collision")
             return True
 
-        # if no collision, check end
-        # end_dis = f.get_distance(self.track.end_location, self.car_state.x)
-        # if end_dis < self.config.dx:
-        #     # print("Final distance is: %d" % end_dis)
-        #     return True
-
         if self.car_state.x[1] < 10 + self.config.dx:
             return True # this makes it a finish line not a point
         
         # if not end, then update glbl_wp if needed
         wp_dis = f.get_distance(self.car_state.glbl_wp.x, self.car_state.x)
         if wp_dis < (self.config.dx/2):
-            self.glbl_wp_n += 1
-            self.car_state.glbl_wp = self.track.route[self.glbl_wp_n]
+            self.wp_n += 1
+            self.car_state.glbl_wp = self.track.route[self.wp_n]
 
         return False
 
@@ -202,10 +143,6 @@ class RaceEnv:
         # this takes a direction to move in and moves there
         new_x = f.add_locations(action, self.car_state.x)
         return new_x
-
-    def get_ep_mem(self):
-        # self.sim_mem.print_ep()
-        return self.sim_mem
 
     def _update_ranges(self):
         dx = 5 # search size

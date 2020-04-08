@@ -93,10 +93,12 @@ class CarState(WayPoint, Ranging):
     def get_distance_difference(self):
         return self.cur_distance - self.prev_distance
 
-    def reset_state(self, start_location):
+    def reset_state(self, start_location, end_location):
         self.x = deepcopy(start_location)
         self.v = 0
         self.theta = 0
+        dis = f.get_distance(start_location, end_location)
+        self.prev_distance = dis
 
 
 class EnvState:
@@ -167,6 +169,9 @@ class SimMem:
 
         s_file.close()
 
+    def clear_mem(self):
+        self.steps.clear()
+        self.step = 0
 
 
 

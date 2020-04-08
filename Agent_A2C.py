@@ -13,77 +13,65 @@ from copy import deepcopy
 import os
 
 
-class ProbDist(tf.keras.Model):
-    # this is a model which takes in log probabilities and returns an action by sampling methods
-    def call(self, logits, **kwags):
-        print("Logits: " + str(logits))
-        return tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
+class AgentA2C:
+    def __init__(self, config, model_net, buffer, env):
+        self.config = config
+        self.model = model_net
+        self.buffer = buffer
+        self.env = env
 
-class Model(tf.keras.Model):
-    def __init__(self, actions_n):
-        super().__init__('mlp_policy') # not sure what that is
+    def run_sim(self):
+        next_obs, done, ep_reward = self.env.reset(), False, 0
+        while not done:
+            obs = deepcopy(next_obs)
+            action, value = self.model.action_value(obs)
+            action = self.choose_action(obs)
+            next_obs, reward, done = self.env.step(action)
+            ep_reward += reward
+            self.buffer.save_step((obs, action, value, reward, next_obs, done))
+        return ep_reward
 
-        self.hidden_values = kl.Dense(128, activation='relu', input_shape=(1,))
-        self.values = kl.Dense(1, name='values')
 
-        self.hidden_actor = kl.Dense(128, activation='relu', input_shape=(1,))
-        self.logits = kl.Dense(actions_n, name='policy_logits')
+class TrainerA2C:
+    def __init__(self, config, target_net):
+        self.config = config
+        self.target = target_net
 
-        self.dist = ProbDist()
+    def train_network(self, batch):
+        states = batch[:, 0]
+        actions = batch[:, 1]
+        values = batch[:, 2]
+        rewards = batch[:, 3]
+        next_states = batch[:, 4]
+        dones = batch[:, 5]
+        next_values = np.zeros_like(next_states)
 
-    def call(self, inputs, **kwags):
-        x = tf.convert_to_tensor(inputs)
-        # print("Tensor x in call")
-        # print(x)
+        # generates next values for each state
+        for i, next_state in enumerate(next_states):
+            _, value = self.target.action_value(next_state)
+            next_values[i] = value
+            
+        returns, advs = self._returns_advantages(rewards, dones, values, next_values)
 
-        hidden_logs = self.hidden_actor(x)
-        logits = self.logits(hidden_logs)
+    def _returns_advantages(self, rewards, dones, values, next_values):
+        returns = np.append(np.zeros_like(rewards), next_values, axis=-1)
+        # this is a new array to store the returns in, returns are the rewards that have been adjusted. 
 
-        hidden_values = self.hidden_values(x)
-        values = self.values(hidden_values)
+        for t in reversed(range(rewards.shape[0])):
+            # this is the first part of del
+            returns[t] = rewards[t] + self.gamma * returns[t+1] * (1-dones[t])
+        returns = returns[:-1]
 
-        return logits, values
+        advantages = returns - values # this is the del
+        return returns, advantages
 
-    def action_value(self, obs):
-        # this apparently executes call
-        logits, value = self.predict_on_batch(obs)
-        # print("ActionValueLogits: " + str(logits))
-        action = self.dist.predict_on_batch(logits)
 
-        action_ret = np.squeeze(action, axis=-1)
-        value_ret = np.squeeze(value, axis=-1)
-
-        return action_ret, value_ret
-    
 class Agent_A2C:
     # basically rewriting the simulation class
     def __init__(self, state_space_n, action_space_n):
-        self.gamma = 0.99
-        self.value_c = 0.5
-        self.entropy_c = 1e-4
-        lr = 7e-3
-        self.update_network_const = 10
-        self.weight_path = "ModelWeights/target_weights"
 
-        self.model = Model(action_space_n)
-        self.model.compile(
-        optimizer=ko.RMSprop(lr=lr),
-        loss=[self._logits_loss, self._value_loss])
 
-        self.actions_n = action_space_n
-        self.state_n = state_space_n
 
-        self.agent_file_path = "Agent_A2C_SimTests/"
-        self.agent_test_path = "Agent_A2C_SimTests/AgentTests/"
-        self.weight_path = self.agent_file_path + "ModelWeights/target_weights"
-
-    def clear_test_files(self):
-        file_path_list = ["EpHistories/", "Plots/", "TrainingImages/"]
-        for path in file_path_list:
-            file_path = self.agent_file_path + path
-            for file_name in os.listdir(os.getcwd() + "/" + file_path):
-                os.remove(file_path + file_name) # deletes old files
-                print("File deleted: " + str(file_path) + "/" + str(file_name))
 
     def train(self, env, steps, train_name="TrainName", f_test=20):
         print(train_name)
@@ -156,26 +144,7 @@ class Agent_A2C:
         advantages = returns - values # this is the del
         return returns, advantages
 
-    def _value_loss(self, returns, value):
-        loss = self.value_c * kls.mean_squared_error(returns, value)
-
-        return loss
-
-    def _logits_loss(self, actions_advantages, log_probs):
-        actions, advs = tf.split(actions_advantages, 2, axis=-1)
-
-        weighted_sparse_ce = kls.SparseCategoricalCrossentropy(from_logits=True)
-
-        actions = tf.cast(actions, tf.int32)
-        policy_loss = weighted_sparse_ce(actions, log_probs, sample_weight=advs)
-
-        probs = tf.nn.softmax(log_probs)
-
-        entropy_loss = kls.categorical_crossentropy(probs, probs)
-
-        loss = policy_loss - self.entropy_c * entropy_loss
-
-        return loss
+    
 
 
 def plot(values, moving_avg_period, title):
