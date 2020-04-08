@@ -143,7 +143,7 @@ class RaceEnv:
         self.reward = 0
         self.sim_mem.steps.clear()
         self.sim_mem.step = 0
-        self.track.set_up_random_obstacles()
+        # self.track.set_up_random_obstacles() # turn back on
 
         return self.car_state.get_state_observation()
 

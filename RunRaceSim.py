@@ -5,8 +5,11 @@ def run_sim():
     config = create_sim_config()
     mySim = RaceSimulation(config)
     # mySim.debug_agent_test()
-    mySim.run_classical_agent()
+    # mySim.run_classical_agent()
+    # mySim.run_agent_mixed_training()
+    # mySim.rerun_old_network()
     # mySim.run_agent_training()
+    mySim.run_report_comp()
     # mySim.test_agent()
 
     # myComp = AgentComparison()

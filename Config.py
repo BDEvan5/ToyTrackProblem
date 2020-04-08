@@ -19,7 +19,7 @@ class Configuration:
 
         # set training
         self.network_update = 5
-        self.render = True
+        self.render = True # dont show interface
         self.render_rate = 20
         self.test_rate = 10
 

@@ -25,6 +25,16 @@ class Agent_ActionValue:
             self.buffer.save_step((obs, action, reward, next_obs, done))
         return ep_reward
 
+    def run_test(self):
+        next_obs, done, ep_reward = self.env.reset(), False, 0
+        while not done:
+            obs = deepcopy(next_obs)
+            action = self.model.get_action(obs)
+            next_obs, reward, done = self.env.step(action)
+            ep_reward += reward
+            self.buffer.save_step((obs, action, reward, next_obs, done))
+        return ep_reward
+
     def choose_action(self, state):
         if np.random.rand() <= self.config.eps:
             return random.randint(0, self.config.action_space-1)
