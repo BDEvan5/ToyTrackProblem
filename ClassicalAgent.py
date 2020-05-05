@@ -1,5 +1,5 @@
 import numpy as np
-from PathPlanner import A_StarPathFinder
+from PathPlanner import A_StarPathFinder, RRT_PathFinder
 import LibFunctions as f
 from copy import deepcopy
 
@@ -9,6 +9,7 @@ class Classical:
         self.car = car
 
         self.path_finder = A_StarPathFinder(track)
+        self.path_finder = RRT_PathFinder(track)
         self.path = None # path to hold path in
 
         self.last_action_n = 0

@@ -2,6 +2,10 @@ import LibFunctions as f
 import numpy as np 
 from copy import deepcopy
 from Models import Path
+from collections import deque
+import matplotlib.pyplot as plt
+from matplotlib import collections  as mc
+
 
 class A_StarPathFinder:
     def __init__(self, track):
@@ -145,7 +149,6 @@ class A_StarPathFinder:
 
 
 
-
 class Node():
     """A node class for A* Pathfinding"""
     # helper class for a star
@@ -169,5 +172,176 @@ class Node():
 
             msg = msg1 + msg2 + msg3
             return msg
+
+
+class RRT_PathFinder:
+    def __init__(self, track):
+        self.ds = None
+        self.track = track
+        self.G = None
+
+    def run_search(self, ds=5, lim=20000):
+        self.G = Graph(self.track.start_location, self.track.end_location)
+        self.ds = ds
+        G, track = self.G, self.track
+
+        counter = 0
+
+        while counter < lim:
+            counter += 1
+            x_new = G.random_postion()
+            if track._check_collision(x_new):
+                continue
+            near_vex, near_idx = self.nearest(x_new)
+            if near_idx is None:
+                continue # collided
+
+            newidx = G.add_vertex(x_new)
+            dis = f.get_distance(x_new, near_vex)
+            G.add_edge(newidx, near_idx, dis)
+
+            end_dis = f.get_distance(x_new, self.track.end_location)
+            if end_dis < self.ds:
+                endidx = G.add_vertex(G.endpos)
+                G.add_edge(newidx, endidx, end_dis)
+                break
+            print(counter)
+
+        print("Success")
+        endidx = G.add_vertex(G.endpos)
+        G.add_edge(newidx, endidx, end_dis)
+        path = self.get_path()
+        plot(G, dijkstra(self.G))
+        return path
+
+    def get_path(self):
+        path_graph = dijkstra(self.G)
+        path = Path()
+        for node in path_graph: # check node data type
+            path.add_way_point(node)
+
+        return path
+
+    def nearest(self, x_new):
+        G, track = self.G, self.track
+        minDist = float("inf")
+        Nidx = None
+        nvex = None
+        for idx, v in enumerate(G.vertices):
+            if track.check_line_collision(v, x_new):
+                continue
+            dis = f.get_distance(v, x_new)
+            if dis < minDist:
+                minDist = dis
+                Nidx = idx
+                nvex = v
+
+        return nvex, Nidx
+
+
+class Graph:
+    def __init__(self, startpos, endpos):
+        self.startpos = tuple(startpos)
+        self.endpos = tuple(endpos)
+
+        self.vertices = [self.startpos]
+        self.edges = []
+        self.success = False
+
+        self.vex2idx = {self.startpos:0}
+        self.neighbors = {0:[]}
+
+        self.sx = endpos[0] - startpos[0]
+        self.sy = endpos[1] - startpos[1]
+
+    def add_vertex(self, pos):
+        try:
+            idx = self.vex2idx[pos]
+        except:
+            idx = len(self.vertices)
+            self.vertices.append(pos)
+            self.vex2idx[pos] = idx
+            self.neighbors[idx] = []
+        return idx
+
+
+    def add_edge(self, idx1, idx2, cost):
+        self.edges.append((idx1, idx2))
+        self.neighbors[idx1].append((idx2, cost))
+        self.neighbors[idx2].append((idx1, cost))
+
+    def random_postion(self):
+        rx = np.random.random()
+        ry = np.random.random()
+
+        posx = rx * 100
+        posy = ry * 100
+
+        # posx = self.startpos[0] - (self.sx / 2.) + rx * self.sx * 2
+        # posy = self.startpos[1] - (self.sy / 2.) + ry * self.sy * 2
+        return (posx, posy)
+
+
+#   '''
+#   Dijkstra algorithm for finding shortest path from startpos position to endpos.
+#   '''
+def dijkstra(G):
+    srcIdx = G.vex2idx[G.startpos]
+    dstIdx = G.vex2idx[G.endpos]
+
+    # build dijkstra
+    nodes = list(G.neighbors.keys())
+    dist = {node: float('inf') for node in nodes}
+    prev = {node: None for node in nodes}
+    dist[srcIdx] = 0
+
+    while nodes:
+        curNode = min(nodes, key=lambda node: dist[node])
+        nodes.remove(curNode)
+        if dist[curNode] == float('inf'):
+            break
+
+        for neighbor, cost in G.neighbors[curNode]:
+            newCost = dist[curNode] + cost
+            if newCost < dist[neighbor]:
+                dist[neighbor] = newCost
+                prev[neighbor] = curNode
+
+    # retrieve path
+    path = deque()
+    curNode = dstIdx
+    while prev[curNode] is not None:
+        path.appendleft(G.vertices[curNode])
+        curNode = prev[curNode]
+    path.appendleft(G.vertices[curNode])
+    return list(path)
+
+
+def plot(G, path=None):
+    px = [x for x, y in G.vertices]
+    py = [y for x, y in G.vertices]
+    fig, ax = plt.subplots()
+
+    # for obs in obstacles:
+    #     circle = plt.Circle(obs, radius, color='red')
+    #     ax.add_artist(circle)
+
+    ax.scatter(px, py, c='cyan')
+    ax.scatter(G.startpos[0], G.startpos[1], c='black')
+    ax.scatter(G.endpos[0], G.endpos[1], c='black')
+
+    lines = [(G.vertices[edge[0]], G.vertices[edge[1]]) for edge in G.edges]
+    lc = mc.LineCollection(lines, colors='green', linewidths=2)
+    ax.add_collection(lc)
+
+    if path is not None:
+        paths = [(path[i], path[i+1]) for i in range(len(path)-1)]
+        lc2 = mc.LineCollection(paths, colors='blue', linewidths=3)
+        ax.add_collection(lc2)
+
+    ax.autoscale()
+    ax.margins(0.1)
+    plt.show()
+
 
 

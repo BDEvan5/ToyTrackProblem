@@ -5,6 +5,7 @@ from copy import deepcopy
 import LibFunctions as f
 import logging
 from copy import deepcopy
+import math
 
 
 class Path:
@@ -153,6 +154,17 @@ class TrackData(TrackConfig):
         for obs in self.hidden_obstacles:
             obs.set_random_location()
 
+    def check_line_collision(self, x1, x2):
+        n_checks = 50
+        m = (x2[1] - x1[1]) / (x2[0] - x1[0])
+        dx = (x2[0] - x1[0]) / n_checks
+        for i in range(n_checks):
+            # 10 points between beginning and end
+            x_add = [i * dx, i * m * dx]
+            x_search = f.add_locations(x_add, x1)
+            if self._check_collision(x_search):
+                return True
+        return False
 
 class Obstacle:
     def __init__(self, size=[0, 0]):
