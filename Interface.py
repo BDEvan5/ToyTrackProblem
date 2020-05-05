@@ -123,12 +123,12 @@ class Interface:
 
         self.prev_px = self._scale_input(self.track.start_location)   
 
-        for i, point in enumerate(self.track.route):
-            x = self._scale_input(point.x)
-            str_msg = str(i)
-            self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
+        # for i, point in enumerate(self.track.route):
+        #     x = self._scale_input(point.x)
+        #     str_msg = str(i)
+        #     self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
 
-            self.canv.pack()   
+        #     self.canv.pack()   
 
     def setup_root(self):
         # print("Setup root called")

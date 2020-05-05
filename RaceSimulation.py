@@ -5,71 +5,49 @@ from matplotlib import pyplot as plt
 import os
 
 from RaceEnv import RaceEnv
-from Agent_A2C import import AgentA2C, TrainerA2C
-from ReplayBuffer import ReplayBuffer
-from Networks import NetworkA2C
+# from ReplayBuffer import ReplayBuffer
+from Models import TrackData
+from ClassicalAgent import Classical
+from AgentWrapper import AgentWrapper
+
 
 
 class RaceSimulation: # for single agent testing
     def __init__(self, config):
         self.config = config
         
-        # shared resources
-        self.buffer = ReplayBuffer(self.config)
-        self.network_av_model = Network_AV(self.config)
-        self.network_av_model.compile_self()
-        self.network_av_target = Network_AV(self.config)
-        self.network_av_target.compile_self()
+        track = TrackData()
+        self.env = RaceEnv(self.config, track)
+        classical = Classical(track, self.env.car)
+        rl = None
+        self.agent = AgentWrapper(classical, rl, self.env)
 
-        self.env = RaceEnv(self.config)
 
-        self.agent_av = Agent_ActionValue(self.config, self.network_av_model, self.buffer, self.env)
-        self.trainer_av = Trainer_AV(self.config, self.network_av_model)
-
-        self.classical_agent = ClassicalAgent(self.config, self.buffer, self.env)
-
-        self.agent_file_path = "Agent_AV_SimTests/"
-        # self.agent_test_path = "Agent_A2C_SimTests/AgentTests/"
-        self.weight_path = self.agent_file_path + "ModelWeights/target_weights"
-
-    def clear_test_files(self):
-        file_path_list = ["EpHistories/", "Plots/", "TrainingImages/"]
-        for path in file_path_list:
-            file_path = self.agent_file_path + path
-            for file_name in os.listdir(os.getcwd() + "/" + file_path):
-                os.remove(file_path + file_name) # deletes old files
-                print("File deleted: " + str(file_name))
+    # def clear_test_files(self):
+    #     file_path_list = ["EpHistories/", "Plots/", "TrainingImages/"]
+    #     for path in file_path_list:
+    #         file_path = self.agent_file_path + path
+    #         for file_name in os.listdir(os.getcwd() + "/" + file_path):
+    #             os.remove(file_path + file_name) # deletes old files
+    #             print("File deleted: " + str(file_name))
 
     def run_agent_training_set(self, num_sets, set_name=""):
         print(set_name)
         # run a training set
         ep_rewards = []
         ep_loss = []
+        self.agent.classic.plan_path()
         for i in range(num_sets):
-            rewards = self.agent_av.run_sim()
+            rewards = self.agent.run_sim()
             ep_rewards.append(rewards)
             plot(ep_rewards, 10, set_name, 2)
 
-            minibatch = self.buffer.sample_batch()
-            self.trainer_av.train_network(minibatch)
-
-            if i % self.config.network_update == 1:
-                self.network_av_model.save_weights(self.weight_path)
-                self.network_av_target.load_weights(self.weight_path)
-
             if i % self.config.render_rate == 1 and self.config.render:
-                self.env.render_episode(self.agent_file_path + "TrainingImages/" + set_name + ":%d"%i)
-
-            if i% self.config.test_rate == 1:
-                minibatch = self.buffer.sample_batch()
-                avg_loss = self.trainer_av.test_network(minibatch)
-                ep_loss.append(avg_loss)
-                plot(ep_loss, 5, set_name + "Loss", 3)
+                self.env.render_episode(set_name + ":ep_pic")
 
         plt.figure(2)
-        plt.savefig(self.agent_file_path + "Plots/" + set_name + ":training")
-        plt.figure(3)
-        plt.savefig(self.agent_file_path + "Plots/" + set_name + ":loss")
+        plt.savefig(set_name + ":training.png")
+
         return ep_rewards
 
     def run_agent_training(self):
@@ -89,9 +67,9 @@ class RaceSimulation: # for single agent testing
         # self.run_agent_training_set(1000, "Train4: TripleObstacle")
 
     def debug_agent_test(self):
-        self.clear_test_files()
+        # self.clear_test_files()
         
-        self.env.track.straight_track()
+        self.env.track.simple_maze()
 
         self.run_agent_training_set(2, "Debugging...")
 

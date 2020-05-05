@@ -8,13 +8,12 @@ from copy import deepcopy
 import pickle
 import datetime
 import os
-from PathPlanner import PathPlanner
 from StateStructs import SimMem, CarState, EnvState, SimulationState, WayPoint
 from Interface import Interface
 from Models import CarModel, TrackData
 
 class RaceEnv:
-    def __init__(self, config):
+    def __init__(self, config, track):
         self.config = config
 
         # set up and create
@@ -24,93 +23,47 @@ class RaceEnv:
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
 
-        self.track = TrackData()
+        self.track = track
         self.car = CarModel()
-        self.planner = PathPlanner(self.track, self.car, self.logger)
         self.c_sys = ControlSystem()
-
-        # configurable
-        self.dt = 1 # Control system frequency 
-        # TODO: replace with config dt
 
         # memory structures
         self.car_state = CarState(self.config.ranges_n)
         self.env_state = EnvState()
         self.sim_mem = SimMem(self.logger)
-        self.wp_n = 0 # waypoint number in the list of global way points
 
+    def step(self, action_wp):
+        # action = waypoint input for controller
 
-    def step(self, agent_action):
-        #TODO: move this to a get lcl_wp function call that returns lcl_wp
-        # agent action is in form of th for set r = 10
-        r = 10 # possibly make more flexible later on
-        th = (agent_action - 1) * 0.6 # 0.6 radians to the right or left of current pos
-        lcl_x = [ r * np.sin(th), -r * np.cos(th)]
-        lcl_wp = WayPoint()
-        lcl_wp.x = f.add_locations(self.car_state.x, lcl_x)
-        # print(lcl_wp.x)
-        lcl_wp.v = self.car.max_v # this will be changed later
-        lcl_wp.theta = th # orientation of lcl_wp. It is as if you go straight through it
+        control_action = self.c_sys.get_controlled_action(self.car_state, action_wp)
 
-        control_action = self.c_sys.get_controlled_action(self.car_state, lcl_wp)
-        # action, dr = self.get_new_action(agent_action, control_action)
         new_x = self.car.chech_new_state(self.car_state, control_action, self.config.dt)
         coll_flag = self.track._check_collision_hidden(new_x)
 
         if not coll_flag: # no collsions
-            self.car.update_controlled_state(self.car_state, control_action, self.dt)
+            self.car.update_controlled_state(self.car_state, control_action, self.config.dt)
 
         self.env_state.done = self._check_done(coll_flag)
         self.env_state.control_action = control_action
-        self.env_state.agent_action = agent_action
-        self._get_reward(coll_flag, agent_action)
+        self._get_reward(coll_flag)
         self._update_ranges()
 
         self.sim_mem.add_step(self.car_state, self.env_state)
         obs = self.car_state.get_state_observation()
         self.sim_mem.step += 1
-        return obs, self.env_state.reward, self.env_state.done
-
-    def get_new_action(self, agent_action, con_action):
-        theta_swerve = 0.8
-        # interpret action
-        # 0-m : left 
-        # m - straight
-        # m-n : right
-        agent_action += 1 # takes start from zero to 1
-
-        n_actions_side = (self.action_space -1)/2
-        m = n_actions_side + 1
-
-        if agent_action < m: # swerve left
-            swerve = agent_action / n_actions_side * theta_swerve
-            action = [con_action[0], con_action[1] -  swerve]
-            dr = 1
-            # print("Swerving left")
-        elif agent_action == m: # stay in the centre
-            dr = 0
-            swerve = 0
-            action = con_action
-        elif agent_action > m: # swerve right
-            swerve = (agent_action - m) / n_actions_side * theta_swerve
-            action = [con_action[0], con_action[1] + swerve]
-            dr = 1
-            # print("Swerving right")
-        # print(swerve)
-        return action, dr
+        loc_state = self.car_state.x
+        return loc_state, self.env_state.reward, self.env_state.done
 
     def reset(self):
         self.car_state.reset_state(self.track.start_location, self.track.end_location)
-        self.planner.plan_path()
-        self.wp_n = 0
-        self.car_state.glbl_wp = self.track.route[self.wp_n] # sets current goal
         self.reward = 0
         self.sim_mem.clear_mem()
         self.track.set_up_random_obstacles() # turn back on
 
-        return self.car_state.get_state_observation()
+        # return self.car_state.get_state_observation()
+        return self.car_state.x
 
-    def _get_reward(self, coll_flag, agent_action):
+    def _get_reward(self, coll_flag):
         self.car_state.cur_distance = f.get_distance(self.car_state.x, self.track.end_location) 
 
         reward = 0 
@@ -128,15 +81,10 @@ class RaceEnv:
             # print("Ended in collision")
             return True
 
-        if self.car_state.x[1] < 10 + self.config.dx:
+        if self.car_state.x[1] < 2 + self.config.dx:
+            print("Destination reached")
             return True # this makes it a finish line not a point
         
-        # if not end, then update glbl_wp if needed
-        wp_dis = f.get_distance(self.car_state.glbl_wp.x, self.car_state.x)
-        if wp_dis < (self.config.dx/2):
-            self.wp_n += 1
-            self.car_state.glbl_wp = self.track.route[self.wp_n]
-
         return False
 
     def _get_next_state(self, action):

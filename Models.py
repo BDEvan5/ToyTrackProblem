@@ -61,13 +61,12 @@ class TrackConfig:
 
         self.add_locations(start_location, end_location)
         self.boundary = b
-        self.add_obstacle(o1)
-        self.add_obstacle(o2)
+        self.add_wall(o1)
+        self.add_wall(o2)
 
 
-class TrackData(Path, TrackConfig):
+class TrackData(TrackConfig):
     def __init__(self):
-        Path.__init__(self)
         TrackConfig.__init__(self)
         self.boundary = None
         self.obstacles = []
@@ -120,14 +119,14 @@ class TrackData(Path, TrackConfig):
         b = self.boundary
         ret = 0
         for i, o in enumerate(self.obstacles):
-            if o[0] < x[0] < o[2]:
-                if o[1] < x[1] < o[3]:
+            if o[0] <= x[0] <= o[2]:
+                if o[1] <= x[1] <= o[3]:
                     msg = "Obstacle collision %d --> x: %d;%d"%(i, x[0],x[1])
                     ret = 1
-        if x[0] < b[0] or x[0] > b[2]:
+        if x[0] <= b[0] or x[0] >= b[2]:
             msg = "X wall collision --> x: %d, b:%d;%d"%(x[0], b[0], b[2])
             ret = 1
-        if x[1] < b[1] or x[1] > b[3]:
+        if x[1] <= b[1] or x[1] >= b[3]:
             msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
             ret = 1
         return ret
