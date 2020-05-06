@@ -27,3 +27,9 @@ def get_gradient(x1=[0, 0], x2=[0, 0]):
     if b != 0:
         return t / b
     return 1000000 # near infinite gradient. 
+
+def get_angle(x1, x2, x3):
+    m1 = get_gradient(x1, x2)
+    m2 = get_gradient(x2, x3)
+    angle = abs(np.arctan(m1) - np.arctan(m2))
+    return angle

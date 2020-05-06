@@ -289,13 +289,14 @@ class A_StarPathFinderModified:
            
             # Create the f, g, and h values
             corner_cost = 1 # per radian of difference
-            m_new = f.get_gradient(new_position, self.current_node.position)
-            try:
-                m_old = f.get_gradient(self.current_node.position, self.current_node.parent.position)
-            except:
-                m_old = 100 #near verticle
-            angle = abs(np.arctan(m_new) - np.arctan(m_old))
-            new_node.g = self.current_node.g + self.ds + angle * corner_cost
+            new_pos = new_node.position
+            cur_pos = self.current_node.position
+            if self.current_node.parent:
+                old_pos = self.current_node.parent.position
+                d_cost = get_track_segment_cost(new_pos, cur_pos, old_pos)
+            else:
+                d_cost = self.ds
+            new_node.g = self.current_node.g + d_cost
             h_val = f.get_distance(new_node.position, self.end_n.position)
             new_node.h = h_val 
             new_node.f = new_node.g + new_node.h
@@ -328,7 +329,14 @@ class A_StarPathFinderModified:
         path.add_way_point(self.track.end_location)
         return path
 
+def get_track_segment_cost(new_pt, cur_point, old_point):
 
+    dis = f.get_distance(cur_point, new_pt) 
+    angle = f.get_angle(old_point, cur_point, new_pt)
+
+    cost = dis + angle ** 2
+
+    return cost
 
 """
 RRT algorithm and helpers
@@ -339,7 +347,7 @@ class RRT_PathFinder:
         self.track = track
         self.G = None
 
-    def run_search(self, ds=5, lim=20000):
+    def run_search(self, ds=5, lim=2000):
         self.G = Graph(self.track.start_location, self.track.end_location)
         self.ds = ds
         G, track = self.G, self.track
@@ -370,7 +378,7 @@ class RRT_PathFinder:
         endidx = G.add_vertex(G.endpos)
         G.add_edge(newidx, endidx, end_dis)
         path = self.get_path()
-        plot(G, dijkstra(self.G))
+        # plot(G, dijkstra(self.G))
         return path
 
     def get_path(self):
@@ -546,32 +554,79 @@ class WayPoint:
         return False
 
 
-def SmoothRoute(path):
+def ReduceRoute(path):
     new_path = Path()
     new_path.add_way_point(path.route[0].x)
-    
-    j = 0 # this is the comparison value
+    pt1 = path.route[0]
     for i in range(2, len(path)):
-        pt1 = path.route[j]
         pt2 = path.route[i]
-        if pt1 == pt2:
-            continue
-        # thus not eq
-        new_path.add_way_point(path.route[i-1].x)
-        j = i - 1
+        if pt1 != pt2:
+            new_path.add_way_point(path.route[i-1].x)
+            pt1 = path.route[i-1]
+    new_path.add_way_point(path.route[len(path.route)-1].x)
 
     return new_path
 
+def SmoothRouth(path):
+    # path of corner points.
+    new_path = Path()
+    delta = 10 #distance to smooth each side of corner
+    for i in range(len(path)-1):
+        pt = path.route[i]
+        next_pt = path.route[i+1]
+        # new_path.add_way_point(pt.x)
+        new_pt = [(pt.x[0]*2+ next_pt.x[0])/3, (pt.x[1]*2+ next_pt.x[1])/3]
+        new_path.add_way_point(new_pt)
+        new_pt = [(pt.x[0]+ next_pt.x[0]*2)/3, (pt.x[1]+ next_pt.x[1]*2)/3]
+        new_path.add_way_point(new_pt)
 
+    new_path.add_way_point(path.route[len(path.route)-1].x)
+
+    return new_path
+        
+def GetTrackCost(path):
+    cost = 0
+    for i in range(len(path)-2):
+        pt1 = path.route[i].x
+        pt2 = path.route[i+1].x
+        pt3 = path.route[i+2].x
+
+        dis = f.get_distance(pt1, pt2) 
+        angle = f.get_angle(pt1, pt2, pt3)
+
+        cost += dis + angle ** 2
+
+    return cost
+
+def show_path(path):
+    interface = Interface(track, 100)
+    interface.show_planned_path(path)
 
 # testing
 if __name__ == "__main__":
     track = TrackData()
     track.simple_maze()
-    myPlanner = A_StarPathFinder(track)
+   
+
+    # myPlanner = A_StarPathFinder(track)
+    # path = myPlanner.run_search(5)
+
+    # print(f"Cost of A*  {GetTrackCost(path)}")
+    # # show_path(path)
+    # path = ReduceRoute(path)
+    # # show_path(path)
+    # print(f"Cost of Reduced  {GetTrackCost(path)}")
+    # path = SmoothRouth(path)
+    # # path = SmoothRouth(path)
+    # # show_path(path)
+    # print(f"Cost of Smoothed  {GetTrackCost(path)}")
+
+    # myPlanner = A_StarPathFinderModified(track)
+    myPlanner = RRT_PathFinder(track)
     path = myPlanner.run_search(5)
 
-    path = SmoothRoute(path)
-
-    interface = Interface(track, 100)
-    interface.show_planned_path(path)
+    # print(f"Cost of Modified  {GetTrackCost(path)}")
+    print(f"Cost of RRT  {GetTrackCost(path)}")
+    show_path(path)
+    
+    
