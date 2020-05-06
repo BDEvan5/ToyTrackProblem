@@ -1,15 +1,17 @@
 import numpy as np
-from PathPlanner import A_StarPathFinder, RRT_PathFinder
+from PathPlanner import A_StarPathFinder, RRT_PathFinder, A_StarPathFinderModified
 import LibFunctions as f
 from copy import deepcopy
+from Interface import Interface
 
 class Classical:
     def __init__(self, track, car):
         self.track = track
         self.car = car
 
-        self.path_finder = A_StarPathFinder(track)
-        self.path_finder = RRT_PathFinder(track)
+        # self.path_finder = A_StarPathFinder(track)
+        # self.path_finder = RRT_PathFinder(track)
+        self.path_finder = A_StarPathFinderModified(track)
         self.path = None # path to hold path in
 
         self.last_action_n = 0
@@ -18,6 +20,9 @@ class Classical:
         self.path = self.path_finder.run_search(5)
         # self.smooth_track()
         self.add_velocity()
+
+        interface = Interface(self.track, 100)
+        interface.show_planned_path(self.path)
 
     def get_single_path(self):
         self.track.add_way_point(self.track.start_location)

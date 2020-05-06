@@ -73,6 +73,10 @@ class RaceSimulation: # for single agent testing
 
         self.run_agent_training_set(2, "Debugging...")
 
+    def plan_path(self):
+        self.env.track.simple_maze()
+        self.agent.classic.plan_path()
+
  
 
 

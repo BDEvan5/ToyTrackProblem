@@ -20,3 +20,10 @@ def sub_locations(x1=[0, 0], x2=[0, 0], dx=1):
     for i in range(2):
         ret[i] = x1[i] - x2[i] * dx
     return ret
+
+def get_gradient(x1=[0, 0], x2=[0, 0]):
+    t = (x1[1] - x2[1])
+    b = (x1[0] - x2[0])
+    if b != 0:
+        return t / b
+    return 1000000 # near infinite gradient. 
