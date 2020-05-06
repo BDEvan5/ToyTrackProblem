@@ -12,6 +12,7 @@ from StateStructs import SimMem, CarState, EnvState, SimulationState, WayPoint
 from Interface import Interface
 from Models import CarModel, TrackData
 
+
 class RaceEnv:
     def __init__(self, config, track):
         self.config = config

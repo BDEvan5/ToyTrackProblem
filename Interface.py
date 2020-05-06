@@ -5,7 +5,6 @@ import LibFunctions as f
 import time
 import numpy as np 
 import pyautogui 
-import RaceEnv
 import os
 
 

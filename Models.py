@@ -8,19 +8,6 @@ from copy import deepcopy
 import math
 
 
-class Path:
-    def __init__(self):
-        self.route = []
-    
-    def add_way_point(self, x, v=0, theta=0):
-        wp = WayPoint()
-        wp.set_point(x, v, theta)
-        self.route.append(wp)
-
-    def print_route(self):
-        for wp in self.route:
-            print("X: (%d;%d), v: %d, th: %d" %(wp.x[0], wp.x[1], wp.v, wp.theta))
-
 
 class TrackConfig:
     # this holds methods for track configuration
@@ -244,19 +231,6 @@ class CarModel:
         # print(x)
         return x
 
-class WayPoint:
-    def __init__(self):
-        self.x = [0.0, 0.0]
-        self.v = 0.0
-        self.theta = 0.0
-
-    def set_point(self, x, v, theta):
-        self.x = x
-        self.v = v
-        self.theta = theta
-
-    def print_point(self):
-        print("X: " + str(self.x) + " -> v: " + str(self.v) + " -> theta: " +str(self.theta))
 
 
 if __name__ == "__main__":
