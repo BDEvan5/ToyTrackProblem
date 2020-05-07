@@ -7,7 +7,7 @@ from Models import TrackData
 from collections import deque
 import matplotlib.pyplot as plt
 from matplotlib import collections  as mc
-
+from scipy import  interpolate
 
 """
 A* algorithm and helpers - for standard shortest path search
@@ -405,6 +405,70 @@ class RRT_PathFinder:
 
         return nvex, Nidx
 
+    def run_star_search(self, ds=5, lim=2000):
+        self.G = Graph(self.track.start_location, self.track.end_location)
+        self.ds = ds
+        G, track = self.G, self.track
+
+        counter = 0
+        f_show = 10
+
+        while counter < lim:
+            counter += 1
+            if counter % f_show == 1:
+                print(counter)
+
+            x_new = G.random_postion()
+            if track._check_collision(x_new):
+                continue
+            near_vex, near_idx = self.nearest(x_new)
+            if near_idx is None:
+                continue # collided
+
+            newidx = G.add_vertex(x_new)
+            dis = f.get_distance(x_new, near_vex)
+            G.add_edge(newidx, near_idx, dis)
+            G.distances[newidx] = G.distances[near_idx] + dis 
+
+            for vex in G.vertices:
+                if vex == x_new:
+                    continue
+
+                dist = f.get_distance(x_new, vex)
+                if dist < ds / 2:
+                    continue # if it is a negligible increase I think
+
+                if track.check_line_collision(vex, x_new):
+                    continue
+
+                idx = G.vex2idx[vex]
+                if G.distances[newidx] + dist < G.distances[idx]:
+                    G.add_edge(idx, newidx, dist)
+                    G.distances[idx] = G.distances[newidx] + dist
+
+                                
+
+            # check if complete
+            end_dis = f.get_distance(x_new, self.track.end_location)
+            if end_dis < self.ds /2:
+                endidx = G.add_vertex(G.endpos)
+                G.add_edge(newidx, endidx, end_dis)
+                try:
+                    G.distances[endidx] = min(G.distances[endidx], G.distances[newidx] + dist)
+                except:
+                    G.distances[endidx] = G.distances[newidx] + dist
+                # break
+            # print(counter)
+            plot(G)
+            plt.pause(0.001)
+
+        print("Success")
+        endidx = G.add_vertex(G.endpos)
+        G.add_edge(newidx, endidx, end_dis)
+        path = self.get_path()
+        plot(G, dijkstra(self.G))
+        return path
+
 
 class Graph:
     def __init__(self, startpos, endpos):
@@ -417,6 +481,7 @@ class Graph:
 
         self.vex2idx = {self.startpos:0}
         self.neighbors = {0:[]}
+        self.distances = {0: 0.0}
 
         self.sx = endpos[0] - startpos[0]
         self.sy = endpos[1] - startpos[1]
@@ -430,7 +495,6 @@ class Graph:
             self.vex2idx[pos] = idx
             self.neighbors[idx] = []
         return idx
-
 
     def add_edge(self, idx1, idx2, cost):
         self.edges.append((idx1, idx2))
@@ -482,9 +546,12 @@ def dijkstra(G):
 
 
 def plot(G, path=None):
+    plt.figure(2)
+    plt.clf()
+    ax = plt.gca()
     px = [x for x, y in G.vertices]
     py = [y for x, y in G.vertices]
-    fig, ax = plt.subplots()
+    # fig, ax = plt.subplots()
 
     # for obs in obstacles:
     #     circle = plt.Circle(obs, radius, color='red')
@@ -505,8 +572,11 @@ def plot(G, path=None):
 
     ax.autoscale()
     ax.margins(0.1)
-    plt.show()
+    plt.pause(0.001)
+    # plt.show()
 
+
+# def continuous_plot(G)
 
 """
 Helper for all classes - the path that is returned
@@ -527,7 +597,7 @@ class Path:
     def __len__(self):
         return len(self.route)
 
-    def __iter__(self):
+    def __iter__(self): #todo: fix this
         for obj in self.route:
             return obj
 
@@ -602,6 +672,38 @@ def show_path(path):
     interface = Interface(track, 100)
     interface.show_planned_path(path)
 
+def SciPySmoothing(path):
+    pts = []
+    for pt in path.route:
+        pts.append(pt.x)
+
+    # moves points so that they aren't in line with each other
+    for i in range(0, len(pts)-1):
+        if pts[i][0] == pts[i+1][0]:
+            pts[i][0] += 0.1
+    
+
+    x, y = zip(*pts)
+    x = np.asarray(x)
+    x = x[::-1]
+    y = np.asarray(y)
+    y = y[::-1]
+    f = interpolate.interp1d(x, y, kind='cubic')
+
+    start = x[0]
+    stop = x[-1]
+    new_x = np.linspace(x[0], x[-1], 100)
+
+    new_y = f(new_x)
+
+    new_path = Path()
+    for y, x in zip(new_y, new_x):
+        pt = [x, y]
+        new_path.add_way_point(pt)
+
+    return path 
+
+
 # testing
 if __name__ == "__main__":
     track = TrackData()
@@ -612,10 +714,11 @@ if __name__ == "__main__":
     # path = myPlanner.run_search(5)
 
     # print(f"Cost of A*  {GetTrackCost(path)}")
-    # # show_path(path)
+    # show_path(path)
     # path = ReduceRoute(path)
-    # # show_path(path)
-    # print(f"Cost of Reduced  {GetTrackCost(path)}")
+    # path = SciPySmoothing(path)
+    # print(f"Cost of interp:  {GetTrackCost(path)}")
+    # show_path(path)
     # path = SmoothRouth(path)
     # # path = SmoothRouth(path)
     # # show_path(path)
@@ -623,7 +726,8 @@ if __name__ == "__main__":
 
     # myPlanner = A_StarPathFinderModified(track)
     myPlanner = RRT_PathFinder(track)
-    path = myPlanner.run_search(5)
+    # path = myPlanner.run_search(4)
+    path = myPlanner.run_star_search(4, 200)
 
     # print(f"Cost of Modified  {GetTrackCost(path)}")
     print(f"Cost of RRT  {GetTrackCost(path)}")
