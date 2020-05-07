@@ -58,7 +58,7 @@ class A_StarPathFinder:
 
             self.generate_children()
             i += 1
-        path = self.set_track_path()
+        path = self.get_path_list()
 
         return path
 
@@ -138,7 +138,7 @@ class A_StarPathFinder:
             # self.logger.debug("Added new node to open list")
             # self.logger.debug(new_node.log_msg())
                 
-    def set_track_path(self):
+    def get_path_list(self):
         # this sets the path inside the track to the a star path
         curr = self.current_node
         pos_list = []
@@ -147,11 +147,10 @@ class A_StarPathFinder:
             
             curr = curr.parent
         pos_list = pos_list[::-1]
-        path = Path()
-        for pos in pos_list:
-            path.add_way_point(pos)
-        path.add_way_point(self.track.end_location)
-        return path
+
+        pos_list.append(self.track.end_location)
+
+        return pos_list
 
 
 class Node():
@@ -179,408 +178,13 @@ class Node():
             return msg
 
 
-"""
-A* algorithm and helpers - modified for state space
-"""
-class A_StarPathFinderModified:
-    def __init__(self, track):
-        # ds is the search size around the current node
-        self.ds = None
-        self.track = track
 
-        self.open_list = []
-        self.closed_list = []
-        self.children = []
-        
-        self.position_list = []
-        
-        self.current_node = Node()
-
-        self.open_node_n = 0
-
-    def set_directions(self):
-        # for i in range(3):
-        #     for j in range(3):
-        #         direction = [(j-1)*self.ds, (i-1)*self.ds]
-        #         self.position_list.append(direction)
-
-        # self.position_list.pop(4) # remove stand still
-
-        # this makes it not go diagonal
-        self.position_list = [[1, 0], [0, -1], [-1, 0], [0, 1]]
-        for pos in self.position_list:
-            pos[0] = pos[0] * self.ds
-            pos[1] = pos[1] * self.ds
-        # print(self.position_list)
-
-    def run_search(self, ds, max_steps=4000):
-        self.ds = ds
-        self.set_directions()
-        self.set_up_start_node()
-        i = 0
-        while len(self.open_list) > 0 and i < max_steps:
-            self.find_current_node()
-
-            if self.check_done():
-                print("The shortest path has been found")
-                break
-
-            self.generate_children()
-            i += 1
-        path = self.set_track_path()
-
-        return path
-
-    def set_up_start_node(self):
-        self.start_n = Node(None, self.track.start_location)
-        self.end_n = Node(None, self.track.end_location)
-
-        self.open_list.append(self.start_n)
-
-    def find_current_node(self):
-        self.current_node = self.open_list[0]
-        current_index = 0
-        for index, item in enumerate(self.open_list):
-            if item.f < self.current_node.f:
-                self.current_node = item
-                current_index = index
-        # Pop current off open list, add to closed list
-        self.open_list.pop(current_index)
-        self.closed_list.append(self.current_node)
-        # self.logger.debug(self.current_node.log_msg())
-
-    def check_done(self):
-        dx_max = self.ds
-        dis = f.get_distance(self.current_node.position, self.end_n.position)
-        if dis < dx_max:
-            print("Found")
-            return True
-        return False
-
-    def _check_closed_list(self, new_node):
-        for closed_child in self.closed_list:
-            if new_node.position == closed_child.position:
-                return True
-        return False
-
-    def _check_open_list(self, new_node):
-        for open_node in self.open_list:
-            if new_node == open_node: # if in open set return true
-                if new_node.g < open_node.g: # if also beats g score - update g
-                    open_node.g = new_node.g
-                    open_node.parent = new_node.parent
-                return True
-        return False
-
-    def generate_children(self):
-        self.children.clear() # deletes old children
-
-        for direction in self.position_list:
-            new_position = f.add_locations(self.current_node.position, direction)
-
-            if self.track._check_collision(new_position): 
-                continue # collision - skp this direction
-            # Create new node - no obstacle
-            new_node = Node(self.current_node, new_position)
-
-            if self._check_closed_list(new_node): # no in closed list
-                # self.logger.debug("Didn't add CLOSED node")
-                # self.logger.debug(new_node.log_msg())
-                continue
-           
-            # Create the f, g, and h values
-            corner_cost = 1 # per radian of difference
-            new_pos = new_node.position
-            cur_pos = self.current_node.position
-            if self.current_node.parent:
-                old_pos = self.current_node.parent.position
-                d_cost = get_track_segment_cost(new_pos, cur_pos, old_pos)
-            else:
-                d_cost = self.ds
-            new_node.g = self.current_node.g + d_cost
-            h_val = f.get_distance(new_node.position, self.end_n.position)
-            new_node.h = h_val 
-            new_node.f = new_node.g + new_node.h
-
-             # Child is already in the open list
-            if self._check_open_list(new_node):
-                # self.logger.debug("Didn't add OPEN node")
-                # self.logger.debug(new_node.log_msg())
-                continue
-
-            # Add the child to the open list
-
-            self.open_list.append(new_node)
-            self.open_node_n += 1
-            # self.logger.debug("Added new node to open list")
-            # self.logger.debug(new_node.log_msg())
-                
-    def set_track_path(self):
-        # this sets the path inside the track to the a star path
-        curr = self.current_node
-        pos_list = []
-        while curr is not None:
-            pos_list.append(curr.position)
-            
-            curr = curr.parent
-        pos_list = pos_list[::-1]
-        path = Path()
-        for pos in pos_list:
-            path.add_way_point(pos)
-        path.add_way_point(self.track.end_location)
-        return path
-
-def get_track_segment_cost(new_pt, cur_point, old_point):
-
-    dis = f.get_distance(cur_point, new_pt) 
-    angle = f.get_angle(old_point, cur_point, new_pt)
-
-    cost = dis + angle ** 2
-
-    return cost
-
-"""
-RRT algorithm and helpers
-"""
-class RRT_PathFinder:
-    def __init__(self, track):
-        self.ds = None
-        self.track = track
-        self.G = None
-
-    def run_search(self, ds=5, lim=2000):
-        self.G = Graph(self.track.start_location, self.track.end_location)
-        self.ds = ds
-        G, track = self.G, self.track
-
-        counter = 0
-
-        while counter < lim:
-            counter += 1
-            x_new = G.random_postion()
-            if track._check_collision(x_new):
-                continue
-            near_vex, near_idx = self.nearest(x_new)
-            if near_idx is None:
-                continue # collided
-
-            newidx = G.add_vertex(x_new)
-            dis = f.get_distance(x_new, near_vex)
-            G.add_edge(newidx, near_idx, dis)
-
-            end_dis = f.get_distance(x_new, self.track.end_location)
-            if end_dis < self.ds:
-                endidx = G.add_vertex(G.endpos)
-                G.add_edge(newidx, endidx, end_dis)
-                break
-            print(counter)
-
-        print("Success")
-        endidx = G.add_vertex(G.endpos)
-        G.add_edge(newidx, endidx, end_dis)
-        path = self.get_path()
-        # plot(G, dijkstra(self.G))
-        return path
-
-    def get_path(self):
-        path_graph = dijkstra(self.G)
-        path = Path()
-        for node in path_graph: # check node data type
-            path.add_way_point(node)
-
-        return path
-
-    def nearest(self, x_new):
-        G, track = self.G, self.track
-        minDist = float("inf")
-        Nidx = None
-        nvex = None
-        for idx, v in enumerate(G.vertices):
-            if track.check_line_collision(v, x_new):
-                continue
-            dis = f.get_distance(v, x_new)
-            if dis < minDist:
-                minDist = dis
-                Nidx = idx
-                nvex = v
-
-        return nvex, Nidx
-
-    def run_star_search(self, ds=5, lim=2000):
-        self.G = Graph(self.track.start_location, self.track.end_location)
-        self.ds = ds
-        G, track = self.G, self.track
-
-        counter = 0
-        f_show = 10
-
-        while counter < lim:
-            counter += 1
-            if counter % f_show == 1:
-                print(counter)
-
-            x_new = G.random_postion()
-            if track._check_collision(x_new):
-                continue
-            near_vex, near_idx = self.nearest(x_new)
-            if near_idx is None:
-                continue # collided
-
-            newidx = G.add_vertex(x_new)
-            dis = f.get_distance(x_new, near_vex)
-            G.add_edge(newidx, near_idx, dis)
-            G.distances[newidx] = G.distances[near_idx] + dis 
-
-            for vex in G.vertices:
-                if vex == x_new:
-                    continue
-
-                dist = f.get_distance(x_new, vex)
-                if dist < ds / 2:
-                    continue # if it is a negligible increase I think
-
-                if track.check_line_collision(vex, x_new):
-                    continue
-
-                idx = G.vex2idx[vex]
-                if G.distances[newidx] + dist < G.distances[idx]:
-                    G.add_edge(idx, newidx, dist)
-                    G.distances[idx] = G.distances[newidx] + dist
-
-                                
-
-            # check if complete
-            end_dis = f.get_distance(x_new, self.track.end_location)
-            if end_dis < self.ds /2:
-                endidx = G.add_vertex(G.endpos)
-                G.add_edge(newidx, endidx, end_dis)
-                try:
-                    G.distances[endidx] = min(G.distances[endidx], G.distances[newidx] + dist)
-                except:
-                    G.distances[endidx] = G.distances[newidx] + dist
-                # break
-            # print(counter)
-            plot(G)
-            plt.pause(0.001)
-
-        print("Success")
-        endidx = G.add_vertex(G.endpos)
-        G.add_edge(newidx, endidx, end_dis)
-        path = self.get_path()
-        plot(G, dijkstra(self.G))
-        return path
-
-
-class Graph:
-    def __init__(self, startpos, endpos):
-        self.startpos = tuple(startpos)
-        self.endpos = tuple(endpos)
-
-        self.vertices = [self.startpos]
-        self.edges = []
-        self.success = False
-
-        self.vex2idx = {self.startpos:0}
-        self.neighbors = {0:[]}
-        self.distances = {0: 0.0}
-
-        self.sx = endpos[0] - startpos[0]
-        self.sy = endpos[1] - startpos[1]
-
-    def add_vertex(self, pos):
-        try:
-            idx = self.vex2idx[pos]
-        except:
-            idx = len(self.vertices)
-            self.vertices.append(pos)
-            self.vex2idx[pos] = idx
-            self.neighbors[idx] = []
-        return idx
-
-    def add_edge(self, idx1, idx2, cost):
-        self.edges.append((idx1, idx2))
-        self.neighbors[idx1].append((idx2, cost))
-        self.neighbors[idx2].append((idx1, cost))
-
-    def random_postion(self):
-        rx = np.random.random()
-        ry = np.random.random()
-
-        posx = rx * 100
-        posy = ry * 100
-
-        # posx = self.startpos[0] - (self.sx / 2.) + rx * self.sx * 2
-        # posy = self.startpos[1] - (self.sy / 2.) + ry * self.sy * 2
-        return (posx, posy)
-
-
-def dijkstra(G):
-    srcIdx = G.vex2idx[G.startpos]
-    dstIdx = G.vex2idx[G.endpos]
-
-    # build dijkstra
-    nodes = list(G.neighbors.keys())
-    dist = {node: float('inf') for node in nodes}
-    prev = {node: None for node in nodes}
-    dist[srcIdx] = 0
-
-    while nodes:
-        curNode = min(nodes, key=lambda node: dist[node])
-        nodes.remove(curNode)
-        if dist[curNode] == float('inf'):
-            break
-
-        for neighbor, cost in G.neighbors[curNode]:
-            newCost = dist[curNode] + cost
-            if newCost < dist[neighbor]:
-                dist[neighbor] = newCost
-                prev[neighbor] = curNode
-
-    # retrieve path
-    path = deque()
-    curNode = dstIdx
-    while prev[curNode] is not None:
-        path.appendleft(G.vertices[curNode])
-        curNode = prev[curNode]
-    path.appendleft(G.vertices[curNode])
-    return list(path)
-
-
-def plot(G, path=None):
-    plt.figure(2)
-    plt.clf()
-    ax = plt.gca()
-    px = [x for x, y in G.vertices]
-    py = [y for x, y in G.vertices]
-    # fig, ax = plt.subplots()
-
-    # for obs in obstacles:
-    #     circle = plt.Circle(obs, radius, color='red')
-    #     ax.add_artist(circle)
-
-    ax.scatter(px, py, c='cyan')
-    ax.scatter(G.startpos[0], G.startpos[1], c='black')
-    ax.scatter(G.endpos[0], G.endpos[1], c='black')
-
-    lines = [(G.vertices[edge[0]], G.vertices[edge[1]]) for edge in G.edges]
-    lc = mc.LineCollection(lines, colors='green', linewidths=2)
-    ax.add_collection(lc)
-
-    if path is not None:
-        paths = [(path[i], path[i+1]) for i in range(len(path)-1)]
-        lc2 = mc.LineCollection(paths, colors='blue', linewidths=3)
-        ax.add_collection(lc2)
-
-    ax.autoscale()
-    ax.margins(0.1)
-    plt.pause(0.001)
-    # plt.show()
 
 """
 Copied algorithms
 """
+# TODO: convert this to a class that can be created and called.
 class Line():
-#   ''' Define line '''
     def __init__(self, p0, p1):
         self.p = np.array(p0)
         self.dirn = np.array(p1) - np.array(p0)
@@ -593,7 +197,6 @@ class Line():
 
 def distance(x, y):
     return np.linalg.norm(np.array(x) - np.array(y))
-
 
 def nearest(G, vex, obstacles, radius, track):
     Nvex = None
@@ -613,7 +216,6 @@ def nearest(G, vex, obstacles, radius, track):
 
     return Nvex, Nidx
 
-
 def newVertex(randvex, nearvex, stepSize):
     dirn = np.array(randvex) - np.array(nearvex)
     length = np.linalg.norm(dirn)
@@ -621,25 +223,6 @@ def newVertex(randvex, nearvex, stepSize):
 
     newvex = (nearvex[0]+dirn[0], nearvex[1]+dirn[1])
     return newvex
-
-
-def window(startpos, endpos):
-#   ''' Define seach window - 2 times of start to end rectangle'''
-    width = endpos[0] - startpos[0]
-    height = endpos[1] - startpos[1]
-    winx = startpos[0] - (width / 2.)
-    winy = startpos[1] - (height / 2.)
-    return winx, winy, width, height
-
-
-def isInWindow(pos, winx, winy, width, height):
-#   ''' Restrict new vertex insides search window'''
-    if winx < pos[0] < winx+width and \
-        winy < pos[1] < winy+height:
-        return True
-    else:
-        return False
-
 
 class Graph:
 # ''' Define graph '''
@@ -745,7 +328,6 @@ def RRT_star(startpos, endpos, obstacles, n_iter, radius, stepSize, track):
     return G
 
 
-
 def dijkstra(G):
 #   '''
 #   Dijkstra algorithm for finding shortest path from start position to end.
@@ -799,6 +381,35 @@ def pathSearch(startpos, endpos, obstacles, n_iter, radius, stepSize):
         # plot(G, obstacles, radius, path)
         return path
 
+def plot(G, path=None):
+    plt.figure(2)
+    plt.clf()
+    ax = plt.gca()
+    px = [x for x, y in G.vertices]
+    py = [y for x, y in G.vertices]
+    # fig, ax = plt.subplots()
+
+    # for obs in obstacles:
+    #     circle = plt.Circle(obs, radius, color='red')
+    #     ax.add_artist(circle)
+
+    ax.scatter(px, py, c='cyan')
+    ax.scatter(G.startpos[0], G.startpos[1], c='black')
+    ax.scatter(G.endpos[0], G.endpos[1], c='black')
+
+    lines = [(G.vertices[edge[0]], G.vertices[edge[1]]) for edge in G.edges]
+    lc = mc.LineCollection(lines, colors='green', linewidths=2)
+    ax.add_collection(lc)
+
+    if path is not None:
+        paths = [(path[i], path[i+1]) for i in range(len(path)-1)]
+        lc2 = mc.LineCollection(paths, colors='blue', linewidths=3)
+        ax.add_collection(lc2)
+
+    ax.autoscale()
+    ax.margins(0.1)
+    plt.pause(0.001)
+    # plt.show()
 
 
 
@@ -848,6 +459,128 @@ class WayPoint:
         return False
 
 
+class PathSmoother:
+    def __init__(self):
+        self.path = None
+        self.track = None
+
+    def reduce_path(self):
+        path = self.path
+        new_path = []
+        new_path.append(path[0]) # starting pos
+        pt1 = path[0]
+        for i in range(2, len(path)):
+            pt2 = path[i]
+            if pt1 != pt2:
+                new_path.append(path[i-1]) # add corners
+                pt1 = path[i-1]
+        new_path.append(path[-1]) # add end
+
+        self.path = new_path
+
+    def expand_path(self):
+        path = self.path
+        new_path = []
+        pt = path[0]
+        for i in range(len(path)-1):
+            next_pt = path[i+1]
+
+            new_path.append(pt)
+            new_pt = [(pt[0]+ next_pt[0])/2, (pt[1]+ next_pt[1])/2]
+            new_path.append(new_pt)
+
+            pt = next_pt
+
+        new_path.append(path[-1])
+
+        self.path = new_path
+
+    def show_path(self):
+        # helper for debugging
+        interface = Interface(track, 100)
+        interface.show_planned_path(path)
+
+    def optimize_path(self):
+        path = self.path
+        bounds = []
+
+        start1 = tuple((self.path[0][0], self.path[0][0]))
+        end1 = tuple((self.path[-1][0], self.path[-1][0]))
+        start2 = tuple((self.path[0][1], self.path[0][1]))
+        end2 = tuple((self.path[-1][1], self.path[-1][1]))
+        bounds.append(start1)
+        bounds.append(start2)
+        for _ in range((len(path)-2)*2):
+            bounds.append((0, 100))
+        bounds.append(end1)
+        bounds.append(end2)
+
+        cons = {'type': 'eq', 'fun':self.path_constraint}
+        
+        res = optimize.minimize(self.path_cost, path, bounds=bounds, constraints=cons, method='SLSQP')
+        # res = optimize.minimize(path_cost, path)
+        print(res)
+        path_res = res.x
+
+        new_path = []
+        path_opti = Path()
+        for i in range(0,len(path_res), 2):
+            new_pt = (path_res[i], path_res[i+1])
+            new_path.append(new_pt)
+            path_opti.add_way_point(new_pt)
+
+        # path opti has actual path in it
+        self.path = new_path
+        return new_path
+
+    def path_cost(self, path_list):
+        path = []
+        for i in range(0,len(path_list), 2):
+            new_pt = (path_list[i], path_list[i+1])
+            path.append(new_pt)
+
+        cost = 0
+        for i in range(len(path)-2):
+            pt1 = path[i]
+            pt2 = path[i+1]
+            pt3 = path[i+2]
+
+            dis = f.get_distance(pt1, pt2) 
+            angle = f.get_angle(pt1, pt2, pt3)
+
+            cost += dis + (angle ** 2)
+
+        return cost
+
+    def path_constraint(self, path_list):
+        track = self.track
+        path = []
+        for i in range(0,len(path_list), 2):
+            new_pt = (path_list[i], path_list[i+1])
+            path.append(new_pt)
+
+        ret = 0
+        for i in range(len(path)):
+            if track._check_collision(path[i]):
+                ret += 1 
+
+        return ret
+
+    def run_smoothing(self, track, path_list):
+        self.track = track
+        self.path = path_list
+
+        self.reduce_path()
+        self.expand_path()
+        self.expand_path()
+
+        self.optimize_path()
+
+        return self.path
+
+"""
+Additional functions
+"""
 def ReduceRoute(path):
     new_path = Path()
     new_path.add_way_point(path.route[0].x)
@@ -895,7 +628,7 @@ def show_path(path):
     interface = Interface(track, 100)
     interface.show_planned_path(path)
 
-def SciPySmoothing(path):
+def interpolate(path):
     pts = []
     for pt in path.route:
         pts.append(pt.x)
@@ -956,7 +689,9 @@ def path_constraint(path_list):
 
     ret = 0
     for i in range(len(path)):
-        ret += track._check_collision(path[i])
+        if track._check_collision(path[i]):
+            ret += 1 
+    print(ret)
 
     return ret # 0 for no col or 1 for col
 
@@ -979,8 +714,6 @@ def run_rrt_star():
     filename = 'path_arr.npy'
     np.save(filename, path)
 
-
-
 # testing
 if __name__ == "__main__":
     track = TrackData()
@@ -990,54 +723,9 @@ if __name__ == "__main__":
     myPlanner = A_StarPathFinder(track)
     path = myPlanner.run_search(5)
 
-    path = ReduceRoute(path)
-    path = ExandPath(path)
-    # path = ExandPath(path)
-    # path = ExandPath(path)
-    
-    new_path = []
-    for pt in path.route:
-        new_path.append(pt.x)
-    path = new_path
+    myOpti = PathSmoother()
+    new_path = myOpti.run_smoothing(track, path)
 
-    # print(f"Cost of A*  {GetTrackCost(path)}")
-    # show_path(path)
-
-    # run_rrt_star()
-    
-    # filename = 'path_arr.npy'
-    # path = np.load(filename)
-    # new_path = np.empty((len(path), 2))
-    # for i in range(len(path)):
-    #     new_path[i, 0] = path[i][0]
-    #     new_path[i, 1] = path[i][1]
-
-    # path = new_path
-
-    # current path is a list of way point tuples
-    # cons_start = optimize.LinearConstraint()
-
-    bounds = []
-    bounds.append((95,95))
-    bounds.append((95,95))
-    for _ in range((len(path)-2)*2):
-        bounds.append((0, 100) )
-    bounds.append((10, 10))
-    bounds.append((10, 10))
-
-    cons = {'type': 'eq', 'fun':path_constraint}
-    
-    res = optimize.minimize(path_cost, path, bounds=bounds, constraints=cons, method='SLSQP')
-    print(res)
-    path_res = res.x
-    new_path = []
-    path_opti = Path()
-    for i in range(0,len(path_res), 2):
-        new_pt = (path_res[i], path_res[i+1])
-        new_path.append(new_pt)
-        path_opti.add_way_point(new_pt)
-
-    # plot_path(new_path)
-    show_path(path_opti)
+    plot_path(new_path)
 
     

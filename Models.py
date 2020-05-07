@@ -118,6 +118,23 @@ class TrackData(TrackConfig):
             msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
             ret = 1
         return ret
+    
+    def _check_collision_distance(self, x):
+        b = self.boundary
+        ret = 0
+        for i, o in enumerate(self.obstacles):
+            if o[0] <= x[0] <= o[2]:
+                if o[1] <= x[1] <= o[3]:
+                    msg = "Obstacle collision %d --> x: %d;%d"%(i, x[0],x[1])
+                    ret = 1
+                    
+        if x[0] <= b[0] or x[0] >= b[2]:
+            msg = "X wall collision --> x: %d, b:%d;%d"%(x[0], b[0], b[2])
+            ret = 1
+        if x[1] <= b[1] or x[1] >= b[3]:
+            msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
+            ret = 1
+        return ret
 
     def get_ranges(self, x, th):
         # x is location, th is orientation 
