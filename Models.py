@@ -117,6 +117,8 @@ class TrackData(TrackConfig):
         if x[1] <= b[1] or x[1] >= b[3]:
             msg = "Y wall collision --> y: %d, b:%d;%d"%(x[1], b[1], b[3])
             ret = 1
+        # if ret == 1:
+        #     print(msg)
         return ret
     
     def _check_collision_distance(self, x):

@@ -7,7 +7,7 @@ from Models import TrackData
 from collections import deque
 import matplotlib.pyplot as plt
 from matplotlib import collections  as mc
-from scipy import  interpolate
+from scipy import  interpolate as interp 
 from scipy import optimize
 
 """
@@ -674,12 +674,27 @@ def show_path(path):
     interface = Interface(track, 100)
     interface.show_planned_path(path)
 
+def plot_new_path(path, new_path):
+    fig, ax = plt.subplots()
+
+    paths = [(path[i], path[i+1]) for i in range(len(path)-1)]
+    lc2 = mc.LineCollection(paths, colors='blue', linewidths=3)
+    ax.add_collection(lc2)
+    paths = [(new_path[i], new_path[i+1]) for i in range(len(new_path)-1)]
+    lc2 = mc.LineCollection(paths, colors='blue', linewidths=3)
+    ax.add_collection(lc2)
+
+    ax.autoscale()
+    ax.margins(0.1)
+    plt.show()
+
 def interpolate_path(path):
-    pts = []
-    for pt in path.route:
-        pts.append(pt.x)
+    pts = path 
 
     # moves points so that they aren't in line with each other
+    for i in range(0, len(pts)-1):
+        if pts[i][0] == pts[i+1][0]:
+            pts[i][0] += 0.1
     for i in range(0, len(pts)-1):
         if pts[i][0] == pts[i+1][0]:
             pts[i][0] += 0.1
@@ -690,20 +705,26 @@ def interpolate_path(path):
     x = x[::-1]
     y = np.asarray(y)
     y = y[::-1]
-    f = interpolate.interp1d(x, y, kind='cubic')
 
-    start = x[0]
-    stop = x[-1]
+    t = [50]
+    k = 5
+    t = np.r_[(x[0],)*(k+1),
+          t,
+          (x[-1],)*(k+1)]
+
+    spl = interp.make_lsq_spline(x, y, t, k)
+
     new_x = np.linspace(x[0], x[-1], 100)
+    new_y = spl(new_x)
 
-    new_y = f(new_x)
-
-    new_path = Path()
+    
+    new_path = []
     for y, x in zip(new_y, new_x):
         pt = [x, y]
-        new_path.add_way_point(pt)
+        new_path.append(pt)
 
-    return path 
+    plot_new_path(path, new_path)
+    return new_path 
 
 def path_cost(path_list):
     path = []
@@ -777,8 +798,8 @@ def optimise_path(path):
 
     cons = {'type': 'eq', 'fun':path_constraint}
     
-    res = optimize.minimize(path_cost, path, bounds=bounds, constraints=cons, method='SLSQP')
-    # res = optimize.minimize(path_cost, path)
+    res = optimize.minimize(path_cost, path, bounds=bounds, constraints=cons)
+    # res = optimize.minimize(path_cost, path, bounds=bounds)
     print(res)
     path_res = res.x
 
@@ -804,7 +825,7 @@ def old_opti(path):
 
     cons = {'type': 'eq', 'fun':path_constraint}
     
-    res = optimize.minimize(path_cost, path, bounds=bounds, constraints=cons, method='SLSQP')
+    res = optimize.minimize(path_cost, path, bounds=bounds, constraints=cons)
     print(res)
     path_res = res.x
     new_path = []
@@ -827,10 +848,25 @@ def run_path_opti():
     path = reduce_path(path)
     path = expand_path(path)
 
-    # path_list, path_obj = optimise_path(path)
-    old_opti(path)
+    path_list, path_obj = optimise_path(path)
+    # old_opti(path)
 
-    # show_path(path_obj)
+    show_path(path_obj)
+
+def run_bspline_interp():
+    track = TrackData()
+    track.simple_maze()
+
+    myPlanner = A_StarPathFinder(track)
+    path = myPlanner.run_search(5)
+
+    path = reduce_path(path)
+    path = expand_path(path)
+
+    path = interpolate_path(path)
+
+    # plot_path(path)
+
 
 # define unit tests
 def test_smoother_class():
@@ -848,6 +884,7 @@ def test_smoother_class():
 
 # testing
 if __name__ == "__main__":
-    run_path_opti()
+    # run_path_opti()
+    run_bspline_interp()
 
     
