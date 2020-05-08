@@ -674,7 +674,7 @@ def show_path(path):
     interface = Interface(track, 100)
     interface.show_planned_path(path)
 
-def interpolate(path):
+def interpolate_path(path):
     pts = []
     for pt in path.route:
         pts.append(pt.x)
@@ -720,7 +720,7 @@ def path_cost(path_list):
         dis = f.get_distance(pt1, pt2) 
         angle = f.get_angle(pt1, pt2, pt3)
 
-        cost += dis + (angle ** 2)
+        cost += dis #+ (angle ** 2)
 
     return cost
 
@@ -735,9 +735,10 @@ def path_constraint(path_list):
 
     ret = 0
     for i in range(len(path)):
-        if track._check_collision(path[i]):
-            ret += 1 
-    print(ret)
+        # if track._check_collision(path[i]):
+        #     ret += 1 
+        ret += track._check_collision(path[i])
+    # print(ret)
 
     return ret # 0 for no col or 1 for col
 
@@ -792,6 +793,30 @@ def optimise_path(path):
 
     return new_path, path_opti
 
+def old_opti(path):
+    bounds = []
+    bounds.append((95,95))
+    bounds.append((95,95))
+    for _ in range((len(path)-2)*2):
+        bounds.append((0, 100) )
+    bounds.append((10, 10))
+    bounds.append((10, 10))
+
+    cons = {'type': 'eq', 'fun':path_constraint}
+    
+    res = optimize.minimize(path_cost, path, bounds=bounds, constraints=cons, method='SLSQP')
+    print(res)
+    path_res = res.x
+    new_path = []
+    path_opti = Path()
+    for i in range(0,len(path_res), 2):
+        new_pt = (path_res[i], path_res[i+1])
+        new_path.append(new_pt)
+        path_opti.add_way_point(new_pt)
+
+    # plot_path(new_path)
+    show_path(path_opti)
+
 def run_path_opti():
     track = TrackData()
     track.simple_maze()
@@ -802,9 +827,10 @@ def run_path_opti():
     path = reduce_path(path)
     path = expand_path(path)
 
-    path_list, path_obj = optimise_path(path)
+    # path_list, path_obj = optimise_path(path)
+    old_opti(path)
 
-    show_path(path_obj)
+    # show_path(path_obj)
 
 # define unit tests
 def test_smoother_class():
