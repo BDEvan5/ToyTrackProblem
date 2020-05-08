@@ -7,8 +7,7 @@ from Models import TrackData
 from collections import deque
 import matplotlib.pyplot as plt
 from matplotlib import collections  as mc
-from scipy import  interpolate as interp 
-from scipy import optimize
+
 
 """
 A* algorithm and helpers - for standard shortest path search
@@ -325,7 +324,10 @@ def RRT_star(startpos, endpos, obstacles, n_iter, radius, stepSize, track):
             G.success = True
             #print('success')
             # break
-    return G
+
+    path = dijkstra(G)
+    plot(G, path)
+    return path
 
 
 def dijkstra(G):
@@ -458,433 +460,42 @@ class WayPoint:
             return True
         return False
 
-
-class PathSmoother:
-    def __init__(self):
-        self.path = None
-        self.track = None
-
-    def reduce_path(self):
-        path = self.path
-        new_path = []
-        new_path.append(path[0]) # starting pos
-        pt1 = path[0]
-        for i in range(2, len(path)):
-            pt2 = path[i]
-            if pt1[0] != pt2[0] and pt1[1] != pt2[1]:
-                new_path.append(path[i-1]) # add corners
-                pt1 = path[i-1]
-        new_path.append(path[-1]) # add end
-
-        self.path = new_path
-
-    def expand_path(self):
-        path = self.path
-        new_path = []
-        pt = path[0]
-        for i in range(len(path)-1):
-            next_pt = path[i+1]
-
-            new_path.append(pt)
-            new_pt = [(pt[0]+ next_pt[0])/2, (pt[1]+ next_pt[1])/2]
-            new_path.append(new_pt)
-
-            pt = next_pt
-
-        new_path.append(path[-1])
-
-        self.path = new_path
-
-    def show_path(self):
-        # helper for debugging
-        interface = Interface(track, 100)
-        interface.show_planned_path(path)
-
-    def optimize_path(self):
-        path = self.path
-        bounds = []
-
-        start1 = tuple((self.path[0][0], self.path[0][0]))
-        end1 = tuple((self.path[-1][0], self.path[-1][0]))
-        start2 = tuple((self.path[0][1], self.path[0][1]))
-        end2 = tuple((self.path[-1][1], self.path[-1][1]))
-        bounds.append(start1)
-        bounds.append(start2)
-        for _ in range((len(path)-2)*2):
-            bounds.append((0, 100))
-        bounds.append(end1)
-        bounds.append(end2)
-
-        cons = {'type': 'eq', 'fun':path_constraint}
-        
-        res = optimize.minimize(self.path_cost, path, bounds=bounds, constraints=cons, method='SLSQP')
-        # res = optimize.minimize(path_cost, path)
-        print(res)
-        path_res = res.x
-
-        new_path = []
-        path_opti = Path()
-        for i in range(0,len(path_res), 2):
-            new_pt = (path_res[i], path_res[i+1])
-            new_path.append(new_pt)
-            path_opti.add_way_point(new_pt)
-
-        # path opti has actual path in it
-        self.path = new_path
-        return new_path
-
-    def path_cost(self, path_list):
-        path = []
-        for i in range(0,len(path_list), 2):
-            new_pt = (path_list[i], path_list[i+1])
-            path.append(new_pt)
-
-        cost = 0
-        for i in range(len(path)-2):
-            pt1 = path[i]
-            pt2 = path[i+1]
-            pt3 = path[i+2]
-
-            dis = f.get_distance(pt1, pt2) 
-            angle = f.get_angle(pt1, pt2, pt3)
-
-            cost += dis + (angle ** 2)
-
-        return cost
-
-    def path_constraint(self, path_list):
-        track = self.track
-        path = []
-        for i in range(0,len(path_list), 2):
-            new_pt = (path_list[i], path_list[i+1])
-            path.append(new_pt)
-
-        ret = 0
-        for i in range(len(path)):
-            if track._check_collision(path[i]):
-                ret += 1 
-
-        return ret
-
-    def run_smoothing(self, track, path_list):
-        self.track = track
-        self.path = path_list
-
-        self.reduce_path()
-        self.expand_path()
-        # self.expand_path()
-
-        self.optimize_path()
-
-        return self.path
-
-    def plot_path(self, path):
-        fig, ax = plt.subplots()
-
-        paths = [(path[i], path[i+1]) for i in range(len(path)-1)]
-        lc2 = mc.LineCollection(paths, colors='blue', linewidths=3)
-        ax.add_collection(lc2)
-
-        ax.autoscale()
-        ax.margins(0.1)
-        plt.show()
-
-
-"""
-Additional functions
-"""
-def ReduceRoute(path):
-    new_path = Path()
-    new_path.add_way_point(path.route[0].x)
-    pt1 = path.route[0]
-    for i in range(2, len(path)):
-        pt2 = path.route[i]
-        if pt1 != pt2:
-            new_path.add_way_point(path.route[i-1].x)
-            pt1 = path.route[i-1]
-    new_path.add_way_point(path.route[len(path.route)-1].x)
-
-    return new_path
-
-def ExandPath(path):
-    # path of corner points.
-    new_path = Path()
-    for i in range(len(path)-1):
-        pt = path.route[i]
-        next_pt = path.route[i+1]
-        # new_path.add_way_point(pt.x)
-        new_pt = [(pt.x[0]*2+ next_pt.x[0])/3, (pt.x[1]*2+ next_pt.x[1])/3]
-        new_path.add_way_point(new_pt)
-        new_pt = [(pt.x[0]+ next_pt.x[0]*2)/3, (pt.x[1]+ next_pt.x[1]*2)/3]
-        new_path.add_way_point(new_pt)
-
-    new_path.add_way_point(path.route[len(path.route)-1].x)
-
-    return new_path
-
-
-def reduce_path(path):
-    new_path = []
-    new_path.append(path[0]) # starting pos
-    pt1 = path[0]
-    for i in range(2, len(path)):
-        pt2 = path[i]
-        if pt1[0] != pt2[0] and pt1[1] != pt2[1]:
-            new_path.append(path[i-1]) # add corners
-            pt1 = path[i-1]
-    new_path.append(path[-1]) # add end
-
-    return new_path
-
-def expand_path(path):
-    new_path = []
-    pt = path[0]
-    for i in range(len(path)-1):
-        next_pt = path[i+1]
-
-        new_path.append(pt)
-        new_pt = [(pt[0]+ next_pt[0])/2, (pt[1]+ next_pt[1])/2]
-        new_path.append(new_pt)
-
-        pt = next_pt
-
-    new_path.append(path[-1])
-
-    return new_path
-
-
-def GetTrackCost(path):
-    cost = 0
-    for i in range(len(path)-2):
-        pt1 = path.route[i].x
-        pt2 = path.route[i+1].x
-        pt3 = path.route[i+2].x
-
-        dis = f.get_distance(pt1, pt2) 
-        angle = f.get_angle(pt1, pt2, pt3)
-
-        cost += dis + angle ** 2
-
-    return cost
-
-def show_path(path):
-    track = TrackData()
-    track.simple_maze()
-
-    interface = Interface(track, 100)
-    interface.show_planned_path(path)
-
-def plot_new_path(path, new_path):
-    fig, ax = plt.subplots()
-
-    paths = [(path[i], path[i+1]) for i in range(len(path)-1)]
-    lc2 = mc.LineCollection(paths, colors='blue', linewidths=3)
-    ax.add_collection(lc2)
-    paths = [(new_path[i], new_path[i+1]) for i in range(len(new_path)-1)]
-    lc2 = mc.LineCollection(paths, colors='blue', linewidths=3)
-    ax.add_collection(lc2)
-
-    ax.autoscale()
-    ax.margins(0.1)
-    plt.show()
-
-def interpolate_path(path):
-    pts = path 
-
-    # moves points so that they aren't in line with each other
-    for i in range(0, len(pts)-1):
-        if pts[i][0] == pts[i+1][0]:
-            pts[i][0] += 0.1
-    for i in range(0, len(pts)-1):
-        if pts[i][0] == pts[i+1][0]:
-            pts[i][0] += 0.1
-    
-
-    x, y = zip(*pts)
-    x = np.asarray(x)
-    x = x[::-1]
-    y = np.asarray(y)
-    y = y[::-1]
-
-    t = [50]
-    k = 5
-    t = np.r_[(x[0],)*(k+1),
-          t,
-          (x[-1],)*(k+1)]
-
-    spl = interp.make_lsq_spline(x, y, t, k)
-
-    new_x = np.linspace(x[0], x[-1], 100)
-    new_y = spl(new_x)
-
-    
-    new_path = []
-    for y, x in zip(new_y, new_x):
-        pt = [x, y]
-        new_path.append(pt)
-
-    plot_new_path(path, new_path)
-    return new_path 
-
-def path_cost(path_list):
-    path = []
-    for i in range(0,len(path_list), 2):
-        new_pt = (path_list[i], path_list[i+1])
-        path.append(new_pt)
-
-    cost = 0
-    for i in range(len(path)-2):
-        pt1 = path[i]
-        pt2 = path[i+1]
-        pt3 = path[i+2]
-
-        dis = f.get_distance(pt1, pt2) 
-        angle = f.get_angle(pt1, pt2, pt3)
-
-        cost += dis #+ (angle ** 2)
-
-    return cost
-
-def path_constraint(path_list):
-    track = TrackData()
-    track.simple_maze()
-
-    path = []
-    for i in range(0,len(path_list), 2):
-        new_pt = (path_list[i], path_list[i+1])
-        path.append(new_pt)
-
-    ret = 0
-    for i in range(len(path)):
-        # if track._check_collision(path[i]):
-        #     ret += 1 
-        ret += track._check_collision(path[i])
-    # print(ret)
-
-    return ret # 0 for no col or 1 for col
-
-def run_rrt_star():
-    startpos = tuple(track.start_location)
-    endpos = tuple(track.end_location)
-    obstacles = []
-    n_iter = 700
-    radius = 5
-    stepSize = 15
-
-    G = RRT_star(startpos, endpos, obstacles, n_iter, radius, stepSize, track)
-    # G = RRT(startpos, endpos, obstacles, n_iter, radius, stepSize)
-
-
-    path = dijkstra(G)
-    print(path)
-    plot(G, path)
-
-    filename = 'path_arr.npy'
-    np.save(filename, path)
-
-def optimise_path(path):
-    bounds = []
-
-    start1 = tuple((path[0][0], path[0][0]))
-    end1 = tuple((path[-1][0], path[-1][0]))
-    start2 = tuple((path[0][1], path[0][1]))
-    end2 = tuple((path[-1][1], path[-1][1]))
-    bounds.append(start1)
-    bounds.append(start2)
-    for _ in range((len(path)-2)*2):
-        bounds.append((0, 100))
-    bounds.append(end1)
-    bounds.append(end2)
-
-    cons = {'type': 'eq', 'fun':path_constraint}
-    
-    res = optimize.minimize(path_cost, path, bounds=bounds, constraints=cons)
-    # res = optimize.minimize(path_cost, path, bounds=bounds)
-    print(res)
-    path_res = res.x
-
-    new_path = []
-    path_opti = Path()
-    for i in range(0,len(path_res), 2):
-        new_pt = (path_res[i], path_res[i+1])
-        new_path.append(new_pt)
-        path_opti.add_way_point(new_pt)
-
-    # path opti has actual path in it
-
-    return new_path, path_opti
-
-def old_opti(path):
-    bounds = []
-    bounds.append((95,95))
-    bounds.append((95,95))
-    for _ in range((len(path)-2)*2):
-        bounds.append((0, 100) )
-    bounds.append((10, 10))
-    bounds.append((10, 10))
-
-    cons = {'type': 'eq', 'fun':path_constraint}
-    
-    res = optimize.minimize(path_cost, path, bounds=bounds, constraints=cons)
-    print(res)
-    path_res = res.x
-    new_path = []
-    path_opti = Path()
-    for i in range(0,len(path_res), 2):
-        new_pt = (path_res[i], path_res[i+1])
-        new_path.append(new_pt)
-        path_opti.add_way_point(new_pt)
-
-    # plot_path(new_path)
-    show_path(path_opti)
-
-def run_path_opti():
-    track = TrackData()
-    track.simple_maze()
-
-    myPlanner = A_StarPathFinder(track)
-    path = myPlanner.run_search(5)
-
-    path = reduce_path(path)
-    path = expand_path(path)
-
-    path_list, path_obj = optimise_path(path)
-    # old_opti(path)
-
-    show_path(path_obj)
-
-def run_bspline_interp():
-    track = TrackData()
-    track.simple_maze()
-
-    myPlanner = A_StarPathFinder(track)
-    path = myPlanner.run_search(5)
-
-    path = reduce_path(path)
-    path = expand_path(path)
-
-    path = interpolate_path(path)
-
-    # plot_path(path)
-
-
-# define unit tests
-def test_smoother_class():
+# helper for smoother
+def get_practice_path():
     track = TrackData()
     track.simple_maze()
    
-
     myPlanner = A_StarPathFinder(track)
     path = myPlanner.run_search(5)
 
-    myOpti = PathSmoother()
-    new_path = myOpti.run_smoothing(track, path)
+    return path
 
-    plot_path(new_path)
+# define unit tests
+
+def test_a_star():
+    track = TrackData()
+    track.simple_maze()
+   
+    myPlanner = A_StarPathFinder(track)
+    path = myPlanner.run_search(5)
+
+    plot_path(path)
+
+def test_rrt_star():
+    track = TrackData()
+    track.simple_maze()
+   
+    start = tuple(track.start_location)
+    end = tuple(track.end_location)
+
+    path = RRT_star(start, end, [], 800, 5, 15, track)
+    # plot_path(path)
+
+
 
 # testing
 if __name__ == "__main__":
-    # run_path_opti()
-    run_bspline_interp()
 
+    test_rrt_star()
+    test_a_star()
     
