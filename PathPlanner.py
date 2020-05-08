@@ -471,7 +471,7 @@ class PathSmoother:
         pt1 = path[0]
         for i in range(2, len(path)):
             pt2 = path[i]
-            if pt1 != pt2:
+            if pt1[0] != pt2[0] and pt1[1] != pt2[1]:
                 new_path.append(path[i-1]) # add corners
                 pt1 = path[i-1]
         new_path.append(path[-1]) # add end
@@ -515,7 +515,7 @@ class PathSmoother:
         bounds.append(end1)
         bounds.append(end2)
 
-        cons = {'type': 'eq', 'fun':self.path_constraint}
+        cons = {'type': 'eq', 'fun':path_constraint}
         
         res = optimize.minimize(self.path_cost, path, bounds=bounds, constraints=cons, method='SLSQP')
         # res = optimize.minimize(path_cost, path)
@@ -572,11 +572,23 @@ class PathSmoother:
 
         self.reduce_path()
         self.expand_path()
-        self.expand_path()
+        # self.expand_path()
 
         self.optimize_path()
 
         return self.path
+
+    def plot_path(self, path):
+        fig, ax = plt.subplots()
+
+        paths = [(path[i], path[i+1]) for i in range(len(path)-1)]
+        lc2 = mc.LineCollection(paths, colors='blue', linewidths=3)
+        ax.add_collection(lc2)
+
+        ax.autoscale()
+        ax.margins(0.1)
+        plt.show()
+
 
 """
 Additional functions
@@ -609,7 +621,38 @@ def ExandPath(path):
     new_path.add_way_point(path.route[len(path.route)-1].x)
 
     return new_path
-        
+
+
+def reduce_path(path):
+    new_path = []
+    new_path.append(path[0]) # starting pos
+    pt1 = path[0]
+    for i in range(2, len(path)):
+        pt2 = path[i]
+        if pt1[0] != pt2[0] and pt1[1] != pt2[1]:
+            new_path.append(path[i-1]) # add corners
+            pt1 = path[i-1]
+    new_path.append(path[-1]) # add end
+
+    return new_path
+
+def expand_path(path):
+    new_path = []
+    pt = path[0]
+    for i in range(len(path)-1):
+        next_pt = path[i+1]
+
+        new_path.append(pt)
+        new_pt = [(pt[0]+ next_pt[0])/2, (pt[1]+ next_pt[1])/2]
+        new_path.append(new_pt)
+
+        pt = next_pt
+
+    new_path.append(path[-1])
+
+    return new_path
+
+
 def GetTrackCost(path):
     cost = 0
     for i in range(len(path)-2):
@@ -625,6 +668,9 @@ def GetTrackCost(path):
     return cost
 
 def show_path(path):
+    track = TrackData()
+    track.simple_maze()
+
     interface = Interface(track, 100)
     interface.show_planned_path(path)
 
@@ -714,8 +760,54 @@ def run_rrt_star():
     filename = 'path_arr.npy'
     np.save(filename, path)
 
-# testing
-if __name__ == "__main__":
+def optimise_path(path):
+    bounds = []
+
+    start1 = tuple((path[0][0], path[0][0]))
+    end1 = tuple((path[-1][0], path[-1][0]))
+    start2 = tuple((path[0][1], path[0][1]))
+    end2 = tuple((path[-1][1], path[-1][1]))
+    bounds.append(start1)
+    bounds.append(start2)
+    for _ in range((len(path)-2)*2):
+        bounds.append((0, 100))
+    bounds.append(end1)
+    bounds.append(end2)
+
+    cons = {'type': 'eq', 'fun':path_constraint}
+    
+    res = optimize.minimize(path_cost, path, bounds=bounds, constraints=cons, method='SLSQP')
+    # res = optimize.minimize(path_cost, path)
+    print(res)
+    path_res = res.x
+
+    new_path = []
+    path_opti = Path()
+    for i in range(0,len(path_res), 2):
+        new_pt = (path_res[i], path_res[i+1])
+        new_path.append(new_pt)
+        path_opti.add_way_point(new_pt)
+
+    # path opti has actual path in it
+
+    return new_path, path_opti
+
+def run_path_opti():
+    track = TrackData()
+    track.simple_maze()
+
+    myPlanner = A_StarPathFinder(track)
+    path = myPlanner.run_search(5)
+
+    path = reduce_path(path)
+    path = expand_path(path)
+
+    path_list, path_obj = optimise_path(path)
+
+    show_path(path_obj)
+
+# define unit tests
+def test_smoother_class():
     track = TrackData()
     track.simple_maze()
    
@@ -727,5 +819,9 @@ if __name__ == "__main__":
     new_path = myOpti.run_smoothing(track, path)
 
     plot_path(new_path)
+
+# testing
+if __name__ == "__main__":
+    run_path_opti()
 
     
