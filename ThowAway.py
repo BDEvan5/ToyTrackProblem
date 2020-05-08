@@ -19,7 +19,10 @@ y = np.exp(-x**2) + 0.1 * np.random.randn(50)
 
 from scipy.interpolate import make_lsq_spline, BSpline
 t = [-1, 0, 1]
-k = 5
+k = 3
+t = np.r_[(x[0],)*(k+1),
+          t,
+          (x[-1],)*(k+1)]
 t = np.r_[(x[0],)*(k+1),
           t,
           (x[-1],)*(k+1)]

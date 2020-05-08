@@ -470,6 +470,21 @@ def get_practice_path():
 
     return path
 
+def convert_list_to_path(path):
+    new_path = Path()
+    for pt in path:
+        new_path.add_way_point(pt)
+
+    return new_path
+
+def show_path(path):
+    track = TrackData()
+    track.simple_maze()
+
+    interface = Interface(track, 100)
+    interface.show_planned_path(path)
+
+
 # define unit tests
 
 def test_a_star():
@@ -479,7 +494,9 @@ def test_a_star():
     myPlanner = A_StarPathFinder(track)
     path = myPlanner.run_search(5)
 
-    plot_path(path)
+    # plot_path(path)
+    path = convert_list_to_path(path)
+    show_path(path)
 
 def test_rrt_star():
     track = TrackData()
@@ -496,6 +513,6 @@ def test_rrt_star():
 # testing
 if __name__ == "__main__":
 
-    test_rrt_star()
+    # test_rrt_star()
     test_a_star()
     
