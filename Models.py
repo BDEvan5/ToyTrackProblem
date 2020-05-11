@@ -146,7 +146,17 @@ class TrackData(TrackConfig):
                     distances.append(dis)
                     break
 
-        return min(distances)
+        return 1 / min(distances)
+
+    def get_heat_map(self):
+        heat_map = np.zeros((100, 100))
+        for i in range(100):
+            for j in range(100):
+                if self._check_collision([i, j]):
+                    heat_map[i, j] = 1
+
+        # returns a 100 by 100 grid of obstacle values
+        return heat_map
 
 
     def get_ranges(self, x, th):

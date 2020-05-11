@@ -283,7 +283,9 @@ def RRT_star(startpos, endpos, obstacles, n_iter, radius, stepSize, track):
         if nearvex is None:
             continue
 
-        newvex = newVertex(randvex, nearvex, stepSize)
+        newvex = newVertex(randvex, nearvex, stepSize) 
+        # what is happenening here is that he is taking a step in the direction of the randvex
+        # that is why there is a near const step size.
 
         newidx = G.add_vex(newvex)
         dist = distance(newvex, nearvex)

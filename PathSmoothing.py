@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 from matplotlib import collections  as mc
 from scipy import  interpolate as si
 from scipy import optimize as so
+# from tensorflow.keras.optimizers import RMSprop
+# import tensorflow as tf
 
 
 class PathSmoother:
@@ -197,34 +199,6 @@ def plot_new_path(path, new_path):
     ax.margins(0.1)
     plt.show()
 
-def path_cost(path_list):
-    track = TrackData()
-    track.simple_maze()
-    path = []
-    for i in range(0,len(path_list), 2):
-        new_pt = (path_list[i], path_list[i+1])
-        path.append(new_pt)
-
-    cost = 0
-    c_distance = 1
-    for i in range(len(path)-2):
-        pt1 = path[i]
-        pt2 = path[i+1]
-        pt3 = path[i+2]
-
-        dis = f.get_distance(pt1, pt2) 
-        angle = f.get_angle(pt1, pt2, pt3)
-
-        cost += dis
-        # cost += dis + (angle ** 2)
-        dis_to_obs = track.get_obstacle_distance(pt1)
-        print(dis_to_obs)
-        cost += c_distance * dis_to_obs **2
-    
-    cost += f.get_distance(path[-2], path[-1])
-
-    return cost
-
 def path_constraint(path_list):
     track = TrackData()
     track.simple_maze()
@@ -242,6 +216,111 @@ def path_constraint(path_list):
     return ret # 0 for no col or 1 for col
 
 def optimise_path(path):
+    track = preprocess_heat_map()
+
+    def path_cost(path_list):
+        path = []
+        for i in range(0,len(path_list), 2):
+            new_pt = (path_list[i], path_list[i+1])
+            path.append(new_pt)
+        # path = path_list
+
+        dis_cost = 0
+        obs_cost = 0
+        c_distance = 0.1
+        for i in range(len(path)-2):
+            pt1 = path[i]
+            pt2 = path[i+1]
+            pt3 = path[i+2]
+
+            if pt1[0] > 100 or pt1[1] > 100:
+                dis_cost += 1000
+            else:
+                dis = f.get_distance(pt1, pt2) 
+                angle = f.get_angle(pt1, pt2, pt3)
+
+                dis_cost += dis
+                dis_cost += (angle ** 2) * 0.5
+                obs_cost += (track[int(pt1[0])-1, int(pt1[1])-1] ** 2) * c_distance
+        
+        dis_cost += f.get_distance(path[-2], path[-1])
+
+        cost = dis_cost + obs_cost
+        print(f"Distance Cost: {dis_cost} --> Obs cost: {obs_cost} --> Total cost: {cost}")
+
+        return cost
+
+    bounds = set_up_bounds(path)    
+    path = np.asarray(path)
+    path = path.flatten()
+    res = so.minimize(path_cost, path, bounds=bounds, method='trust-constr')
+
+    print(res)
+    path_res = res.x
+
+
+    new_path = []
+    path_opti = Path()
+    for i in range(0,len(path_res), 2):
+        new_pt = (path_res[i], path_res[i+1])
+        new_path.append(new_pt)
+        path_opti.add_way_point(new_pt)
+    # else:
+    #     path_opti = Path()
+    #     for pt in path_res:
+    #         path_opti.add_way_point(pt)
+    #     new_path = path_res
+
+    # path opti has actual path in it
+
+    return new_path, path_opti
+
+def minimize_w_tf(path):
+    track = preprocess_heat_map()
+
+    path  = tf.convert_to_tensor(path)
+
+    def path_cost_tf():
+        dis_cost = 0
+        obs_cost = 0
+        c_distance = 2
+        for i in range(len(path)-2):
+            pt1 = path[i]
+            pt2 = path[i+1]
+            pt3 = path[i+2]
+
+            dis = f.get_distance(pt1, pt2) 
+            angle = f.get_angle(pt1, pt2, pt3)
+
+            dis_cost += dis
+            dis_cost += (angle ** 2)
+            obs_cost += track[int(pt1[0])-1, int(pt1[1])-1] * c_distance
+        
+        dis_cost += f.get_distance(path[-2], path[-1])
+
+        print(f"Distance Cost: {dis_cost} --> Obs cost: {obs_cost}")
+        cost = dis_cost + obs_cost
+        cost = tf.convert_to_tensor(cost, dtype=tf.float32)
+
+        return cost
+
+    # bounds = set_up_bounds(path)    
+
+    opti = RMSprop()
+    trainable_vars = path[1:-1]
+    for i in range(500):
+        opti.minimize(loss=path_cost_tf, var_list=trainable_vars) # not the first and last variables
+
+    path_opti = Path()
+    for i in range(0,len(path), 2):
+        path_opti.add_way_point([path[i], path[i+1]])
+
+    # path opti has actual path in it
+
+    return path, path_opti
+
+    
+def set_up_bounds(path):
     bounds = []
 
     start1 = tuple((path[0][0], path[0][0]))
@@ -255,39 +334,64 @@ def optimise_path(path):
     bounds.append(end1)
     bounds.append(end2)
 
-    cons = {'type': 'eq', 'fun':path_constraint}
-    
-    # res = so.minimize(path_cost, path, bounds=bounds, constraints=cons)
-    res = so.minimize(path_cost, path, bounds=bounds)
-    print(res)
-    path_res = res.x
+    return bounds
 
-    new_path = []
-    path_opti = Path()
-    for i in range(0,len(path_res), 2):
-        new_pt = (path_res[i], path_res[i+1])
-        new_path.append(new_pt)
-        path_opti.add_way_point(new_pt)
+def preprocess_heat_map():
+    track = TrackData()
+    track.simple_maze()
+    track_map = track.get_heat_map()
 
-    # path opti has actual path in it
+    for _ in range(5): # blocks up to 5 away will start to have a gradient
+        for i in range(1, 98):
+            for j in range(1, 98):
+                left = track_map[i-1, j]
+                right = track_map[i+1, j]
+                up = track_map[i, j+1]
+                down = track_map[i, j-1]
 
-    return new_path, path_opti
+                track_map[i, j] = max(sum((left, right, up, down)) / 3, track_map[i, j])
+
+    return track_map 
+            
+
+def show_track_map():
+    track = preprocess_heat_map()
+    x = np.array([i for i in range(100)])
+    y = np.array([i for i in range(100)])
+
+    fig = plt.figure(3)
+    ax = plt.gca()
+
+    im = ax.imshow(track)
+    plt.show()
 
 
 # run functions
 def run_path_opti():
+    # show_track_map()
     path = get_practice_path()
 
     path = reduce_path(path)
     path = expand_path(path)
+    # path = expand_path(path)
 
     path_list, path_obj = optimise_path(path)
     # old_opti(path)
 
     show_path(path_obj)
 
+def run_tf_opti():
+    path = get_practice_path()
+
+    path = reduce_path(path)
+    path = expand_path(path)
+
+    path_list, path_opti = minimize_w_tf(path)
+
+    show_path(path_opti)
 
 
 if __name__ == "__main__":
     run_path_opti()
+    # run_tf_opti()
 
