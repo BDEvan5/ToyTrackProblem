@@ -175,6 +175,8 @@ def expand_path(path):
         pt = next_pt
 
     new_path.append(path[-1])
+    new_path.remove(new_path[1])
+    new_path.remove(new_path[-2])
 
     return new_path
 
@@ -227,7 +229,7 @@ def optimise_path(path):
 
         dis_cost = 0
         obs_cost = 0
-        c_distance = 0.1
+        c_distance = 30
         for i in range(len(path)-2):
             pt1 = path[i]
             pt2 = path[i+1]
@@ -241,7 +243,7 @@ def optimise_path(path):
 
                 dis_cost += dis
                 dis_cost += (angle ** 2) * 0.5
-                obs_cost += (track[int(pt1[0])-1, int(pt1[1])-1] ** 2) * c_distance
+                obs_cost += (track[int(pt1[0])-1, int(pt1[1])-1] ** 0.5) * c_distance
         
         dis_cost += f.get_distance(path[-2], path[-1])
 
@@ -253,10 +255,11 @@ def optimise_path(path):
     bounds = set_up_bounds(path)    
     path = np.asarray(path)
     path = path.flatten()
-    res = so.minimize(path_cost, path, bounds=bounds, method='trust-constr')
+    res = so.minimize(path_cost, path, bounds=bounds, method='trust-constr', tol=0.1)
 
-    print(res)
+    # print(res)
     path_res = res.x
+    print(f"Function value: {res.fun}")
 
 
     new_path = []
@@ -265,11 +268,8 @@ def optimise_path(path):
         new_pt = (path_res[i], path_res[i+1])
         new_path.append(new_pt)
         path_opti.add_way_point(new_pt)
-    # else:
-    #     path_opti = Path()
-    #     for pt in path_res:
-    #         path_opti.add_way_point(pt)
-    #     new_path = path_res
+
+        # print(f"Point {i//2}: obs_cost: {track[int(new_pt[0])-1, int(new_pt[1])-1]}")
 
     # path opti has actual path in it
 
@@ -349,11 +349,17 @@ def preprocess_heat_map():
                 up = track_map[i, j+1]
                 down = track_map[i, j-1]
 
-                track_map[i, j] = max(sum((left, right, up, down)) / 3, track_map[i, j])
+                # logical directions, not according to actual map orientation
+                left_up = track_map[i-1, j+1] *3
+                left_down = track_map[i-1, j-1]*3
+                right_up = track_map[i+1, j+1]*3
+                right_down = track_map[i+1, j-1]*3
+
+                obs_sum = sum((left, right, up, down, left_up, left_down, right_up, right_down))
+                track_map[i, j] = max(obs_sum / 16, track_map[i, j])
 
     return track_map 
             
-
 def show_track_map():
     track = preprocess_heat_map()
     x = np.array([i for i in range(100)])
@@ -363,6 +369,11 @@ def show_track_map():
     ax = plt.gca()
 
     im = ax.imshow(track)
+    cbar = ax.figure.colorbar(im, ax=ax)
+    # for i in x:
+    #     for j in y:
+    #         text = ax.text(j, i, int(track[i, j]),
+    #                         ha="center", va="center", color="w")   
     plt.show()
 
 
@@ -393,5 +404,6 @@ def run_tf_opti():
 
 if __name__ == "__main__":
     run_path_opti()
+    # show_track_map()
     # run_tf_opti()
 
