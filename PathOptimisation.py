@@ -248,19 +248,19 @@ def optimise_path(path):
         dis_cost += f.get_distance(path[-2], path[-1])
 
         cost = dis_cost + obs_cost
-        print(f"Distance Cost: {dis_cost} --> Obs cost: {obs_cost} --> Total cost: {cost}")
+        # print(f"Distance Cost: {dis_cost} --> Obs cost: {obs_cost} --> Total cost: {cost}")
 
         return cost
 
     bounds = set_up_bounds(path)    
     path = np.asarray(path)
     path = path.flatten()
-    res = so.minimize(path_cost, path, bounds=bounds, method='trust-constr', tol=0.1)
+    mthds = ['trust-constr', 'Powell', 'Nelder-Mead']
+    res = so.minimize(path_cost, path, bounds=bounds, method=mthds[0], tol=0.1)
 
     # print(res)
     path_res = res.x
     print(f"Function value: {res.fun}")
-
 
     new_path = []
     path_opti = Path()
@@ -400,6 +400,19 @@ def run_tf_opti():
     path_list, path_opti = minimize_w_tf(path)
 
     show_path(path_opti)
+
+def get_optimised_path():
+    def run_path_opti():
+    # show_track_map()
+    path = get_practice_path()
+
+    path = reduce_path(path)
+    path = expand_path(path)
+    # path = expand_path(path)
+
+    path_list, path_obj = optimise_path(path)
+
+    return path_list
 
 
 if __name__ == "__main__":
