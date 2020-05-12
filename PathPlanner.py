@@ -176,53 +176,107 @@ class Node():
             msg = msg1 + msg2 + msg3
             return msg
 
-
-
-
 """
-Copied algorithms
+RTT* algorithm
 """
-# TODO: convert this to a class that can be created and called.
-class Line():
-    def __init__(self, p0, p1):
-        self.p = np.array(p0)
-        self.dirn = np.array(p1) - np.array(p0)
-        self.dist = np.linalg.norm(self.dirn)
-        self.dirn /= self.dist # normalize
+class RTT_StarPathFinder:
+    def __init__(self, track):
+        self.track = track
+        
+        start = tuple(track.start_location)
+        end = tuple(track.end_location)
+        self.G = Graph(start, end)
 
-    def path(self, t):
-        return self.p + t * self.dirn
+        self.step_size = 15
+        self.radius = 5
 
+    def run_search(self, iterations=800):
+        track, G = self.track, self.G
 
-def distance(x, y):
-    return np.linalg.norm(np.array(x) - np.array(y))
+        for _ in range(iterations):
+            randvex = G.randomPosition()
 
-def nearest(G, vex, obstacles, radius, track):
-    Nvex = None
-    Nidx = None
-    minDist = float("inf")
+            if track._check_collision(randvex):
+                continue
 
-    for idx, v in enumerate(G.vertices):
+            nearvex, nearidx = self.nearest(randvex)
+            if nearvex is None:
+                continue
 
-        if track.check_line_collision(v, vex):
-            continue
+            newvex = self.newVertex(randvex, nearvex) 
 
-        dist = distance(v, vex)
-        if dist < minDist:
-            minDist = dist
-            Nidx = idx
-            Nvex = v
+            newidx = G.add_vex(newvex)
+            dist = distance(newvex, nearvex)
+            G.add_edge(newidx, nearidx, dist)
+            G.distances[newidx] = G.distances[nearidx] + dist
 
-    return Nvex, Nidx
+            self.update_vertices(newvex, newidx)
+            self.check_end(newvex, newidx)
 
-def newVertex(randvex, nearvex, stepSize):
-    dirn = np.array(randvex) - np.array(nearvex)
-    length = np.linalg.norm(dirn)
-    dirn = (dirn / length) * min (stepSize, length)
+        path = dijkstra(G)
+        plot(G, path)
+        return path
 
-    newvex = (nearvex[0]+dirn[0], nearvex[1]+dirn[1])
-    return newvex
+    def check_end(self, newvex, newidx):
+        G, radius = self.G, self.radius
+    
+        dist = distance(newvex, G.endpos)
+        if dist < 2 * radius:
+            endidx = G.add_vex(G.endpos)
+            G.add_edge(newidx, endidx, dist)
+            try:
+                G.distances[endidx] = min(G.distances[endidx], G.distances[newidx]+dist)
+            except:
+                G.distances[endidx] = G.distances[newidx]+dist
 
+            G.success = True
+    
+    def update_vertices(self, newvex, newidx):
+        G, radius, track = self.G, self.radius, self.track
+        for vex in G.vertices:
+            if vex == newvex:
+                continue
+
+            dist = distance(vex, newvex)
+            if dist > radius:
+                continue
+
+            if track.check_line_collision(vex, newvex):
+                continue
+
+            idx = G.vex2idx[vex]
+            if G.distances[newidx] + dist < G.distances[idx]:
+                G.add_edge(idx, newidx, dist)
+                G.distances[idx] = G.distances[newidx] + dist
+
+    def nearest(self, vex):
+        G, radius, track = self.G, self.radius, self.track
+        Nvex = None
+        Nidx = None
+        minDist = float("inf")
+
+        for idx, v in enumerate(G.vertices):
+
+            if track.check_line_collision(v, vex):
+                continue
+
+            dist = distance(v, vex)
+            if dist < minDist:
+                minDist = dist
+                Nidx = idx
+                Nvex = v
+
+        return Nvex, Nidx
+
+    def newVertex(self, randvex, nearvex):
+        dirn = np.array(randvex) - np.array(nearvex)
+        length = np.linalg.norm(dirn)
+        dirn = (dirn / length) * min (self.step_size, length)
+
+        newvex = (nearvex[0]+dirn[0], nearvex[1]+dirn[1])
+        return newvex
+
+# helpers
 class Graph:
 # ''' Define graph '''
     def __init__(self, startpos, endpos):
@@ -263,78 +317,7 @@ class Graph:
         posy = self.startpos[1] - (self.sy / 2.) + ry * self.sy * 2
         return posx, posy
 
-def RRT_star(startpos, endpos, obstacles, n_iter, radius, stepSize, track):
-#   ''' RRT star algorithm '''
-    #redefine functions
-    
-
-
-    G = Graph(startpos, endpos)
-
-    for _ in range(n_iter):
-        randvex = G.randomPosition()
-        # if isInObstacle(randvex, obstacles, radius):
-        #     continue
-        if track._check_collision(randvex):
-            continue
-
-        nearvex, nearidx = nearest(G, randvex, obstacles, radius, track)
-        if nearvex is None:
-            continue
-
-        newvex = newVertex(randvex, nearvex, stepSize) 
-        # what is happenening here is that he is taking a step in the direction of the randvex
-        # that is why there is a near const step size.
-
-        newidx = G.add_vex(newvex)
-        dist = distance(newvex, nearvex)
-        G.add_edge(newidx, nearidx, dist)
-        G.distances[newidx] = G.distances[nearidx] + dist
-
-        plot(G)
-
-        # update nearby vertices distance (if shorter)
-        for vex in G.vertices:
-            if vex == newvex:
-                continue
-
-            dist = distance(vex, newvex)
-            if dist > radius:
-                continue
-
-            line = Line(vex, newvex)
-            # if isThruObstacle(line, obstacles, radius):
-            #     continue
-            if track.check_line_collision(vex, newvex):
-                continue
-
-            idx = G.vex2idx[vex]
-            if G.distances[newidx] + dist < G.distances[idx]:
-                G.add_edge(idx, newidx, dist)
-                G.distances[idx] = G.distances[newidx] + dist
-
-        dist = distance(newvex, G.endpos)
-        if dist < 2 * radius:
-            endidx = G.add_vex(G.endpos)
-            G.add_edge(newidx, endidx, dist)
-            try:
-                G.distances[endidx] = min(G.distances[endidx], G.distances[newidx]+dist)
-            except:
-                G.distances[endidx] = G.distances[newidx]+dist
-
-            G.success = True
-            #print('success')
-            # break
-
-    path = dijkstra(G)
-    plot(G, path)
-    return path
-
-
 def dijkstra(G):
-#   '''
-#   Dijkstra algorithm for finding shortest path from start position to end.
-#   '''
     srcIdx = G.vex2idx[G.startpos]
     dstIdx = G.vex2idx[G.endpos]
 
@@ -365,84 +348,11 @@ def dijkstra(G):
     path.appendleft(G.vertices[curNode])
     return list(path)
 
-class RTT_StarPathFinder:
-    def __init__(self, track):
-        self.track = track
-        
-        start = tuple(track.start_location)
-        end = tuple(track.end_location)
-        self.G = Graph(start, end)
-
-        self.step_size = 15
-        self.radius = 5
-
-    def run_search(self, iterations=800):
-        track, G, radius, step_size = self.track, self.G, self.radius, self.step_size
-
-        for _ in range(iterations):
-            randvex = G.randomPosition()
-
-            if track._check_collision(randvex):
-                continue
-
-            # make into adding function
-            nearvex, nearidx = nearest(G, randvex, [], radius, track)
-            if nearvex is None:
-                continue
-
-            newvex = newVertex(randvex, nearvex, step_size) 
-
-            newidx = G.add_vex(newvex)
-            dist = distance(newvex, nearvex)
-            G.add_edge(newidx, nearidx, dist)
-            G.distances[newidx] = G.distances[nearidx] + dist
-
-            self.update_vertices(newvex, newidx)
-
-            self.check_end(newvex, newidx)
-
-        path = dijkstra(G)
-        plot(G, path)
-        return path
-
-    def check_end(self, newvex, newidx):
-        G, radius = self.G, self.radius
-    
-        dist = distance(newvex, G.endpos)
-        if dist < 2 * radius:
-            endidx = G.add_vex(G.endpos)
-            G.add_edge(newidx, endidx, dist)
-            try:
-                G.distances[endidx] = min(G.distances[endidx], G.distances[newidx]+dist)
-            except:
-                G.distances[endidx] = G.distances[newidx]+dist
-
-            G.success = True
-    
-    def update_vertices(self, newvex, newidx):
-        G, radius, track = self.G, self.radius, self.track
-        for vex in G.vertices:
-            if vex == newvex:
-                continue
-
-            dist = distance(vex, newvex)
-            if dist > radius:
-                continue
-
-            # line = Line(vex, newvex)
-
-            if track.check_line_collision(vex, newvex):
-                continue
-
-            idx = G.vex2idx[vex]
-            if G.distances[newidx] + dist < G.distances[idx]:
-                G.add_edge(idx, newidx, dist)
-                G.distances[idx] = G.distances[newidx] + dist
-
-            
+def distance(x, y):
+    return np.linalg.norm(np.array(x) - np.array(y))
 
 
-
+# util plotters
 def plot_path(path=None):
     fig, ax = plt.subplots()
 
@@ -453,13 +363,6 @@ def plot_path(path=None):
     ax.autoscale()
     ax.margins(0.1)
     plt.show()
-
-def pathSearch(startpos, endpos, obstacles, n_iter, radius, stepSize):
-    G = RRT_star(startpos, endpos, obstacles, n_iter, radius, stepSize)
-    if G.success:
-        path = dijkstra(G)
-        # plot(G, obstacles, radius, path)
-        return path
 
 def plot(G, path=None):
     plt.figure(2)
@@ -490,7 +393,6 @@ def plot(G, path=None):
     ax.margins(0.1)
     plt.pause(0.001)
     # plt.show()
-
 
 
 """
