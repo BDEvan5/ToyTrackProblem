@@ -275,6 +275,7 @@ def optimise_path(path):
 
     return new_path, path_opti
 
+
 def minimize_w_tf(path):
     track = preprocess_heat_map()
 
@@ -336,9 +337,10 @@ def set_up_bounds(path):
 
     return bounds
 
-def preprocess_heat_map():
-    track = TrackData()
-    track.simple_maze()
+def preprocess_heat_map(track=None):
+    if track is None:
+        track = TrackData()
+        track.simple_maze()
     track_map = track.get_heat_map()
 
     for _ in range(5): # blocks up to 5 away will start to have a gradient
@@ -402,8 +404,6 @@ def run_tf_opti():
     show_path(path_opti)
 
 def get_optimised_path():
-    def run_path_opti():
-    # show_track_map()
     path = get_practice_path()
 
     path = reduce_path(path)
@@ -414,6 +414,91 @@ def get_optimised_path():
 
     return path_list
 
+
+# externally called functions
+def add_velocity(path_obj, car):
+        path = path_obj.route
+        for i, wp in enumerate(path):
+            if i == 0:
+                last_wp = wp
+                continue
+            dx = wp.x[0] - last_wp.x[0]
+            dy = wp.x[1] - last_wp.x[1]
+            if dy != 0:
+                gradient = dx/dy  #flips to make forward theta = 0
+            else:
+                gradient = 1000
+            last_wp.theta = np.arctan(gradient)  # gradient to next point
+            last_wp.v = car.max_v * (np.pi - last_wp.theta) / np.pi
+
+            last_wp = wp
+
+        path[len(path)-1].theta = 0 # set the last point
+        path[len(path)-1].v = car.max_v
+
+        return path_obj
+
+def optmise_track_path(path, track):
+    track_map = preprocess_heat_map(track)
+
+    path = reduce_path(path)
+    path = expand_path(path)
+
+    def path_cost(path_list):
+        path = []
+        for i in range(0,len(path_list), 2):
+            new_pt = (path_list[i], path_list[i+1])
+            path.append(new_pt)
+        # path = path_list
+
+        dis_cost = 0
+        obs_cost = 0
+        c_distance = 30
+        for i in range(len(path)-2):
+            pt1 = path[i]
+            pt2 = path[i+1]
+            pt3 = path[i+2]
+
+            if pt1[0] > 100 or pt1[1] > 100:
+                dis_cost += 1000
+            else:
+                dis = f.get_distance(pt1, pt2) 
+                angle = f.get_angle(pt1, pt2, pt3)
+
+                dis_cost += dis
+                dis_cost += (angle ** 2) * 0.5
+                obs_cost += (track_map[int(pt1[0])-1, int(pt1[1])-1] ** 0.5) * c_distance
+        
+        dis_cost += f.get_distance(path[-2], path[-1])
+
+        cost = dis_cost + obs_cost
+        # print(f"Distance Cost: {dis_cost} --> Obs cost: {obs_cost} --> Total cost: {cost}")
+
+        return cost
+
+    bounds = set_up_bounds(path)    
+    path = np.asarray(path)
+    path = path.flatten()
+    res = so.minimize(path_cost, path, bounds=bounds, method='trust-constr', tol=0.1)
+
+    path_res = res.x
+    print(f"Optimised Path Cost: {res.fun}")
+
+    new_path = []
+    # path_opti = Path()
+    for i in range(0,len(path_res), 2):
+        new_pt = (path_res[i], path_res[i+1])
+        new_path.append(new_pt)
+        # path_opti.add_way_point(new_pt)
+
+    return new_path
+
+def convert_to_obj(path):
+    path_obj = Path()
+    for pt in path:
+        path_obj.add_way_point(pt)
+
+    return path_obj
 
 if __name__ == "__main__":
     run_path_opti()

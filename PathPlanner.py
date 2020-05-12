@@ -440,6 +440,14 @@ class Path:
         for obj in self.route:
             return obj
 
+    def show(self, track=None):
+        if track is None:
+            track = TrackData()
+            track.simple_maze()
+        interface = Interface(track, 100)
+        interface.show_planned_path(self)
+
+
 class WayPoint:
     def __init__(self):
         self.x = [0.0, 0.0]

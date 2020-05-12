@@ -1,13 +1,18 @@
 import numpy as np
+from PathPlanner import A_StarPathFinder
+from PathOptimisation import optmise_track_path, add_velocity, convert_to_obj
 
 
 class AgentWrapper:
     # this agent is what will interface with the env.
+    # this holds the global plan as used by the classical and RL agents
     def __init__(self, classical, rl, env):
         # self.rl = Vanilla()
         self.rl = rl
         self.classic = classical 
         self.env = env
+
+        self.path = None
 
     def take_step(self, state):
 
@@ -63,5 +68,15 @@ class AgentWrapper:
 
         return rewards
 
+    def get_path_plan(self):
+        track, car = self.env.track, self.classic.car
+        path_finder = A_StarPathFinder(track)
+        path = path_finder.run_search(5)
+        path = optmise_track_path(path, track)
+        path_obj = convert_to_obj(path)
+        path_obj = add_velocity(path_obj, car)
 
+        self.path = path_obj
+
+        path_obj.show(track)
 

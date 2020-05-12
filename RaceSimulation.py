@@ -5,7 +5,6 @@ from matplotlib import pyplot as plt
 import os
 
 from RaceEnv import RaceEnv
-# from ReplayBuffer import ReplayBuffer
 from Models import TrackData
 from ClassicalAgent import Classical
 from AgentWrapper import AgentWrapper
@@ -21,6 +20,7 @@ class RaceSimulation: # for single agent testing
         classical = Classical(track, self.env.car)
         rl = None
         self.agent = AgentWrapper(classical, rl, self.env)
+        
 
 
     # def clear_test_files(self):
@@ -70,12 +70,13 @@ class RaceSimulation: # for single agent testing
         # self.clear_test_files()
         
         self.env.track.simple_maze()
+        self.agent.get_path_plan()
 
         self.run_agent_training_set(2, "Debugging...")
 
     def plan_path(self):
         self.env.track.simple_maze()
-        self.agent.classic.plan_path()
+        self.agent.get_path_plan()
 
  
 
