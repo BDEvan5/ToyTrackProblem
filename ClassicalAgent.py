@@ -13,7 +13,7 @@ class Classical:
 
         self.last_action_n = 0
 
-    def get_action(self, state):
+    def get_base_action(self, state):
         location = state[0:2] # check this state vector
         
         while self.check_wp_increment(location):
@@ -38,4 +38,6 @@ class Classical:
         # possibly find path here except it wastes computation time.
         self.last_action_n = 0
 
-
+    def plan_rrt(self):
+        # write method here that uses random trees to plan a path to a receding horizon around obs
+        

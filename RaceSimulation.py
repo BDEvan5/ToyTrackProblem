@@ -22,7 +22,7 @@ class RaceSimulation: # for single agent testing
         self.agent = AgentWrapper(classical, rl, self.env)
         
 
-
+""""""
     # def clear_test_files(self):
     #     file_path_list = ["EpHistories/", "Plots/", "TrainingImages/"]
     #     for path in file_path_list:
@@ -30,7 +30,7 @@ class RaceSimulation: # for single agent testing
     #         for file_name in os.listdir(os.getcwd() + "/" + file_path):
     #             os.remove(file_path + file_name) # deletes old files
     #             print("File deleted: " + str(file_name))
-
+""""""
     def run_agent_training_set(self, num_sets, set_name=""):
         print(set_name)
         # run a training set

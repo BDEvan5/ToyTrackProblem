@@ -203,7 +203,7 @@ def nearest(G, vex, obstacles, radius, track):
     minDist = float("inf")
 
     for idx, v in enumerate(G.vertices):
-        line = Line(v, vex)
+
         if track.check_line_collision(v, vex):
             continue
 
@@ -254,7 +254,6 @@ class Graph:
         self.edges.append((idx1, idx2))
         self.neighbors[idx1].append((idx2, cost))
         self.neighbors[idx2].append((idx1, cost))
-
 
     def randomPosition(self):
         rx = np.random.random()
@@ -365,6 +364,83 @@ def dijkstra(G):
         curNode = prev[curNode]
     path.appendleft(G.vertices[curNode])
     return list(path)
+
+class RTT_StarPathFinder:
+    def __init__(self, track):
+        self.track = track
+        
+        start = tuple(track.start_location)
+        end = tuple(track.end_location)
+        self.G = Graph(start, end)
+
+        self.step_size = 15
+        self.radius = 5
+
+    def run_search(self, iterations=800):
+        track, G, radius, step_size = self.track, self.G, self.radius, self.step_size
+
+        for _ in range(iterations):
+            randvex = G.randomPosition()
+
+            if track._check_collision(randvex):
+                continue
+
+            # make into adding function
+            nearvex, nearidx = nearest(G, randvex, [], radius, track)
+            if nearvex is None:
+                continue
+
+            newvex = newVertex(randvex, nearvex, step_size) 
+
+            newidx = G.add_vex(newvex)
+            dist = distance(newvex, nearvex)
+            G.add_edge(newidx, nearidx, dist)
+            G.distances[newidx] = G.distances[nearidx] + dist
+
+            self.update_vertices(newvex, newidx)
+
+            self.check_end(newvex, newidx)
+
+        path = dijkstra(G)
+        plot(G, path)
+        return path
+
+    def check_end(self, newvex, newidx):
+        G, radius = self.G, self.radius
+    
+        dist = distance(newvex, G.endpos)
+        if dist < 2 * radius:
+            endidx = G.add_vex(G.endpos)
+            G.add_edge(newidx, endidx, dist)
+            try:
+                G.distances[endidx] = min(G.distances[endidx], G.distances[newidx]+dist)
+            except:
+                G.distances[endidx] = G.distances[newidx]+dist
+
+            G.success = True
+    
+    def update_vertices(self, newvex, newidx):
+        G, radius, track = self.G, self.radius, self.track
+        for vex in G.vertices:
+            if vex == newvex:
+                continue
+
+            dist = distance(vex, newvex)
+            if dist > radius:
+                continue
+
+            # line = Line(vex, newvex)
+
+            if track.check_line_collision(vex, newvex):
+                continue
+
+            idx = G.vex2idx[vex]
+            if G.distances[newidx] + dist < G.distances[idx]:
+                G.add_edge(idx, newidx, dist)
+                G.distances[idx] = G.distances[newidx] + dist
+
+            
+
 
 
 def plot_path(path=None):
@@ -490,6 +566,9 @@ def convert_list_to_path(path):
 def show_path(path):
     track = TrackData()
     track.simple_maze()
+    p = Path()
+    if type(path) != type(p):
+        path = convert_list_to_path(path)
 
     interface = Interface(track, 100)
     interface.show_planned_path(path)
@@ -518,11 +597,18 @@ def test_rrt_star():
     path = RRT_star(start, end, [], 800, 5, 15, track)
     # plot_path(path)
 
+def test_rrt_star_class():
+    track = TrackData()
+    track.simple_maze()
 
+    finder = RTT_StarPathFinder(track)
+    path = finder.run_search()
+    show_path(path)
 
 # testing
 if __name__ == "__main__":
 
     # test_rrt_star()
-    test_a_star()
+    # test_a_star()
+    test_rrt_star_class()
     

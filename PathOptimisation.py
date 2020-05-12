@@ -500,8 +500,15 @@ def convert_to_obj(path):
 
     return path_obj
 
+
+
+
 if __name__ == "__main__":
     run_path_opti()
     # show_track_map()
     # run_tf_opti()
+
+
+
+
 
