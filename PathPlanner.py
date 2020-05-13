@@ -187,7 +187,7 @@ class RTT_StarPathFinder:
         end = tuple(track.end_location)
         self.G = Graph(start, end)
 
-        self.step_size = 15
+        self.step_size = 10
         self.radius = 5
 
     def run_search(self, iterations=800):
@@ -241,7 +241,7 @@ class RTT_StarPathFinder:
             if dist > radius:
                 continue
 
-            if track.check_line_collision(vex, newvex):
+            if track.check_hidden_line_collision(vex, newvex):
                 continue
 
             idx = G.vex2idx[vex]
@@ -250,14 +250,14 @@ class RTT_StarPathFinder:
                 G.distances[idx] = G.distances[newidx] + dist
 
     def nearest(self, vex):
-        G, radius, track = self.G, self.radius, self.track
+        G, track = self.G, self.track
         Nvex = None
         Nidx = None
         minDist = float("inf")
 
         for idx, v in enumerate(G.vertices):
 
-            if track.check_line_collision(v, vex):
+            if track.check_hidden_line_collision(v, vex):
                 continue
 
             dist = distance(v, vex)
@@ -275,6 +275,38 @@ class RTT_StarPathFinder:
 
         newvex = (nearvex[0]+dirn[0], nearvex[1]+dirn[1])
         return newvex
+
+    def run_wp_search(self, start, end, iterations=300):
+        track = self.track
+        start = tuple((int(start[0]), int(start[1])))
+        end = tuple((int(end[0]), int(end[1])))
+        G = Graph(start, end) # create temp graph
+        self.G = G
+
+        for _ in range(iterations):
+            randvex = G.randomPosition()
+
+            if track._check_collision_hidden(randvex):
+                continue
+
+            nearvex, nearidx = self.nearest(randvex)
+            if nearvex is None:
+                continue
+
+            newvex = self.newVertex(randvex, nearvex) 
+
+            newidx = G.add_vex(newvex)
+            dist = distance(newvex, nearvex)
+            G.add_edge(newidx, nearidx, dist)
+            G.distances[newidx] = G.distances[nearidx] + dist
+
+            self.update_vertices(newvex, newidx)
+            self.check_end(newvex, newidx)
+
+        path = dijkstra(G)
+        return path
+
+
 
 # helpers
 class Graph:

@@ -120,33 +120,6 @@ class TrackData(TrackConfig):
         # if ret == 1:
         #     print(msg)
         return ret
-    
-    def get_obstacle_distance(self, x):
-        if self._check_collision(x):
-            return 0
-    
-        y = x[1]
-        x = x[0]
-        step = 2
-
-        distances = []
-        for i in [-1, 1]: # left and right, up and down
-            x_search = x
-            y_search = y
-            while True:
-                x_search = x_search + step * i
-                if self._check_collision([x_search, y]):
-                    dis = abs(x_search - x)
-                    distances.append(dis)
-                    break
-            while True:
-                y_search = y_search + step * i
-                if self._check_collision([x, y_search]):
-                    dis = abs(y_search - y)
-                    distances.append(dis)
-                    break
-
-        return 1 / min(distances)
 
     def get_heat_map(self):
         heat_map = np.zeros((100, 100))
@@ -157,7 +130,6 @@ class TrackData(TrackConfig):
 
         # returns a 100 by 100 grid of obstacle values
         return heat_map
-
 
     def get_ranges(self, x, th):
         # x is location, th is orientation 
@@ -182,8 +154,8 @@ class TrackData(TrackConfig):
             obs.set_random_location()
 
     def check_line_collision(self, x1, x2):
-        n_checks = 50
-        m = (x2[1] - x1[1]) / (x2[0] - x1[0])
+        n_checks = 20
+        m = f.get_gradient(x1, x2)
         dx = (x2[0] - x1[0]) / n_checks
         for i in range(n_checks):
             x_add = [i * dx, i * m * dx]
@@ -192,6 +164,16 @@ class TrackData(TrackConfig):
                 return True
         return False
 
+    def check_hidden_line_collision(self, x1, x2):
+        n_checks = 20
+        m = f.get_gradient(x1, x2)
+        dx = (x2[0] - x1[0]) / n_checks
+        for i in range(n_checks):
+            x_add = [i * dx, i * m * dx]
+            x_search = f.add_locations(x_add, x1)
+            if self._check_collision_hidden(x_search):
+                return True
+        return False
 
 class Obstacle:
     def __init__(self, size=[0, 0]):

@@ -21,22 +21,13 @@ class RaceSimulation: # for single agent testing
         rl = None
         self.agent = AgentWrapper(classical, rl, self.env)
         
-
-""""""
-    # def clear_test_files(self):
-    #     file_path_list = ["EpHistories/", "Plots/", "TrainingImages/"]
-    #     for path in file_path_list:
-    #         file_path = self.agent_file_path + path
-    #         for file_name in os.listdir(os.getcwd() + "/" + file_path):
-    #             os.remove(file_path + file_name) # deletes old files
-    #             print("File deleted: " + str(file_name))
-""""""
+  
     def run_agent_training_set(self, num_sets, set_name=""):
         print(set_name)
         # run a training set
         ep_rewards = []
         ep_loss = []
-        self.agent.classic.plan_path()
+        self.agent.get_path_plan()
         for i in range(num_sets):
             rewards = self.agent.run_sim()
             ep_rewards.append(rewards)
@@ -70,7 +61,6 @@ class RaceSimulation: # for single agent testing
         # self.clear_test_files()
         
         self.env.track.simple_maze()
-        self.agent.get_path_plan()
 
         self.run_agent_training_set(2, "Debugging...")
 

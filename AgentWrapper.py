@@ -1,6 +1,7 @@
 import numpy as np
-from PathPlanner import A_StarPathFinder
+from PathPlanner import A_StarPathFinder, WayPoint
 from PathOptimisation import optmise_track_path, add_velocity, convert_to_obj
+import LibFunctions as f
 
 
 class AgentWrapper:
@@ -21,7 +22,7 @@ class AgentWrapper:
         classical_action = self.classic.get_action(state)
 
         # action = self.add_actions(rl_action, classical_action)
-
+        print(f"Classical Actin: {classical_action}")
         return classical_action
 
     def add_actions(self, rl, classic):
@@ -77,6 +78,7 @@ class AgentWrapper:
         path_obj = add_velocity(path_obj, car)
 
         self.path = path_obj
+        self.classic.path = path_obj
 
-        path_obj.show(track)
+        # path_obj.show(track)
 

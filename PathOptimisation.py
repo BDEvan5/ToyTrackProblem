@@ -252,7 +252,9 @@ def optimise_path(path):
 
         return cost
 
-    bounds = set_up_bounds(path)    
+    # bounds = set_up_bounds(path)    
+    bounds = set_up_bounds_xhold(path)    
+
     path = np.asarray(path)
     path = path.flatten()
     mthds = ['trust-constr', 'Powell', 'Nelder-Mead']
@@ -275,52 +277,7 @@ def optimise_path(path):
 
     return new_path, path_opti
 
-
-def minimize_w_tf(path):
-    track = preprocess_heat_map()
-
-    path  = tf.convert_to_tensor(path)
-
-    def path_cost_tf():
-        dis_cost = 0
-        obs_cost = 0
-        c_distance = 2
-        for i in range(len(path)-2):
-            pt1 = path[i]
-            pt2 = path[i+1]
-            pt3 = path[i+2]
-
-            dis = f.get_distance(pt1, pt2) 
-            angle = f.get_angle(pt1, pt2, pt3)
-
-            dis_cost += dis
-            dis_cost += (angle ** 2)
-            obs_cost += track[int(pt1[0])-1, int(pt1[1])-1] * c_distance
-        
-        dis_cost += f.get_distance(path[-2], path[-1])
-
-        print(f"Distance Cost: {dis_cost} --> Obs cost: {obs_cost}")
-        cost = dis_cost + obs_cost
-        cost = tf.convert_to_tensor(cost, dtype=tf.float32)
-
-        return cost
-
-    # bounds = set_up_bounds(path)    
-
-    opti = RMSprop()
-    trainable_vars = path[1:-1]
-    for i in range(500):
-        opti.minimize(loss=path_cost_tf, var_list=trainable_vars) # not the first and last variables
-
-    path_opti = Path()
-    for i in range(0,len(path), 2):
-        path_opti.add_way_point([path[i], path[i+1]])
-
-    # path opti has actual path in it
-
-    return path, path_opti
-
-    
+ 
 def set_up_bounds(path):
     bounds = []
 
@@ -331,6 +288,24 @@ def set_up_bounds(path):
     bounds.append(start1)
     bounds.append(start2)
     for _ in range((len(path)-2)*2):
+        bounds.append((0, 100))
+    bounds.append(end1)
+    bounds.append(end2)
+
+    return bounds
+
+def set_up_bounds_xhold(path):
+    bounds = []
+
+    start1 = tuple((path[0][0], path[0][0]))
+    end1 = tuple((path[-1][0], path[-1][0]))
+    start2 = tuple((path[0][1], path[0][1]))
+    end2 = tuple((path[-1][1], path[-1][1]))
+    bounds.append(start1)
+    bounds.append(start2)
+    for i in range(1, (len(path)-1)):
+        bnd = tuple((path[i][0], path[i][0])) # the x bound holds in place the x val
+        bounds.append(bnd)
         bounds.append((0, 100))
     bounds.append(end1)
     bounds.append(end2)
@@ -386,7 +361,7 @@ def run_path_opti():
 
     path = reduce_path(path)
     path = expand_path(path)
-    # path = expand_path(path)
+    path = expand_path(path)
 
     path_list, path_obj = optimise_path(path)
     # old_opti(path)
