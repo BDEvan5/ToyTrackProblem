@@ -67,17 +67,21 @@ def calcTrajOpti(path):
     traj_map = preprocess_heat_map()
 
     def trajectory_objective(traj):
-        A = 20
-
+        A = 205
         traj = np.reshape(traj, (-1, 2))
+        for pt in traj:
+            if pt[0] > 100 or pt[1] > 100:
+                return 20 * pt[0] * pt[1]
+
+    
         distances = np.array([f.get_distance(traj[i], traj[i+1]) for i in range(len(traj)-1)])
         cost_distance = np.sum(distances)
 
         obstacle_costs = np.array([traj_map[int(pt[0]-1), int(pt[1])] ** 0.5 for pt in traj])
-        obs_cost = np.sum(obstacle_costs)
+        obs_cost = np.sum(obstacle_costs) * A
 
-        cost = cost_distance + obs_cost * A
-        print(f"Cost: {cost} -> dis: {cost_distance} -> Obs: {obs_cost}")
+        cost = cost_distance + obs_cost
+        # print(f"Cost: {cost} -> dis: {cost_distance} -> Obs: {obs_cost}")
         return cost
 
     def traj_constraint(traj):
@@ -94,17 +98,20 @@ def calcTrajOpti(path):
     bnd.insert(-1, end1)
     bnd.insert(-1, end2)
 
-    x = so.minimize(fun=trajectory_objective, x0=path, bounds=bnd)
+    mthds = ['trust-constr', 'Powell', 'Nelder-Mead', 'SLSQP']
+    x0 = np.array(path).flatten()
+    x = so.minimize(fun=trajectory_objective, x0=x0, bounds=bnd, method=mthds[0])
     print(f"Message: {x.message}")
     print(f"Success: {x.success}")
     print(f"Result: {x.fun}")
     path = np.reshape(x.x, (-1, 2))
-    print(f"Path: {path}")
+    # print(f"Path: {path}")
 
     path_obj = convert_list_to_path(path)
-    path_obj.show()
+    # path_obj.show()
 
     return path
+
 
 
 def run_traj_opti():
@@ -118,6 +125,16 @@ def run_traj_opti():
     # path = convert_list_to_path(path)
     # path.show()
 
+
+#external call
+def optimise_trajectory(path):
+    path = reduce_path(path)
+    path = expand_path(path)
+    path = expand_path(path)
+
+    path = calcTrajOpti(path)
+
+    return path
 
 
 

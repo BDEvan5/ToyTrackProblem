@@ -458,7 +458,7 @@ class Path:
         interface.show_planned_path(self)
 
 
-class WayPoint:
+class WayPoint: # todo use the one from state structs
     def __init__(self):
         self.x = [0.0, 0.0]
         self.v = 0.0
@@ -469,8 +469,14 @@ class WayPoint:
         self.v = v
         self.theta = theta
 
-    def print_point(self):
-        print("X: " + str(self.x) + " -> v: " + str(self.v) + " -> theta: " +str(self.theta))
+    def print_point(self, text=None):
+        # print("X: " + str(self.x) + " -> v: " + str(self.v) + " -> theta: " +str(self.theta))
+        if text is None:
+            print(f"X: [{self.x[0]:.2f} ; {self.x[1]:.2f}] -> V: {self.v:.2f} -> theta: {self.theta:.2f}")
+        else:
+            print(f"[{text}] X: [{self.x[0]:.2f} ; {self.x[1]:.2f}] -> V: {self.v:.2f} -> theta: {self.theta:.2f}")
+
+
 
     def __eq__(self, other):
         dx = self.x[0] - other.x[0]

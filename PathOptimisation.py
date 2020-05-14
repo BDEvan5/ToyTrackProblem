@@ -391,27 +391,30 @@ def get_optimised_path():
 
 
 # externally called functions
-def add_velocity(path_obj, car):
-        path = path_obj.route
-        for i, wp in enumerate(path):
-            if i == 0:
-                last_wp = wp
-                continue
-            dx = wp.x[0] - last_wp.x[0]
-            dy = wp.x[1] - last_wp.x[1]
-            if dy != 0:
-                gradient = dx/dy  #flips to make forward theta = 0
-            else:
-                gradient = 1000
-            last_wp.theta = np.arctan(gradient)  # gradient to next point
-            last_wp.v = car.max_v * (np.pi - last_wp.theta) / np.pi
+def add_velocity(path_obj, car=None):
+    max_v = 5
+    if car is not None:
+        max_v = car.max_v
 
+    new_path = Path()
+    if type(path_obj) != type(new_path):
+        path_obj = convert_to_obj(path_obj)
+
+    path = path_obj.route
+    for i, wp in enumerate(path):
+        if i == 0:
             last_wp = wp
+            continue
+        gradient = f.get_gradient(last_wp.x, wp.x)
+        last_wp.theta = np.arctan(gradient) - np.pi/2  # gradient to next point
+        last_wp.v = max_v * (np.pi - abs(last_wp.theta)) / np.pi
 
-        path[len(path)-1].theta = 0 # set the last point
-        path[len(path)-1].v = car.max_v
+        last_wp = wp
 
-        return path_obj
+    path[len(path)-1].theta = 0 # set the last point
+    path[len(path)-1].v = max_v
+
+    return path_obj
 
 def optmise_track_path(path, track):
     track_map = preprocess_heat_map(track)

@@ -10,14 +10,18 @@ import pickle
 import datetime
 import os
 
-class WayPoint:
+class WayPoint: # todo: use in planning
     def __init__(self):
         self.x = [0.0, 0.0]
         self.v = 0.0
         self.theta = 0.0
 
-    def print_point(self):
-        print("X: " + str(self.x) + " -> v: " + str(self.v) + " -> theta: " +str(self.theta))
+    def print_point(self, text=None):
+        # print("X: " + str(self.x) + " -> v: " + str(self.v) + " -> theta: " +str(self.theta))
+        if text is None:
+            print(f"X: [{self.x[0]:.2f} ; {self.x[1]:.2f}] -> V: {self.v:.2f} -> theta: {self.theta:.2f}")
+        else:
+            print(f"[{text}] X: [{self.x[0]:.2f} ; {self.x[1]:.2f}] -> V: {self.v:.2f} -> theta: {self.theta:.2f}")
 
 
 class SingleRange:

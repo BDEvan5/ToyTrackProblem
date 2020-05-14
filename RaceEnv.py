@@ -26,17 +26,13 @@ class RaceEnv:
 
         self.track = track
         self.car = CarModel()
-        self.c_sys = ControlSystem()
 
         # memory structures
         self.car_state = CarState(self.config.ranges_n)
         self.env_state = EnvState()
         self.sim_mem = SimMem(self.logger)
 
-    def step(self, action_wp):
-        # action = waypoint input for controller
-
-        control_action = self.c_sys.get_controlled_action(self.car_state, action_wp)
+    def step(self, control_action):
 
         new_x = self.car.chech_new_state(self.car_state, control_action, self.config.dt)
         coll_flag = self.track._check_collision_hidden(new_x)
@@ -53,7 +49,7 @@ class RaceEnv:
         obs = self.car_state.get_state_observation()
         self.sim_mem.step += 1
         loc_state = self.car_state.x
-        return loc_state, self.env_state.reward, self.env_state.done
+        return self.car_state, self.env_state.reward, self.env_state.done
 
     def reset(self):
         self.car_state.reset_state(self.track.start_location, self.track.end_location)
@@ -62,7 +58,7 @@ class RaceEnv:
         self.track.set_up_random_obstacles() # turn back on
 
         # return self.car_state.get_state_observation()
-        return self.car_state.x
+        return self.car_state
 
     def _get_reward(self, coll_flag):
         self.car_state.cur_distance = f.get_distance(self.car_state.x, self.track.end_location) 
@@ -113,7 +109,7 @@ class RaceEnv:
         # self.car_state.print_ranges()
 
     def render_episode(self, screen_name_path):
-        dt = 30
+        dt = 100
         self.interface = Interface(self.track, dt)
         self.interface.save_shot_path = screen_name_path
 
@@ -124,54 +120,6 @@ class RaceEnv:
         self.interface.setup_root()
 
 
-class ControlSystem:
-    def __init__(self):
-        self.k_th_ref = 0.1 # amount to favour v direction
 
-    def get_controlled_action(self, state, glbl_wp):
-        # print(glbl_wp.x)
-        # print(state.x)
-        x_ref = glbl_wp.x 
-        v_ref = glbl_wp.v 
-        th_ref = glbl_wp.theta
-
-        # run v control
-        e_v = v_ref - state.v # error for controler
-        a = self._acc_control(e_v)
-
-        # run th control
-        x_ref_th = self._get_xref_th(state.x, x_ref)
-        e_th = th_ref * self.k_th_ref + x_ref_th * (1- self.k_th_ref) # no feedback
-        th = self._th_controll(e_th)
-
-        action = [a, th]
-        return action
-
-    def _acc_control(self, e_v):
-        # this function is the actual controller
-        k = 0.25
-        return k * e_v
-
-    def _th_controll(self, e_th):
-        # theta controller to come here when dth!= th
-        return e_th
-
-    def _get_xref_th(self, x1, x2):
-        dx = x2[0] - x1[0]
-        dy = x2[1] - x1[1]
-        # self.logger.debug("x1: " + str(x1) + " x2: " + str(x2))
-        # self.logger.debug("dxdy: %d, %d" %(dx,dy))
-        if dy != 0:
-            ret = np.abs(np.arctan(dx / dy))
-        else:
-            ret = np.pi / 2
-
-        # sort out the sin
-        sign = 1
-        if dx < 0:
-            sign = -1
-        if dy > 0: # dy is opposite to normal
-            ret = np.pi - np.abs(ret)
-        return ret * sign
 
 
