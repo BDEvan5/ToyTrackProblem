@@ -120,7 +120,7 @@ def simulation_runner(config):
         state, reward, done = env.step(ref_action)
         print(f"Action: [{ref_action[0]:.2f} ; {ref_action[1]:.2f}]")
 
-    env.render_episode("PathTracker")
+    env.render_episode("PathTracker", True)
 
  
 

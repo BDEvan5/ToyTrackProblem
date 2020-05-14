@@ -108,12 +108,12 @@ class RaceEnv:
             ran.val = update_val
         # self.car_state.print_ranges()
 
-    def render_episode(self, screen_name_path):
+    def render_episode(self, screen_name_path, pause=False):
         dt = 100
         self.interface = Interface(self.track, dt)
         self.interface.save_shot_path = screen_name_path
+        self.interface.pause_flag = pause
 
-        self.interface.pause_flag = False # starts in play mode
         for step in self.sim_mem.steps:
             self.interface.step_q.put(step)
 
