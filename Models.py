@@ -175,6 +175,7 @@ class TrackData(TrackConfig):
                 return True
         return False
 
+
 class Obstacle:
     def __init__(self, size=[0, 0]):
         self.x_size = size[0]

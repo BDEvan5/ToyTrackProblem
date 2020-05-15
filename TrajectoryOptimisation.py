@@ -136,6 +136,31 @@ def optimise_trajectory(path):
 
     return path
 
+def add_velocity(path_obj, car=None):
+    max_v = 5
+    if car is not None:
+        max_v = car.max_v
+
+    new_path = Path()
+    if type(path_obj) != type(new_path):
+        path_obj = convert_list_to_path(path_obj)
+
+    path = path_obj.route
+    for i, wp in enumerate(path):
+        if i == 0:
+            last_wp = wp
+            continue
+        gradient = f.get_gradient(last_wp.x, wp.x)
+        last_wp.theta = np.arctan(gradient) - np.pi/2  # gradient to next point
+        last_wp.v = max_v * (np.pi - abs(last_wp.theta)) / np.pi
+
+        last_wp = wp
+
+    path[len(path)-1].theta = 0 # set the last point
+    path[len(path)-1].v = max_v
+
+    return path_obj
+
 
 
 

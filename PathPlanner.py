@@ -3,6 +3,7 @@ import numpy as np
 from copy import deepcopy
 from Interface import Interface
 from Models import TrackData
+from StateStructs import WayPoint, Path
 
 from collections import deque
 import matplotlib.pyplot as plt
@@ -214,7 +215,7 @@ class RTT_StarPathFinder:
             self.check_end(newvex, newidx)
 
         path = dijkstra(G)
-        plot(G, path)
+        plot_graph(G, path)
         return path
 
     def check_end(self, newvex, newidx):
@@ -310,7 +311,6 @@ class RTT_StarPathFinder:
 
 # helpers
 class Graph:
-# ''' Define graph '''
     def __init__(self, startpos, endpos):
         self.startpos = startpos
         self.endpos = endpos
@@ -396,7 +396,7 @@ def plot_path(path=None):
     ax.margins(0.1)
     plt.show()
 
-def plot(G, path=None):
+def plot_graph(G, path=None):
     plt.figure(2)
     plt.clf()
     ax = plt.gca()
@@ -430,61 +430,6 @@ def plot(G, path=None):
 """
 Helper for all classes - the path that is returned
 """
-class Path:
-    def __init__(self):
-        self.route = []
-    
-    def add_way_point(self, x, v=0, theta=0):
-        wp = WayPoint()
-        wp.set_point(x, v, theta)
-        self.route.append(wp)
-
-    def print_route(self):
-        for wp in self.route:
-            print("X: (%d;%d), v: %d, th: %d" %(wp.x[0], wp.x[1], wp.v, wp.theta))
-
-    def __len__(self):
-        return len(self.route)
-
-    def __iter__(self): #todo: fix this
-        for obj in self.route:
-            return obj
-
-    def show(self, track=None):
-        if track is None:
-            track = TrackData()
-            track.simple_maze()
-        interface = Interface(track, 100)
-        interface.show_planned_path(self)
-
-
-class WayPoint: # todo use the one from state structs
-    def __init__(self):
-        self.x = [0.0, 0.0]
-        self.v = 0.0
-        self.theta = 0.0
-
-    def set_point(self, x, v, theta):
-        self.x = x
-        self.v = v
-        self.theta = theta
-
-    def print_point(self, text=None):
-        # print("X: " + str(self.x) + " -> v: " + str(self.v) + " -> theta: " +str(self.theta))
-        if text is None:
-            print(f"X: [{self.x[0]:.2f} ; {self.x[1]:.2f}] -> V: {self.v:.2f} -> theta: {self.theta:.2f}")
-        else:
-            print(f"[{text}] X: [{self.x[0]:.2f} ; {self.x[1]:.2f}] -> V: {self.v:.2f} -> theta: {self.theta:.2f}")
-
-
-
-    def __eq__(self, other):
-        dx = self.x[0] - other.x[0]
-        dy = self.x[1] - other.x[1]
-        # strictly not true but done for smoothing ease
-        if dx == 0 or dy == 0:
-            return True
-        return False
 
 # helper for smoother
 def get_practice_path():
@@ -503,7 +448,7 @@ def convert_list_to_path(path):
 
     return new_path
 
-def show_path(path):
+def show_path_interface(path):
     track = TrackData()
     track.simple_maze()
     p = Path()
@@ -525,17 +470,7 @@ def test_a_star():
 
     # plot_path(path)
     path = convert_list_to_path(path)
-    show_path(path)
-
-def test_rrt_star():
-    track = TrackData()
-    track.simple_maze()
-   
-    start = tuple(track.start_location)
-    end = tuple(track.end_location)
-
-    path = RRT_star(start, end, [], 800, 5, 15, track)
-    # plot_path(path)
+    show_path_interface(path)
 
 def test_rrt_star_class():
     track = TrackData()
@@ -543,7 +478,7 @@ def test_rrt_star_class():
 
     finder = RTT_StarPathFinder(track)
     path = finder.run_search()
-    show_path(path)
+    show_path_interface(path)
 
 # testing
 if __name__ == "__main__":
