@@ -10,7 +10,7 @@ import datetime
 import os
 from StateStructs import SimMem, CarState, EnvState, SimulationState, WayPoint
 from Interface import Interface
-from Models import CarModel, TrackData
+from Models import TrackData
 
 
 class RaceEnv:
@@ -25,7 +25,6 @@ class RaceEnv:
         self.logger.setLevel(logging.DEBUG)
 
         self.track = track
-        self.car = CarModel()
 
         # memory structures
         self.car_state = CarState(self.config.ranges_n)
@@ -33,12 +32,13 @@ class RaceEnv:
         self.sim_mem = SimMem(self.logger)
 
     def step(self, control_action):
+        new_x = self.car_state.chech_new_state(control_action, self.config.dt)
 
-        new_x = self.car.chech_new_state(self.car_state, control_action, self.config.dt)
+        # new_state = self.car.chech_new_state(self.car_state, control_action, self.config.dt)
         coll_flag = self.track._check_collision_hidden(new_x)
 
         if not coll_flag: # no collsions
-            self.car.update_controlled_state(self.car_state, control_action, self.config.dt)
+            self.car_state.update_controlled_state(control_action, self.config.dt)
 
         self.env_state.done = self._check_done(coll_flag)
         self.env_state.control_action = control_action
@@ -48,7 +48,7 @@ class RaceEnv:
         self.sim_mem.add_step(self.car_state, self.env_state)
         obs = self.car_state.get_state_observation()
         self.sim_mem.step += 1
-        loc_state = self.car_state.x
+
         return self.car_state, self.env_state.reward, self.env_state.done
 
     def reset(self):

@@ -1,6 +1,5 @@
 import numpy as np
 from PathPlanner import A_StarPathFinder, WayPoint
-from PathOptimisation import optmise_track_path
 import LibFunctions as f
 
 
@@ -37,20 +36,21 @@ class ControlSystem:
 
     def _th_controll(self, e_th):
         # theta controller to come here when dth!= th
-        # e_th = min(np.pi/2, e_th)
-        # e_th = max(-np.pi/2, e_th) # clips the action to pi 
 
         return e_th
 
     def _get_xref_th(self, x1, x2):
         dx = x2[0] - x1[0]
         dy = x2[1] - x1[1]
-        # self.logger.debug("x1: " + str(x1) + " x2: " + str(x2))
-        # self.logger.debug("dxdy: %d, %d" %(dx,dy))
-        if dy != 0:
-            ret = np.abs(np.arctan(dx / dy))
-        else:
-            ret = np.pi / 2
+        # # self.logger.debug("x1: " + str(x1) + " x2: " + str(x2))
+        # # self.logger.debug("dxdy: %d, %d" %(dx,dy))
+        # if dy != 0:
+        #     ret = np.abs(np.arctan(dx / dy))
+        # else:
+        #     ret = np.pi / 2
+
+        grad = f.get_gradient(x1, x2)
+        ret = abs(np.arctan((grad ** (-1))))
 
         # sort out the sin
         sign = 1

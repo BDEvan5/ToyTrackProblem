@@ -94,11 +94,42 @@ class Ranging:
         obs = self._get_range_obs()
         print(obs)
 
+class CarModel:
+    def __init__(self):
+        self.m = 1
+        self.L = 1
+        self.J = 5
+        self.b = [0.5, 0.2]
 
-class CarState(WayPoint, Ranging):
+        self.max_v = 5
+        self.friction = 0.1
+
+    def update_controlled_state(self, action, dt):
+        a = action[0]
+        th = action[1]
+        self.v += a * dt - self.friction * self.v
+
+        self.theta = th # assume no th integration to start
+        r = self.v * dt
+        self.x[0] += r * np.sin(self.theta)
+        self.x[1] += - r * np.cos(self.theta)
+          
+    def chech_new_state(self, action, dt):
+        x = [0.0, 0.0]
+        v = action[0] * dt + (1 - self.friction) * self.v  
+
+        r = v * dt
+        x[0] = r * np.sin(action[1]) + self.x[0]
+        x[1] = - r * np.cos(action[1]) + self.x[1]
+        
+        return x
+
+
+class CarState(WayPoint, Ranging, CarModel):
     def __init__(self, n):
         WayPoint.__init__(self)
         Ranging.__init__(self, n)
+        CarModel.__init__(self)
         self.cur_distance = 0.0
         self.prev_distance = 0.0
         self.glbl_wp = WayPoint() # this is what is being navigated towards
@@ -145,6 +176,8 @@ class CarState(WayPoint, Ranging):
         dis = f.get_distance(start_location, end_location)
         self.prev_distance = dis
 
+    def print_state(self):
+        self.print_point("State:")
 
 class EnvState:
     def __init__(self):

@@ -427,10 +427,6 @@ def plot_graph(G, path=None):
     # plt.show()
 
 
-"""
-Helper for all classes - the path that is returned
-"""
-
 # helper for smoother
 def get_practice_path():
     track = TrackData()

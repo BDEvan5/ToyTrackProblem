@@ -1,4 +1,4 @@
-
+from StateStructs import CarState
 import numpy as np
 import time
 from copy import deepcopy
@@ -6,6 +6,7 @@ import LibFunctions as f
 import logging
 from copy import deepcopy
 import math
+import copy 
 
 
 
@@ -206,53 +207,11 @@ class Obstacle:
         self.location = [x_loc, y_loc]
 
 
-class CarModel:
-    def __init__(self):
-        self.m = 1
-        self.L = 1
-        self.J = 5
-        self.b = [0.5, 0.2]
 
-        self.max_v = 5
-        self.friction = 0.1
         
-    def set_up_car(self, max_v):
-        self.max_v = max_v
+
     
-    def update_controlled_state(self, state, action, dt):
-        a = action[0]
-        th = action[1]
-        state.v += a * dt - self.friction * state.v
-
-        state.theta = th # assume no th integration to start
-        r = state.v * dt
-        state.x[0] += r * np.sin(state.theta)
-        state.x[1] += - r * np.cos(state.theta)
-
-    def update_modelled_state(self, state, action, dt):
-        ret_state = deepcopy(state)
-        a = action[0]
-        th = action[1]
-        ret_state.v += a * dt - self.friction * state.v
-
-        ret_state.theta = th # assume no th integration to start
-        r = state.v * dt
-        ret_state.x[0] += r * np.sin(state.theta)
-        ret_state.x[1] += - r * np.cos(state.theta)
-
-        return ret_state
-           
-    def chech_new_state(self, state, action, dt):
-        x = [0.0, 0.0]
-        a = action[0]
-        th = action[1]
-        v = a * dt - self.friction * state.v + state.v
-
-        r = v * dt
-        x[0] = r * np.sin(th) + state.x[0]
-        x[1] = - r * np.cos(th) + state.x[1]
-        # print(x)
-        return x
+    
 
 
 
