@@ -55,7 +55,7 @@ def simulation_runner(config):
 
 
     while not done:
-        # state.print_point("State")
+        state.print_point("State")
         ref_action = tracker.act(state)
         state, reward, done = env.step(ref_action)
         print(f"Action: [{ref_action[0]:.2f} ; {ref_action[1]:.2f}]")

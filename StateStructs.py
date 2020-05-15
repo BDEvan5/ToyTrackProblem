@@ -106,10 +106,10 @@ class CarModel:
 
     def update_controlled_state(self, action, dt):
         a = action[0]
-        th = action[1]
+
         self.v += a * dt - self.friction * self.v
 
-        self.theta = th # assume no th integration to start
+        self.theta += self.v / self.L * np.tan(action[1])
         r = self.v * dt
         self.x[0] += r * np.sin(self.theta)
         self.x[1] += - r * np.cos(self.theta)
@@ -118,9 +118,11 @@ class CarModel:
         x = [0.0, 0.0]
         v = action[0] * dt + (1 - self.friction) * self.v  
 
+        theta = self.v / self.L * np.tan(action[1]) + self.theta
+
         r = v * dt
-        x[0] = r * np.sin(action[1]) + self.x[0]
-        x[1] = - r * np.cos(action[1]) + self.x[1]
+        x[0] = r * np.sin(theta) + self.x[0]
+        x[1] = - r * np.cos(theta) + self.x[1]
         
         return x
 

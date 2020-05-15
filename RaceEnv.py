@@ -109,7 +109,7 @@ class RaceEnv:
         # self.car_state.print_ranges()
 
     def render_episode(self, screen_name_path, pause=False):
-        dt = 100
+        dt = 60
         self.interface = Interface(self.track, dt)
         self.interface.save_shot_path = screen_name_path
         self.interface.pause_flag = pause

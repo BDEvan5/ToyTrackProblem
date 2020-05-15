@@ -8,6 +8,8 @@ import LibFunctions as f
 class ControlSystem:
     def __init__(self):
         self.k_th_ref = 0.1 # amount to favour v direction
+        self.k_th = 0.8
+        self.L = 1
 
     def __call__(self, state, destination):
         # print(glbl_wp.x)
@@ -22,10 +24,13 @@ class ControlSystem:
 
         # run th control
         x_ref_th = self._get_xref_th(state.x, x_ref)
-        e_th = th_ref * self.k_th_ref + x_ref_th * (1- self.k_th_ref) # no feedback
-        th = self._th_controll(e_th)
+        th_ref_combined = th_ref * self.k_th_ref + x_ref_th * (1- self.k_th_ref) # no feedback
 
-        action = [a, th]
+        new_v = state.v + a
+        e_th = th_ref_combined - state.theta
+        delta = np.arctan(e_th * self.L / (new_v)) 
+
+        action = [a, delta]
         return action
 
     def _acc_control(self, e_v):
@@ -37,7 +42,12 @@ class ControlSystem:
     def _th_controll(self, e_th):
         # theta controller to come here when dth!= th
 
-        return e_th
+        th = e_th * self.k_th
+
+        th = max(-np.pi, e_th)
+        th = min(np.pi, e_th)
+
+        return th
 
     def _get_xref_th(self, x1, x2):
         dx = x2[0] - x1[0]
