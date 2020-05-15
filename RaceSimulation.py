@@ -11,10 +11,9 @@ from Config import create_sim_config
 from PathPlanner import A_StarPathFinder
 from TrajectoryOptimisation import optimise_trajectory, add_velocity
 from PathTracker import Tracker
+from Interface import show_path
 
 def get_path(load=False):
-    load = True
-    # load = False
     filename = "path_obj.npy"
     db_file = open(filename, 'br+')
     track = TrackData()
@@ -41,8 +40,8 @@ def get_path(load=False):
 
 
 def simulation_runner(config):
-    path_obj, track = get_path(False)
-    # path_obj.show()
+    path_obj, track = get_path(True)
+    # show_path(track, path_obj)
 
     for i, pt in enumerate(path_obj.route):
         print(i)
@@ -55,10 +54,10 @@ def simulation_runner(config):
 
 
     while not done:
-        state.print_point("State")
+        # state.print_point("State")
         ref_action = tracker.act(state)
         state, reward, done = env.step(ref_action)
-        print(f"Action: [{ref_action[0]:.2f} ; {ref_action[1]:.2f}]")
+        print(f"Action: [{ref_action[0]:.2f} ; {ref_action[1]:.4f}]")
 
     env.render_episode("PathTracker", False)
 

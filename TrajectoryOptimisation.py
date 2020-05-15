@@ -1,7 +1,8 @@
 import LibFunctions as f 
 import numpy as np 
 from Models import TrackData
-from PathPlanner import get_practice_path, Path, convert_list_to_path
+from PathPlanner import get_practice_path, convert_list_to_path
+from StateStructs import Path
 
 import matplotlib.pyplot as plt
 from scipy import optimize as so
@@ -67,7 +68,7 @@ def calcTrajOpti(path):
     traj_map = preprocess_heat_map()
 
     def trajectory_objective(traj):
-        A = 205
+        A = 200
         traj = np.reshape(traj, (-1, 2))
         for pt in traj:
             if pt[0] > 100 or pt[1] > 100:

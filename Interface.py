@@ -310,5 +310,8 @@ class InterfaceManager:
             self.replay_ep("SimulationTests/" + file_name)
 
 
+def show_path(track, path):
+    interface = Interface(track, 100)
+    interface.show_planned_path(path)
 
 

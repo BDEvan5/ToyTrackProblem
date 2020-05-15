@@ -25,10 +25,16 @@ class ControlSystem:
         # run th control
         x_ref_th = self._get_xref_th(state.x, x_ref)
         th_ref_combined = th_ref * self.k_th_ref + x_ref_th * (1- self.k_th_ref) # no feedback
-
+        print(f"Theta ref: {th_ref_combined}")
         new_v = state.v + a
+        # e_th = abs(th_ref_combined) - abs(state.theta)
         e_th = th_ref_combined - state.theta
-        delta = np.arctan(e_th * self.L / (new_v)) 
+        if e_th > np.pi:
+            e_th = 2 * np.pi - e_th
+        delta = np.arctan(e_th * self.L / (new_v)) * 1
+
+        if abs(delta) > 1:
+            print("Probelms")
 
         action = [a, delta]
         return action
@@ -54,21 +60,21 @@ class ControlSystem:
         dy = x2[1] - x1[1]
         # # self.logger.debug("x1: " + str(x1) + " x2: " + str(x2))
         # # self.logger.debug("dxdy: %d, %d" %(dx,dy))
-        # if dy != 0:
-        #     ret = np.abs(np.arctan(dx / dy))
-        # else:
-        #     ret = np.pi / 2
+        if dy != 0:
+            ret = np.abs(np.arctan(dx / dy))
+        else:
+            ret = np.pi / 2
 
-        grad = f.get_gradient(x1, x2)
-        ret = abs(np.arctan((grad ** (-1))))
+        # grad = f.get_gradient(x1, x2)
+        # ret = abs(np.arctan((grad ** (-1))))
 
         # sort out the sin
         sign = 1
-        if dx < 0:
+        if dx < 0.1:
             sign = -1
         if dy > 0: # dy is opposite to normal
             ret = np.pi - np.abs(ret)
-        return ret * sign
+        return abs(ret) * sign
 
 
 class Tracker:
@@ -80,33 +86,51 @@ class Tracker:
 
         self.control_system = ControlSystem()
 
+    # def act(self, state):
+    #     HORIZON = 0
+    #     location = state.x
+
+    #     ind = self.get_nearest_ind(location)
+    #     if ind > self.pind: # pind is where I am now and want to work forward from.
+    #         self.pind = ind
+
+    #     ind = min(ind + HORIZON, self.n_inds) # checks that it isn't past the end indicie  
+    #     destination = self.path[ind]
+
+    #     destination.print_point(f"Destination: {ind}")
+
+    #     ref_action = self.control_system(state, destination)
+
+    #     return ref_action
+
+    # def get_nearest_ind(self, location):
+    #     SEARCH_PTS = 5
+    #     d = [f.get_distance(location, wpt.x) for wpt in self.path[(self.pind):(self.pind+SEARCH_PTS)]]
+
+    #     pt = min(d)
+    #     ind = d.index(pt) + self.pind
+
+    #     return ind
+
     def act(self, state):
-        HORIZON = 1
-        location = state.x
+        # self.pind = # the points I have passed
 
-        ind = self.get_nearest_ind(location)
-        if ind > self.pind: # pind is where I am now and want to work forward from.
-            self.pind = ind
+        car_dist = f.get_distance(self.path[self.pind].x, state.x)
+        ds = f.get_distance(self.path[self.pind].x, self.path[self.pind+1].x)
+        if car_dist > ds:
+            self.pind += 1
 
-        ind = min(ind + HORIZON, self.n_inds) # checks that it isn't past the end indicie  
-        destination = self.path[ind]
+        destination = self.path[self.pind+1] # next point
 
-        destination.print_point(f"Destination: {ind}")
+        # destination.print_point(f"Destination: {self.pind + 1}")
+        if self.pind == 11:
+            state.print_state()
+            destination.print_point(f"Destination: {self.pind + 1}")
+            print("dest prob")
 
         ref_action = self.control_system(state, destination)
 
         return ref_action
-
-    def get_nearest_ind(self, location):
-        SEARCH_PTS = 5
-        d = [f.get_distance(location, wpt.x) for wpt in self.path[self.pind:(self.pind+SEARCH_PTS)]]
-
-        pt = min(d)
-        ind = d.index(pt) + self.pind
-
-        return ind
-
-
 
 
 

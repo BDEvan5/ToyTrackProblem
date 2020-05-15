@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-import StateStructs as ls
 from copy import deepcopy
 import LibFunctions as f
 import logging
@@ -9,6 +8,8 @@ from copy import deepcopy
 import pickle
 import datetime
 import os
+from Models import TrackData
+
 
 class WayPoint:
     def __init__(self):
@@ -48,12 +49,9 @@ class Path:
         for obj in self.route:
             return obj
 
-    def show(self, track=None):
-        if track is None:
-            track = TrackData()
-            track.simple_maze()
-        interface = Interface(track, 100)
-        interface.show_planned_path(self)
+    # def show(self, track):
+    #     interface = Interface(track, 100)
+    #     interface.show_planned_path(self)
 
     def __eq__(self, other):
         dx = self.x[0] - other.x[0]
@@ -62,7 +60,6 @@ class Path:
         if dx == 0 or dy == 0:
             return True
         return False
-
 
 
 class SingleRange:
@@ -210,7 +207,7 @@ class SimMem:
         self.step = 0
 
     def add_step(self, car_state, env_state):
-        SimStep = ls.SimulationState()
+        SimStep = SimulationState()
         SimStep._add_car_state(deepcopy(car_state))
         SimStep._add_env_state(deepcopy(env_state))
         self.steps.append(SimStep)
@@ -252,6 +249,8 @@ class SimMem:
     def clear_mem(self):
         self.steps.clear()
         self.step = 0
+
+
 
 
 
