@@ -158,6 +158,25 @@ class Interface:
 
         self.root.mainloop()
 
+    def show_path_setup_root(self, path):
+        # print("Setup root called")
+        p0 = [50, 50]
+        px = f.sub_locations(self.prev_px, p0)
+
+        self.canv.move(self.o, px[0], px[1])
+        
+        self.canv.pack()
+
+        for i, point in enumerate(path.route):
+            x = self._scale_input(point.x)
+            str_msg = str(i)
+            self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
+
+            self.canv.pack()   
+
+        self.root.after(0, self.run_interface_loop)
+        self.root.mainloop()
+
 # main function with logic
     def run_interface_loop(self):
         if  not self.pause_flag:
@@ -310,8 +329,19 @@ class InterfaceManager:
             self.replay_ep("SimulationTests/" + file_name)
 
 
+# externally called
 def show_path(track, path):
     interface = Interface(track, 100)
     interface.show_planned_path(path)
 
+def render_ep(track, path, sim_mem, screen_name_path="DataRecords/PathTracker", pause=FALSE):
+    dt = 60
+    interface = Interface(track, dt)
+    interface.save_shot_path = screen_name_path
+    interface.pause_flag = pause
+
+    for step in sim_mem.steps:
+        interface.step_q.put(step)
+
+    interface.show_path_setup_root(path)
 

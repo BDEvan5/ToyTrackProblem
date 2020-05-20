@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib import  pyplot as plt
 
+
 def add_locations(x1=[0, 0], x2=[0, 0], dx=1):
     # dx is a scaling factor
     ret = [0.0, 0.0]

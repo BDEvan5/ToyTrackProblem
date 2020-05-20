@@ -110,14 +110,15 @@ class RaceEnv:
 
     def render_episode(self, screen_name_path, pause=False):
         dt = 60
-        self.interface = Interface(self.track, dt)
-        self.interface.save_shot_path = screen_name_path
-        self.interface.pause_flag = pause
+        interface = Interface(self.track, dt)
+        interface.save_shot_path = screen_name_path
+        interface.pause_flag = pause
 
         for step in self.sim_mem.steps:
-            self.interface.step_q.put(step)
+            interface.step_q.put(step)
 
-        self.interface.setup_root()
+        # self.interface.setup_root()
+        interface.show_path_setup_root()
 
 
 

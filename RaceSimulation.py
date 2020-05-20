@@ -11,7 +11,7 @@ from Config import create_sim_config
 from PathPlanner import A_StarPathFinder
 from TrajectoryOptimisation import optimise_trajectory, add_velocity
 from PathTracker import Tracker
-from Interface import show_path
+from Interface import show_path, render_ep
 
 def get_path(load=False):
     filename = "DataRecords/path_obj.npy"
@@ -57,9 +57,10 @@ def simulation_runner(config):
         # state.print_point("State")
         ref_action = tracker.act(state)
         state, reward, done = env.step(ref_action)
-        print(f"Action: [{ref_action[0]:.2f} ; {ref_action[1]:.4f}]")
+        # print(f"Action: [{ref_action[0]:.2f} ; {ref_action[1]:.4f}]")
 
-    env.render_episode("DataRecords/PathTracker", False)
+    # env.render_episode("DataRecords/PathTracker", False)
+    render_ep(track, path_obj, env.sim_mem)
 
 
 

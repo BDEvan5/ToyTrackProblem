@@ -152,7 +152,10 @@ def add_velocity(path_obj, car=None):
             last_wp = wp
             continue
         gradient = f.get_gradient(last_wp.x, wp.x)
-        last_wp.theta = np.arctan(gradient) - np.pi/2  # gradient to next point
+        theta = np.arctan(gradient) - np.pi/2  # gradient to next point
+        # if theta < 0: # negative theta
+        #     theta = 2 * np.pi + theta
+        last_wp.theta = theta
         last_wp.v = max_v * (np.pi - abs(last_wp.theta)) / np.pi
 
         last_wp = wp

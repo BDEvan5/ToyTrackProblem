@@ -25,16 +25,20 @@ class ControlSystem:
         # run th control
         x_ref_th = self._get_xref_th(state.x, x_ref)
         th_ref_combined = th_ref * self.k_th_ref + x_ref_th * (1- self.k_th_ref) # no feedback
-        print(f"Theta ref: {th_ref_combined}")
+        # print(f"Theta ref: {th_ref_combined}")
         new_v = state.v + a
         # e_th = abs(th_ref_combined) - abs(state.theta)
         e_th = th_ref_combined - state.theta
         if e_th > np.pi: # there is a problem here, the angle between -3.14 and + 3.14 is wrong
             e_th = 2 * np.pi - e_th
+        if e_th < - np.pi:
+            e_th = e_th + 2 * np.pi
+
         delta = np.arctan(e_th * self.L / (new_v)) * 1
 
         if abs(delta) > 1:
-            print("Probelms")
+            print("Probelms") 
+            raise ValueError
 
         action = [a, delta]
         return action
