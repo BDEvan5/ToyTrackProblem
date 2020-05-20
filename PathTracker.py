@@ -126,12 +126,6 @@ class Tracker:
 
         destination = self.path[self.pind+1] # next point
 
-        # destination.print_point(f"Destination: {self.pind + 1}")
-        if self.pind == 11:
-            state.print_state()
-            destination.print_point(f"Destination: {self.pind + 1}")
-            print("dest prob")
-
         ref_action = self.control_system(state, destination)
 
         return ref_action

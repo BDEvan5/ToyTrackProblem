@@ -43,9 +43,9 @@ def simulation_runner(config):
     path_obj, track = get_path(True)
     # show_path(track, path_obj)
 
-    for i, pt in enumerate(path_obj.route):
-        print(i)
-        pt.print_point()
+    # for i, pt in enumerate(path_obj.route):
+    #     print(i)
+    #     pt.print_point()
 
     # run sim
     env = RaceEnv(config, track)
