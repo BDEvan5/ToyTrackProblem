@@ -5,7 +5,7 @@ import LibFunctions as f
 
 
 
-class ControlSystem:
+class ControlSykstem:
     def __init__(self):
         self.k_th_ref = 0.1 # amount to favour v direction
         self.k_th = 0.8
