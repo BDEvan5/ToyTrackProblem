@@ -55,8 +55,6 @@ class TrackMap:
                 idx = self.rect_map[i, j]
                 c.itemconfig(idx, fill=color)
 
-        
-
     def set_up_saving(self):
         root = self.root
         # root.bind("<Enter>", self.save_map)
@@ -84,7 +82,6 @@ class TrackMap:
         self.map = np.zeros((self.n_blocks, self.n_blocks), dtype=np.bool)
         self.redrawmap()
 
-
     def save_map(self, info=None):
         filename = "DataRecords/" + str(self.name_var.get()) + ".npy"
         np.save(filename, self.map)
@@ -96,10 +93,9 @@ class TrackMap:
         self.map = load_map
         self.redrawmap()
 
-
     def set_button_fill(self, info):
         i, j = self.get_loaction_value(info.x, info.y)
-        print(f"Button clicked: {info.x};{info.y} --> {i}:{j}")
+        # print(f"Button clicked ON: {info.x};{info.y} --> {i}:{j}")
 
         self.map[i, j] = True
 
@@ -109,7 +105,7 @@ class TrackMap:
 
     def set_button_empty(self, info):
         i, j = self.get_loaction_value(info.x, info.y)
-        print(f"Button clicked: {info.x};{info.y} --> {i}:{j}")
+        # print(f"Button clicked OFF: {info.x};{info.y} --> {i}:{j}")
 
         self.map[i, j] = False
 
@@ -125,7 +121,6 @@ class TrackMap:
 
         return color
 
-
     def get_loaction_value(self, x, y):
         block_size = self.fs * self.res
 
@@ -134,7 +129,16 @@ class TrackMap:
 
         return x_ret, y_ret
 
+    def get_map(self):
+        return self.map
 
+def load_map(self, map_name="myTrack0"):
+    filename = "DataRecords/" + map_name + ".npy"
+    loadmap = np.load(filename)
+
+    return loadmap
+
+    
 
 
         
