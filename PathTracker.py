@@ -29,7 +29,7 @@ class ControlSystem:
         new_v = state.v + a
         # e_th = abs(th_ref_combined) - abs(state.theta)
         e_th = th_ref_combined - state.theta
-        if e_th > np.pi:
+        if e_th > np.pi: # there is a problem here, the angle between -3.14 and + 3.14 is wrong
             e_th = 2 * np.pi - e_th
         delta = np.arctan(e_th * self.L / (new_v)) * 1
 

@@ -18,7 +18,7 @@ class RaceEnv:
         self.config = config
 
         # set up and create
-        logging.basicConfig(filename="AgentLogger.log", 
+        logging.basicConfig(filename="DataRecords/AgentLogger.log", 
                     format='%(asctime)s %(message)s', 
                     filemode='w') 
         self.logger = logging.getLogger()

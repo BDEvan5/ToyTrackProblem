@@ -14,7 +14,7 @@ from PathTracker import Tracker
 from Interface import show_path
 
 def get_path(load=False):
-    filename = "path_obj.npy"
+    filename = "DataRecords/path_obj.npy"
     db_file = open(filename, 'br+')
     track = TrackData()
     track.simple_maze()
@@ -59,7 +59,7 @@ def simulation_runner(config):
         state, reward, done = env.step(ref_action)
         print(f"Action: [{ref_action[0]:.2f} ; {ref_action[1]:.4f}]")
 
-    env.render_episode("PathTracker", False)
+    env.render_episode("DataRecords/PathTracker", False)
 
 
 
