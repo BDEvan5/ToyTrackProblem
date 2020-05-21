@@ -53,6 +53,8 @@ class TrackMapInterface:
         add_obs = Button(save_pane, text="Add Obs", command=self.add_obs)
         add_obs.pack()
 
+        
+
     def redrawmap(self):
         block_sz = self.map_data.fs * self.map_data.res
         c = self.canv
@@ -122,6 +124,7 @@ def load_map(map_name="myTrack0"):
 def test_interface():
     map_data = load_map()
     myInterface = TrackMapInterface(map_data)
+
 
 
 if __name__ == "__main__":

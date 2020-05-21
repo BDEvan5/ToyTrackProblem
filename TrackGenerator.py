@@ -49,6 +49,8 @@ class TrackGenerator:
                 c.tag_bind(tag_string, "<B1-Motion>", self.set_button_fill)
                 c.tag_bind(tag_string, "<Button-3>", self.set_button_empty)
                 c.tag_bind(tag_string, "<B3-Motion>", self.set_button_empty)
+                c.tag_bind(tag_string, "<Button-2>", self.set_x)
+                # c.tag_bind(tag_string, "e", self.set_x2)
 
     def set_up_saving(self):
         root = self.root
@@ -95,6 +97,7 @@ class TrackGenerator:
     def clear_map(self):
         self.map_data.track_map = np.zeros((self.map_data.n_blocks, self.map_data.n_blocks), dtype=np.bool)
         self.map_data.obstacles.clear()
+        self.map_data.reset_obstacles()
         self.redrawmap()
 
     def save_map(self, info=None):
@@ -128,6 +131,7 @@ class TrackGenerator:
         
         dump(self.map_data, db_file)
 
+# bindings
     def set_button_fill(self, info):
         i, j = self.get_loaction_value(info.x, info.y)
         # print(f"Button clicked ON: {info.x};{info.y} --> {i}:{j}")
@@ -148,14 +152,39 @@ class TrackGenerator:
         idx = self.rect_map[i, j]    
         self.canv.itemconfig(idx, fill=color)
 
+    def set_x(self, info):
+        print(info)
+        i, j = self.get_loaction_value(info.x, info.y)
+        if self.map_data.start_x1 is None:
+            self.map_data.start_x1 = [i, j]
+        elif self.map_data.start_x2 is None:
+            if j == self.map_data.start_x1[1]:
+                self.map_data.start_x2 = [i, j]
+        else: 
+            self.map_data.start_x1 = [i, j]
+            self.map_data.start_x2 = None
+        self.map_data.set_start_line()
+        self.redrawmap()
+
+    def set_x2(self, info):
+        i, j = self.get_map_color(info.x, info.y)
+        self.map_data.start_x2 = [i, j]
+        self.redrawmap()
+
 # helpers
     def get_map_color(self, i, j):
         if self.map_data.track_map[i, j]:
             color = 'grey50'
         else:
             color = 'gray95'
+
         if self.map_data.obs_map[i, j]:
             color = 'purple1'
+
+        if [i, j] == self.map_data.start_x1 or [i, j] == self.map_data.start_x2:
+            color = 'medium spring green'
+        elif [i, j] in self.map_data.start_line:
+            color = 'spring green'
 
         return color
 
