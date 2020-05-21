@@ -37,18 +37,21 @@ class TrackMapData:
 
     def reset_obstacles(self):
         # this is called to respawn the obstacles
-        obs_map = self.obs_map
+        obs_map = np.zeros_like(self.track_map) # create new map
         n_obs = len(self.obstacles)
-        rands = np.random.randint(1, 99, (n_obs, 2))
+        rands = np.random.randint(1, self.n_blocks-1, (n_obs, 2))
 
         for i, obs in enumerate(self.obstacles):
             obs_map = obs.get_new_map(obs_map, rands[i]) # possibly move fcn to self
+
+        self.obs_map = obs_map
 
 
 class Obstacle:
     def __init__(self, size=[0, 0]):
         self.size = size
-        self.layer_size = size // 2
+        self.layer_size_x = size[0] // 2
+        self.layer_size_y = size[1] // 2
 
     def get_new_map(self, obs_map, rand_xy):
         rand_x = rand_xy[0]
@@ -56,10 +59,13 @@ class Obstacle:
 
         for i in range(self.size[0]):
             for j in range(self.size[1]):
-                x = i - self.layer_size + rand_x
-                y = j - self.layer_size + rand_y
+                x = i - self.layer_size_x + rand_x
+                y = j - self.layer_size_y + rand_y
 
-                obs_map[x, y] = 1
+                try:
+                    obs_map[x, y] = 1
+                except:
+                    print(f"Error setting obs at {x}:{y}")
 
         return obs_map
 

@@ -73,6 +73,12 @@ class TrackGenerator:
         quit_button = Button(save_pane, text="Quit", command=self.root.destroy)
         quit_button.pack()
 
+        reset_obs = Button(save_pane, text="Reset Obs", comman=self.reset_obs)
+        reset_obs.pack()
+
+        add_obs = Button(save_pane, text="Add Obs", command=self.add_obs)
+        add_obs.pack()
+
     def redrawmap(self):
         block_sz = self.map_data.fs * self.map_data.res
         c = self.canv
@@ -88,6 +94,7 @@ class TrackGenerator:
 #Button features
     def clear_map(self):
         self.map_data.track_map = np.zeros((self.map_data.n_blocks, self.map_data.n_blocks), dtype=np.bool)
+        self.map_data.obstacles.clear()
         self.redrawmap()
 
     def save_map(self, info=None):
@@ -105,6 +112,21 @@ class TrackGenerator:
         self.map_data = load_map
 
         self.redrawmap()
+
+    def reset_obs(self):
+        self.map_data.reset_obstacles()
+        self.redrawmap()
+
+    def add_obs(self):
+        self.map_data.add_random_obstacle()
+        print(f"Obs Added: {self.map_data.obstacles[-1].size}")
+        self.reset_obs()
+
+    def save_map(self, info=None):
+        filename = "DataRecords/" + str(self.name_var.get()) 
+        db_file = open(filename, 'ab')
+        
+        dump(self.map_data, db_file)
 
     def set_button_fill(self, info):
         i, j = self.get_loaction_value(info.x, info.y)
@@ -132,6 +154,8 @@ class TrackGenerator:
             color = 'grey50'
         else:
             color = 'gray95'
+        if self.map_data.obs_map[i, j]:
+            color = 'purple1'
 
         return color
 
@@ -142,15 +166,6 @@ class TrackGenerator:
         y_ret = int(np.floor(y / block_size))
 
         return x_ret, y_ret
-
-    def get_map(self):
-        map_data = TrackMapData(self.map)
-        map_data.set_map_parameters(self.fs, self.res, self.size, self.n_blocks, self.map_size)
-        
-        return map_data
-
-
-
 
 
 

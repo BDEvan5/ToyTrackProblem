@@ -1,14 +1,15 @@
 import numpy as np  
 from tkinter import *
 from TrackMapData import TrackMapData
+from pickle import load, dump
 
 
 class TrackMapInterface:
-    def __init__(self, track_obj, resolution=2, scaling_factor=10):
-        self.track_map = track_obj
-        size = self.track_map.display_size
+    def __init__(self, track_obj):
+        self.map_data = track_obj
+        size = self.map_data.display_size
 
-        self.rect_map = np.zeros_like(self.track_map.track_map, dtype=np.int)
+        self.rect_map = np.zeros_like(self.map_data.track_map, dtype=np.int)
 
         self.root = Tk()
         frame = Frame(self.root, height=size[0], width=size[1])
@@ -24,11 +25,11 @@ class TrackMapInterface:
 
 # set up
     def create_map(self):
-        block_sz = self.track_map.fs * self.track_map.res
+        block_sz = self.map_data.fs * self.map_data.res
         c = self.canv
 
-        for i in range(self.track_map.n_blocks):
-            for j in range(self.track_map.n_blocks):
+        for i in range(self.map_data.n_blocks):
+            for j in range(self.map_data.n_blocks):
                 color = self.get_map_color(i, j)
 
                 top_left = (i*block_sz, j*block_sz)
@@ -41,16 +42,23 @@ class TrackMapInterface:
         save_pane = self.save_pane
         quit_button = Button(save_pane, text="Quit", command=self.root.destroy)
         quit_button.pack()
+        save_button = Button(save_pane, text="Save", command=self.save_map)
+        save_button.pack()
+        save_button = Button(save_pane, text="Load", command=self.load_map)
+        save_button.pack()
 
         reset_obs = Button(save_pane, text="Reset Obs", comman=self.reset_obs)
         reset_obs.pack()
 
+        add_obs = Button(save_pane, text="Add Obs", command=self.add_obs)
+        add_obs.pack()
+
     def redrawmap(self):
-        block_sz = self.track_map.fs * self.track_map.res
+        block_sz = self.map_data.fs * self.map_data.res
         c = self.canv
 
-        for i in range(self.track_map.n_blocks):
-            for j in range(self.track_map.n_blocks):
+        for i in range(self.map_data.n_blocks):
+            for j in range(self.map_data.n_blocks):
                 color = self.get_map_color(i, j)
                 
                 idx = self.rect_map[i, j]
@@ -59,20 +67,43 @@ class TrackMapInterface:
 
 #Button features
     def reset_obs(self):
-        self.track_map.reset_obstacles()
+        self.map_data.reset_obstacles()
+        self.redrawmap()
+
+    def add_obs(self):
+        self.map_data.add_random_obstacle()
+        print(f"Obs Added: {self.map_data.obstacles[-1].size}")
+        self.reset_obs()
+
+        def save_map(self, info=None):
+        filename = "DataRecords/" + str(self.name_var.get()) 
+        db_file = open(filename, 'ab')
+        
+        dump(self.map_data, db_file)
+        # np.save(filename, self.map)
+
+    def load_map(self, info=None):
+        filename = "DataRecords/" + str(self.name_var.get()) 
+        db_file = open(filename, 'rb')
+
+        load_map = load(db_file)
+        self.map_data = load_map
+
         self.redrawmap()
 
 # helpers
     def get_map_color(self, i, j):
-        if self.map[i, j]:
+        if self.map_data.track_map[i, j]:
             color = 'grey50'
         else:
             color = 'gray95'
+        if self.map_data.obs_map[i, j]:
+            color = 'purple1'
 
         return color
 
     def get_loaction_value(self, x, y):
-        block_size = self.fs * self.res
+        block_size = self.map_data.fs * self.map_data.res
 
         x_ret = int(np.floor(x / block_size))
         y_ret = int(np.floor(y / block_size))
@@ -82,14 +113,17 @@ class TrackMapInterface:
 
 
 def load_map(map_name="myTrack0"):
-    filename = "DataRecords/" + map_name + ".npy"
-    loadmap = np.load(filename)
+    filename = "DataRecords/" + map_name 
+    db_file = open(filename, 'rb')
+    loadmap = load(db_file)
 
-    map_data = TrackMapData(loadmap)
+    return loadmap
 
-    return map_data
+def test_interface():
+    map_data = load_map()
+    myInterface = TrackMapInterface(map_data)
 
 
 if __name__ == "__main__":
-    map_data = load_map()
+    test_interface()
 
