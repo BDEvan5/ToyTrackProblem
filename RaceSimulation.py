@@ -12,12 +12,13 @@ from PathPlanner import A_StarPathFinder
 from TrajectoryOptimisation import optimise_trajectory, add_velocity
 from PathTracker import Tracker
 from Interface import show_path, render_ep
+from TrackMapInterface import load_map
 
 def get_path(load=False):
     filename = "DataRecords/path_obj.npy"
     db_file = open(filename, 'br+')
-    track = TrackData()
-    track.simple_maze()
+
+    track = load_map()
 
     if load:
         path_obj = pickle.load(db_file)
@@ -67,5 +68,6 @@ def simulation_runner(config):
 
 
 if __name__ == "__main__":
-    config = create_sim_config()
-    simulation_runner(config)
+    get_path(False)
+    # config = create_sim_config()
+    # simulation_runner(config)

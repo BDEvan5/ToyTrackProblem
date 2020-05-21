@@ -4,20 +4,23 @@ import LibFunctions as f
 
 
 class TrackMapData:
-    def __init__(self, track_map):
+    def __init__(self, resolution=2, scaling_factor=10):
         # replacing the old trackdata
-        self.track_map = track_map
+        self.fs = int(scaling_factor) # scaling factor from map size to display dize
+        self.res = int(resolution) # how many map blocks to drawn blocks
+        self.map_size = np.array([100, 100]) # how big the map is, 100, 100
+        self.display_size = self.map_size * self.fs # tkinter pxls
+        self.n_blocks = int(self.map_size[0]/self.res) # how many blocks per dimension
+
+        self.track_map = np.zeros((self.n_blocks, self.n_blocks), dtype=np.bool)
         self.obs_map = np.zeros_like(self.track_map) # stores heatmap of obstacles
         
         self.start_x1 = None 
         self.start_x2 = None
+        self.start_location = None
         self.start_line = []
+        self.way_pts = []
 
-        self.fs = None # scaling factor from map size to display dize
-        self.res = None # how many map blocks to drawn blocks
-        self.display_size = None # tkinter pxls
-        self.n_blocks = None # how many blocks per dimension
-        self.map_size = None # how big the map is, 100, 100
 
         # boundariy?? not needed
         self.obstacles = []
@@ -54,16 +57,26 @@ class TrackMapData:
         else:
             for i in range(self.start_x1[0], self.start_x2[0]):
                 self.start_line.append([i, self.start_x1[1]])
+            y = self.start_x1[1] + self.res * self.fs * 0.5
+            x = int((self.start_x1[0] + self.start_x2[0])/2)
+            self.start_location = [x, y]
 
 
     def check_collision(self, x, hidden_obs=False):
-        i = x[0]
-        j = x[1]
+        [i, j] = self.get_location_value(x)
         if self.track_map[i, j]:
             return True
         if hidden_obs and self.obs_map[i, j]:
             return True
         return False
+    
+    def get_location_value(self, x):
+        block_size = self.map_data.fs * self.map_data.res
+
+        x_ret = int(np.floor(x[0] / block_size))
+        y_ret = int(np.floor(x[1] / block_size))
+
+        return [x_ret, y_ret]
 
     def check_line_collision(self, x1, x2, hidden_obs=False):
         n_pts = 15

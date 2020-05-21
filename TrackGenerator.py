@@ -5,25 +5,21 @@ from pickle import load, dump
 
 
 class TrackGenerator:
-    def __init__(self, resolution=2, scaling_factor=10):
+    def __init__(self):
         # scale to 100 by 100 in space and 50 by 50 in blocks
-        fs = int(scaling_factor)
-        res = int(resolution)
-        map_size = np.array([100, 100])
-        display_size = map_size * fs
-        res_size = display_size / resolution
-        n_blocks = int(map_size[0]/res)
+        self.map_data = TrackMapData()
 
-        track_map = np.zeros((n_blocks, n_blocks), dtype=np.bool) # if it is walkable
-        self.map_data = TrackMapData(track_map)
-        self.map_data.set_map_parameters(fs, res, display_size, n_blocks, map_size)
+        display_size = self.map_data.display_size
+
+        # self.map_data.set_map_parameters(fs, res, display_size, n_blocks, map_size)
         
-        self.rect_map = np.zeros_like(track_map, dtype=np.int)
+        self.rect_map = np.zeros_like(self.map_data.track_map, dtype=np.int)
 
         self.root = Tk()
         frame = Frame(self.root, height=display_size[0], width=display_size[1])
         frame.grid(row=1, column=1)
         self.canv = Canvas(frame, height=display_size[0], width=display_size[1])
+        self.root.bind("<Return>", self.set_wp)
 
         self.create_map()
         self.set_up_saving()
@@ -50,6 +46,7 @@ class TrackGenerator:
                 c.tag_bind(tag_string, "<Button-3>", self.set_button_empty)
                 c.tag_bind(tag_string, "<B3-Motion>", self.set_button_empty)
                 c.tag_bind(tag_string, "<Button-2>", self.set_x)
+        # c.bind("<space>", self.set_wp)
                 # c.tag_bind(tag_string, "e", self.set_x2)
 
     def set_up_saving(self):
@@ -95,24 +92,29 @@ class TrackGenerator:
 
 #Button features
     def clear_map(self):
-        self.map_data.track_map = np.zeros((self.map_data.n_blocks, self.map_data.n_blocks), dtype=np.bool)
-        self.map_data.obstacles.clear()
-        self.map_data.reset_obstacles()
+        self.map_data = TrackMapData()
         self.redrawmap()
 
     def save_map(self, info=None):
         filename = "DataRecords/" + str(self.name_var.get()) 
-        db_file = open(filename, 'ab')
+        db_file = open(filename, 'wb')
         
         dump(self.map_data, db_file)
         # np.save(filename, self.map)
+        db_file.close()
+        print(f"File saved: " + filename)
 
     def load_map(self, info=None):
         filename = "DataRecords/" + str(self.name_var.get()) 
         db_file = open(filename, 'rb')
 
         load_map = load(db_file)
-        self.map_data = load_map
+        db_file.close()
+        if type(self.map_data) == type(load_map):
+            self.map_data = load_map
+        else:
+            print("Problem loading map")
+            print(f"Loaded map type: {type(load_map)}")
 
         self.redrawmap()
 
@@ -125,11 +127,11 @@ class TrackGenerator:
         print(f"Obs Added: {self.map_data.obstacles[-1].size}")
         self.reset_obs()
 
-    def save_map(self, info=None):
-        filename = "DataRecords/" + str(self.name_var.get()) 
-        db_file = open(filename, 'ab')
+    # def save_map(self, info=None):
+    #     filename = "DataRecords/" + str(self.name_var.get()) 
+    #     db_file = open(filename, 'ab')
         
-        dump(self.map_data, db_file)
+    #     dump(self.map_data, db_file)
 
 # bindings
     def set_button_fill(self, info):
@@ -153,7 +155,7 @@ class TrackGenerator:
         self.canv.itemconfig(idx, fill=color)
 
     def set_x(self, info):
-        print(info)
+        # print(info)
         i, j = self.get_loaction_value(info.x, info.y)
         if self.map_data.start_x1 is None:
             self.map_data.start_x1 = [i, j]
@@ -165,6 +167,18 @@ class TrackGenerator:
             self.map_data.start_x2 = None
         self.map_data.set_start_line()
         self.redrawmap()
+
+    def set_wp(self, info):
+        # print(info)
+        x, y = self.get_loaction_value(info.x, info.y)
+        x = [x, y]
+        # print(x)
+        if x in self.map_data.way_pts:
+            self.map_data.way_pts.remove(x)
+        else:
+            self.map_data.way_pts.append(x)
+        self.redrawmap()
+
 
 
 # helpers
@@ -181,6 +195,9 @@ class TrackGenerator:
             color = 'medium spring green'
         elif [i, j] in self.map_data.start_line:
             color = 'spring green'
+        elif [i, j] in self.map_data.way_pts:
+            color = 'light sea green'
+
 
         return color
 
