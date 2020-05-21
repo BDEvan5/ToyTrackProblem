@@ -59,7 +59,7 @@ class TrackMapData:
         else:
             for i in range(self.start_x1[0], self.start_x2[0]):
                 self.start_line.append([i, self.start_x1[1]])
-            y = self.start_x1[1] + self.res * self.fs * 0.5
+            y = self.start_x1[1] 
             x = int((self.start_x1[0] + self.start_x2[0])/2)
             self.start_location = [x, y]
 
@@ -73,7 +73,7 @@ class TrackMapData:
         return False
     
     def get_location_value(self, x):
-        block_size = self.map_data.fs * self.map_data.res
+        block_size = self.fs * self.res
 
         x_ret = int(np.floor(x[0] / block_size))
         y_ret = int(np.floor(x[1] / block_size))

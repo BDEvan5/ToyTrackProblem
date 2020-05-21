@@ -22,7 +22,7 @@ def get_track_path(load=False):
         db_file = open(filename, 'br+')
         path_obj = pickle.load(db_file)
     else:
-        path = A_StarTrackWrapper(track, 5)
+        path = A_StarTrackWrapper(track, 2)
 
         show_track_path(track, path)
 

@@ -233,14 +233,20 @@ class TrackMapInterface(TrackMapBase):
         self.root.mainloop()
 
     def show_planned_path(self, path):
-        for i, point in enumerate(path.route):
-            x = self._scale_input(point.x)
+        for i, point in enumerate(path):
+            x = self._scale_input(point)
             str_msg = str(i)
             self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
 
             self.canv.pack() 
 
         self.run_loop()
+
+    def _scale_input(self, x_in):
+        x_out = [0, 0]
+        for i in range(2):
+            x_out[i] = x_in[i] * self.map_data.fs * self.map_data.res
+        return x_out 
 
 
 

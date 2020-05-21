@@ -320,7 +320,7 @@ class A_StarPathFinderTrack:
             curr = curr.parent
         pos_list = pos_list[::-1]
 
-        pos_list.append(self.track.end_path_location)
+        pos_list.append(self.track.path_end_location)
 
         return pos_list
 
@@ -361,18 +361,21 @@ def A_StarTrackWrapper(track, ds):
         track.path_end_location = track.way_pts[i]
         path = path_finder.run_search(ds)
 
-        print(f"Finish {i} runs")
-        print(path)
+        # print(f"Finish {i} runs")
+        # print(path)
 
-        total_path.append(path)
+        for i in range(len(path) -1): # don't add last point
+            total_path.append(path[i])
         track.path_start_location = track.path_end_location
 
-    track.end_location = track.start_location
+    track.path_end_location = track.start_location
     path = path_finder.run_search(ds)
-    total_path.append(path)
+    for i in range(len(path) -1): # don't add last point
+        total_path.append(path[i])
+
 
     total_path = np.asarray(total_path)
-    total_path = total_path.flatten()
+    # total_path = total_path.flatten()
 
     return total_path
 """
