@@ -20,6 +20,7 @@ class TrackMapBase:
         self.canv = Canvas(frame, height=size[0], width=size[1])
         self.save_pane = Frame(self.root, height=size[0], width=size[1]/10)
         self.save_pane.grid(row=1, column=2)
+        self.root.bind("<Return>", self.set_wp)
 
         self.set_up_buttons()
 
@@ -96,6 +97,20 @@ class TrackMapBase:
         self.map_data = TrackMapData()
         self.redrawmap()
 
+    def set_wp(self, info):
+        # print(info)
+        x = info.x_root - self.root.winfo_x()
+        y = info.y_root - self.root.winfo_y()
+        # print(x, y)
+        x, y = self.get_loaction_value(x, y)
+        x = [x, y]
+        # print(x)
+        if x in self.map_data.way_pts:
+            self.map_data.way_pts.remove(x)
+        else:
+            self.map_data.way_pts.append(x)
+        self.redrawmap()
+
 
 # helpers
     def get_map_color(self, i, j):
@@ -111,6 +126,8 @@ class TrackMapBase:
             color = 'medium spring green'
         elif [i, j] in self.map_data.start_line:
             color = 'spring green'
+        elif [i, j] in self.map_data.way_pts:
+            color = 'light sea green'
 
         return color
 
@@ -123,38 +140,12 @@ class TrackMapBase:
         return x_ret, y_ret
 
 
-
-
-class TrackMapInterface2(TrackMapBase):
-    def __init__(self, track_obj):
-        super().__init__(track_obj=track_obj)
-
-        self.create_map()
-
-        self.root.mainloop()
-
-    # set up - define create map and additional buttons
-    def create_map(self):
-        block_sz = self.map_data.fs * self.map_data.res
-        c = self.canv
-
-        for i in range(self.map_data.n_blocks):
-            for j in range(self.map_data.n_blocks):
-                color = self.get_map_color(i, j)
-
-                top_left = (i*block_sz, j*block_sz)
-                bot_right = ((i+1)*block_sz, (j+1)*block_sz)
-                rect = c.create_rectangle(top_left, bot_right, fill=color)
-                self.rect_map[i, j] = rect
-                c.pack()
-
-
-class TrackGenerator2(TrackMapBase):
+class TrackGenerator(TrackMapBase):
     def __init__(self):
         super().__init__()
 
-        self.create_map()
         self.root.bind("<Return>", self.set_wp)
+        self.create_map()
         self.root.mainloop()
 
     def create_map(self):
@@ -213,40 +204,17 @@ class TrackGenerator2(TrackMapBase):
         self.map_data.set_start_line()
         self.redrawmap()
 
-    def set_wp(self, info):
-        # print(info)
-        x, y = self.get_loaction_value(info.x, info.y)
-        x = [x, y]
-        # print(x)
-        if x in self.map_data.way_pts:
-            self.map_data.way_pts.remove(x)
-        else:
-            self.map_data.way_pts.append(x)
-        self.redrawmap()
 
 
 
-
-class TrackMapInterface:
+class TrackMapInterface(TrackMapBase):
     def __init__(self, track_obj):
-        self.map_data = track_obj
-        size = self.map_data.display_size
-
-        self.rect_map = np.zeros_like(self.map_data.track_map, dtype=np.int)
-
-        self.root = Tk()
-        frame = Frame(self.root, height=size[0], width=size[1])
-        frame.grid(row=1, column=1)
-        self.canv = Canvas(frame, height=size[0], width=size[1])
-        self.save_pane = Frame(self.root, height=size[0], width=size[1]/10)
-        self.save_pane.grid(row=1, column=2)
+        super().__init__(track_obj=track_obj)
 
         self.create_map()
-        self.set_up_buttons()
 
-        self.root.mainloop()
 
-# set up
+    # set up - define create map and additional buttons
     def create_map(self):
         block_sz = self.map_data.fs * self.map_data.res
         c = self.canv
@@ -261,91 +229,21 @@ class TrackMapInterface:
                 self.rect_map[i, j] = rect
                 c.pack()
 
-    def set_up_buttons(self):
-        save_pane = self.save_pane
-        quit_button = Button(save_pane, text="Quit", command=self.root.destroy)
-        quit_button.pack()
-        save_button = Button(save_pane, text="Save", command=self.save_map)
-        save_button.pack()
-        save_button = Button(save_pane, text="Load", command=self.load_map)
-        save_button.pack()
+    def run_loop(self):
+        self.root.mainloop()
 
-        reset_obs = Button(save_pane, text="Reset Obs", comman=self.reset_obs)
-        reset_obs.pack()
+    def show_planned_path(self, path):
+        for i, point in enumerate(path.route):
+            x = self._scale_input(point.x)
+            str_msg = str(i)
+            self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
 
-        add_obs = Button(save_pane, text="Add Obs", command=self.add_obs)
-        add_obs.pack()
+            self.canv.pack() 
 
-    def redrawmap(self):
-        block_sz = self.map_data.fs * self.map_data.res
-        c = self.canv
-
-        for i in range(self.map_data.n_blocks):
-            for j in range(self.map_data.n_blocks):
-                color = self.get_map_color(i, j)
-                
-                idx = self.rect_map[i, j]
-                c.itemconfig(idx, fill=color)
+        self.run_loop()
 
 
-#Button features
-    def reset_obs(self):
-        self.map_data.reset_obstacles()
-        self.redrawmap()
 
-    def add_obs(self):
-        self.map_data.add_random_obstacle()
-        print(f"Obs Added: {self.map_data.obstacles[-1].size}")
-        self.reset_obs()
-
-    def save_map(self, info=None):
-        filename = "DataRecords/" + str(self.name_var.get()) 
-        db_file = open(filename, 'ab')
-        
-        dump(self.map_data, db_file)
-        # np.save(filename, self.map)
-
-    def load_map(self, info=None):
-        print("Attempting map load")
-        filename = "DataRecords/" + str(self.name_var.get()) 
-        db_file = open(filename, 'rb')
-
-        load_map = load(db_file)
-        db_file.close()
-        if type(self.map_data) == type(load_map):
-            print("Map loaded successfully")
-            self.map_data = load_map
-        else:
-            print("Problem loading map")
-            print(f"Loaded map type: {type(load_map)}")
-
-        self.redrawmap()
-
-
-# helpers
-    def get_map_color(self, i, j):
-        if self.map_data.track_map[i, j]:
-            color = 'grey50'
-        else:
-            color = 'gray95'
-
-        if self.map_data.obs_map[i, j]:
-            color = 'purple1'
-
-        if [i, j] == self.map_data.start_x1 or [i, j] == self.map_data.start_x2:
-            color = 'medium spring green'
-        elif [i, j] in self.map_data.start_line:
-            color = 'spring green'
-
-        return color
-
-    def get_loaction_value(self, x, y):
-        block_size = self.map_data.fs * self.map_data.res
-
-        x_ret = int(np.floor(x / block_size))
-        y_ret = int(np.floor(y / block_size))
-
-        return x_ret, y_ret
 
 
 
@@ -358,9 +256,14 @@ def load_map(map_name="myTrack1"):
 
 def test_interface():
     # map_data = load_map()
+    myTrackMap = TrackGenerator()
     # myInterface = TrackMapInterface(map_data)
-    # myInterface = TrackMapInterface2(track_obj = map_data)
-    myTrackMap = TrackGenerator2()
+
+
+# externals
+def show_track_path(track, path):
+    myTrackInterface = TrackMapInterface(track)
+    myTrackInterface.show_planned_path(path)
 
 
 if __name__ == "__main__":

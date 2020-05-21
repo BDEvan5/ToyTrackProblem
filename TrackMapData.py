@@ -20,6 +20,8 @@ class TrackMapData:
         self.start_location = None
         self.start_line = []
         self.way_pts = []
+        self.path_end_location = None
+        self.path_start_location = None
 
 
         # boundariy?? not needed

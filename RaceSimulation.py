@@ -8,23 +8,34 @@ import pickle
 from RaceEnv import RaceEnv
 from Models import TrackData
 from Config import create_sim_config
-from PathPlanner import A_StarPathFinder
+from PathPlanner import A_StarPathFinder, A_StarTrackWrapper
 from TrajectoryOptimisation import optimise_trajectory, add_velocity
 from PathTracker import Tracker
 from Interface import show_path, render_ep
-from TrackMapInterface import load_map
+from TrackMapInterface import load_map, show_track_path
 
-def get_path(load=False):
-    filename = "DataRecords/path_obj.npy"
-    db_file = open(filename, 'br+')
-
+def get_track_path(load=False):
     track = load_map()
 
     if load:
+        filename = "DataRecords/path_obj.npy"
+        db_file = open(filename, 'br+')
+        path_obj = pickle.load(db_file)
+    else:
+        path = A_StarTrackWrapper(track, 5)
+
+        show_track_path(track, path)
+
+def get_path(load=False):
+    track = load_map()
+
+    if load:
+        filename = "DataRecords/path_obj.npy"
+        db_file = open(filename, 'br+')
         path_obj = pickle.load(db_file)
     else: 
         # plan path
-        myPlanner = A_StarPathFinder(track)
+        myPlanner = A_StarPathFinderTrack(track)
         path = myPlanner.run_search(5)
 
         # optimise path
@@ -43,10 +54,6 @@ def get_path(load=False):
 def simulation_runner(config):
     path_obj, track = get_path(True)
     # show_path(track, path_obj)
-
-    # for i, pt in enumerate(path_obj.route):
-    #     print(i)
-    #     pt.print_point()
 
     # run sim
     env = RaceEnv(config, track)
@@ -68,6 +75,7 @@ def simulation_runner(config):
 
 
 if __name__ == "__main__":
-    get_path(False)
+    # get_path(False)
+    get_track_path(False)
     # config = create_sim_config()
     # simulation_runner(config)
