@@ -53,7 +53,7 @@ class TrackMapInterface:
         add_obs = Button(save_pane, text="Add Obs", command=self.add_obs)
         add_obs.pack()
 
-        
+
 
     def redrawmap(self):
         block_sz = self.map_data.fs * self.map_data.res
@@ -77,7 +77,7 @@ class TrackMapInterface:
         print(f"Obs Added: {self.map_data.obstacles[-1].size}")
         self.reset_obs()
 
-        def save_map(self, info=None):
+    def save_map(self, info=None):
         filename = "DataRecords/" + str(self.name_var.get()) 
         db_file = open(filename, 'ab')
         
@@ -99,8 +99,14 @@ class TrackMapInterface:
             color = 'grey50'
         else:
             color = 'gray95'
+
         if self.map_data.obs_map[i, j]:
             color = 'purple1'
+
+        if [i, j] == self.map_data.start_x1 or [i, j] == self.map_data.start_x2:
+            color = 'medium spring green'
+        elif [i, j] in self.map_data.start_line:
+            color = 'spring green'
 
         return color
 
@@ -114,7 +120,7 @@ class TrackMapInterface:
 
 
 
-def load_map(map_name="myTrack0"):
+def load_map(map_name="myTrack1"):
     filename = "DataRecords/" + map_name 
     db_file = open(filename, 'rb')
     loadmap = load(db_file)

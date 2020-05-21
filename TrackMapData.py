@@ -50,7 +50,7 @@ class TrackMapData:
 
     def set_start_line(self):
         if self.start_x1 == None or self.start_x2 == None:
-            pass
+            self.start_line.clear()
         else:
             for i in range(self.start_x1[0], self.start_x2[0]):
                 self.start_line.append([i, self.start_x1[1]])

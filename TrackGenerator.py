@@ -166,10 +166,6 @@ class TrackGenerator:
         self.map_data.set_start_line()
         self.redrawmap()
 
-    def set_x2(self, info):
-        i, j = self.get_map_color(info.x, info.y)
-        self.map_data.start_x2 = [i, j]
-        self.redrawmap()
 
 # helpers
     def get_map_color(self, i, j):
