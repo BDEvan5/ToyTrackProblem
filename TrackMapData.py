@@ -65,8 +65,8 @@ class TrackMapData:
 
 
     def check_collision(self, x, hidden_obs=False):
-        i = x[0]
-        j = x[1]
+        i = int(x[0])
+        j = int(x[1])
         # [i, j] = self.get_location_value(x)
         if i >= 100 or i < 0: 
             return True
@@ -91,11 +91,11 @@ class TrackMapData:
     def check_line_collision(self, x1, x2, hidden_obs=False):
         n_pts = 15
         m = f.get_gradient(x1, x2)
-        x_search = np.linspace(x1[0], x1[0], n_pts)
+        x_search = np.linspace(0, x2[0] - x1[0], n_pts)
         for i in range(n_pts):
-            pt_add = [x_search[i], * x_search[i]]
+            pt_add = [x_search[i], m * x_search[i]]
             pt = f.add_locations(pt_add, x1)
-            if self.check_line_collision(pt, hidden_obs):
+            if self.check_collision(pt, hidden_obs):
                 return True
         return False
 

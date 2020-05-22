@@ -230,6 +230,9 @@ class A_StarPathFinderTrack:
 
             self.generate_children()
             i += 1
+            
+        if i > 3900:
+            print("Max Iterations reached: problem with search")
         path = self.get_path_list()
 
         return path
@@ -256,7 +259,6 @@ class A_StarPathFinderTrack:
         dx_max = self.ds
         dis = f.get_distance(self.current_node.position, self.end_n.position)
         if dis < dx_max:
-            print("Final way pt found")
             return True
         return False
 
@@ -281,7 +283,8 @@ class A_StarPathFinderTrack:
         for direction in self.position_list:
             new_position = f.add_locations(self.current_node.position, direction)
 
-            if self.track.check_collision(new_position): 
+            # if self.track.check_collision(new_position):
+            if self.track.check_line_collision(self.current_node.position, new_position): 
                 continue # collision - skp this direction
             # Create new node - no obstacle
             new_node = Node(self.current_node, new_position)
@@ -358,13 +361,12 @@ def A_StarTrackWrapper(track, ds):
         print("Unable to find path with no waypoints")
         raise ValueError
     for i in range(len(track.way_pts)):
-        track.path_end_location = track.way_pts[i]
+        track.path_end_location = track.way_pts[i] # consdier moving to new function
 
         print(f"Start: {track.path_start_location} --> End: {track.path_end_location}")
+
         path_finder = A_StarPathFinderTrack(track)
         path = path_finder.run_search(ds)
-
-        # print(path)
 
         for j in range(len(path) -1): # don't add last point
             total_path.append(path[j])

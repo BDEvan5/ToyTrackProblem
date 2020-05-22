@@ -2,6 +2,7 @@ import numpy as np
 from tkinter import *
 from TrackMapData import TrackMapData
 from pickle import load, dump
+import LibFunctions as f
 
 class TrackMapBase:
     def __init__(self, track_obj=None):
@@ -234,7 +235,8 @@ class TrackMapInterface(TrackMapBase):
 
     def show_planned_path(self, path):
         for i, point in enumerate(path):
-            x = self._scale_input(point)
+            new_pt = f.add_locations(point, [0.5, 0.5]) # brings to centre
+            x = self._scale_input(new_pt)
             str_msg = str(i)
             self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 12")
 
