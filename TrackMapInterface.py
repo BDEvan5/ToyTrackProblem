@@ -238,7 +238,8 @@ class TrackMapInterface(TrackMapBase):
             new_pt = f.add_locations(point, [0.5, 0.5]) # brings to centre
             x = self._scale_input(new_pt)
             str_msg = str(i)
-            self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 12")
+            self.end_x = self.canv.create_oval(x[0], x[1], x[0] + 8, x[1] + 8, fill='DeepPink2')
+            # self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 12")
 
             self.canv.pack() 
 

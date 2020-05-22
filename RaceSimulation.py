@@ -26,6 +26,11 @@ def get_track_path(load=False):
 
         show_track_path(track, path)
 
+        path = optimise_trajectory(path)
+        path_obj = add_velocity(path)
+
+    # return track, path
+
 def get_path(load=False):
     track = load_map()
 

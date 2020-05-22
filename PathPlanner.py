@@ -208,7 +208,7 @@ class A_StarPathFinderTrack:
                 self.position_list.append(direction)
 
         self.position_list.pop(4) # remove stand still
-        print(self.position_list)
+        # print(self.position_list)
         # this makes it not go diagonal
         # self.position_list = [[1, 0], [0, -1], [-1, 0], [0, 1]]
         for pos in self.position_list:
@@ -367,7 +367,7 @@ def A_StarTrackWrapper(track, ds):
 
         path_finder = A_StarPathFinderTrack(track)
         path = path_finder.run_search(ds)
-        print(path)
+        # print(path)
 
         for j in range(len(path) -1): # don't add last point
             total_path.append(path[j])
