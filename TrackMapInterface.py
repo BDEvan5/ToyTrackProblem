@@ -164,7 +164,7 @@ class TrackGenerator(TrackMapBase):
                 self.rect_map[i, j] = rect
                 c.pack()
                 c.tag_bind(tag_string, "<Button-1>", self.set_button_fill)
-                c.tag_bind(tag_string, "<B1-Motion>", self.set_button_fill)
+                c.tag_bind(tag_string, "<B1-Motion>", self.set_thick_brush_fill)
                 c.tag_bind(tag_string, "<Button-3>", self.set_button_empty)
                 c.tag_bind(tag_string, "<B3-Motion>", self.set_button_empty)
                 c.tag_bind(tag_string, "<Button-2>", self.set_x)
@@ -180,6 +180,20 @@ class TrackGenerator(TrackMapBase):
         color = self.get_map_color(i, j)
         idx = self.rect_map[i, j]    
         self.canv.itemconfig(idx, fill=color)
+
+    def set_thick_brush_fill(self, event):
+        i, j = self.get_loaction_value(event.x, event.y)
+        # print(f"Button clicked ON: {info.x};{info.y} --> {i}:{j}")\
+        for x in range(3):
+            for y in range(3):
+                new_i = i + x - 1
+                new_j = j + y - 1
+                self.map_data.track_map[new_i, new_j] = True
+
+                color = self.get_map_color(new_i, new_j)
+                idx = self.rect_map[new_i, new_j]    
+                self.canv.itemconfig(idx, fill=color)
+
 
     def set_button_empty(self, info):
         i, j = self.get_loaction_value(info.x, info.y)

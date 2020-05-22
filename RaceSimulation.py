@@ -15,7 +15,7 @@ from PathTracker import Tracker
 from Interface import show_path, render_ep
 from TrackMapInterface import load_map, show_track_path
 
-def get_track_path(load=False, load_path=True):
+def get_track_path(load=False, load_path=False):
     track = load_map()
 
     filename = "DataRecords/path_obj_db"
@@ -35,19 +35,17 @@ def get_track_path(load=False, load_path=True):
             np.save(path_file, path)
 
         path = reduce_path_diag(path)
-        # path = reduce_path_diag(path)
         show_track_path(track, path)
 
-        # path = optimise_track_trajectory(path, track)
-        # show_track_path(track, path)
-        # # path = optimise_trajectory(path)
-        # path_obj = add_velocity(path)
+        path = optimise_track_trajectory(path, track)
+        show_track_path(track, path)
+        path_obj = add_velocity(path)
 
-        # pickle.dump(path_obj, db_file)
+        pickle.dump(path_obj, db_file)
 
-    # db_file.close()
+    db_file.close()
 
-    # return path_obj, track
+    return path_obj, track
 
 
 
@@ -103,6 +101,6 @@ def simulation_runner(config):
 
 if __name__ == "__main__":
     # get_path(False)
-    get_track_path(False)
+    get_track_path()
     # config = create_sim_config()
     # simulation_runner(config)

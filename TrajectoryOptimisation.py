@@ -46,16 +46,16 @@ def reduce_path_diag(path):
      
     print(f"Path Reduced from: {len(path)} to: {len(new_path)}  points")
 
-    path = reduce_diagons(new_path)
-    print(len(path))
-
-    # path = reduce_diagons(path)
+    # path = reduce_diagons(new_path)
     # print(len(path))
 
     # path = reduce_diagons(path)
     # print(len(path))
 
-    return path
+    # path = reduce_diagons(path)
+    # print(len(path))
+
+    return new_path
 
 def reduce_diagons(new_path):
     two_new_path = []
