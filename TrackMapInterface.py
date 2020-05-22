@@ -225,7 +225,7 @@ class TrackMapInterface(TrackMapBase):
 
                 top_left = (i*block_sz, j*block_sz)
                 bot_right = ((i+1)*block_sz, (j+1)*block_sz)
-                rect = c.create_rectangle(top_left, bot_right, fill=color)
+                rect = c.create_rectangle(top_left, bot_right, fill=color, outline='grey76')
                 self.rect_map[i, j] = rect
                 c.pack()
 
@@ -236,7 +236,7 @@ class TrackMapInterface(TrackMapBase):
         for i, point in enumerate(path):
             x = self._scale_input(point)
             str_msg = str(i)
-            self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
+            self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 12")
 
             self.canv.pack() 
 
@@ -253,7 +253,7 @@ class TrackMapInterface(TrackMapBase):
 
 
 
-def load_map(map_name="myTrack1"):
+def load_map(map_name="myTrack0"):
     filename = "DataRecords/" + map_name 
     db_file = open(filename, 'rb')
     loadmap = load(db_file)
@@ -261,9 +261,8 @@ def load_map(map_name="myTrack1"):
     return loadmap
 
 def test_interface():
-    # map_data = load_map()
-    myTrackMap = TrackGenerator()
-    # myInterface = TrackMapInterface(map_data)
+    map_data = load_map()
+    myInterface = TrackMapInterface(map_data)
 
 
 # externals
@@ -273,5 +272,6 @@ def show_track_path(track, path):
 
 
 if __name__ == "__main__":
-    test_interface()
+    myTrackMap = TrackGenerator()
+    # test_interface()
 

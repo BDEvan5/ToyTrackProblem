@@ -351,7 +351,7 @@ class Node():
 
 
 def A_StarTrackWrapper(track, ds):
-    path_finder = A_StarPathFinderTrack(track)
+    # path_finder = A_StarPathFinderTrack(track)
     track.path_start_location = track.start_location
     total_path = []
     if len(track.way_pts) == 0:
@@ -359,14 +359,17 @@ def A_StarTrackWrapper(track, ds):
         raise ValueError
     for i in range(len(track.way_pts)):
         track.path_end_location = track.way_pts[i]
+
+        print(f"Start: {track.path_start_location} --> End: {track.path_end_location}")
+        path_finder = A_StarPathFinderTrack(track)
         path = path_finder.run_search(ds)
 
-        # print(f"Finish {i} runs")
         # print(path)
 
-        for i in range(len(path) -1): # don't add last point
-            total_path.append(path[i])
-        track.path_start_location = track.path_end_location
+        for j in range(len(path) -1): # don't add last point
+            total_path.append(path[j])
+
+        track.path_start_location = track.way_pts[i]
 
     track.path_end_location = track.start_location
     path = path_finder.run_search(ds)

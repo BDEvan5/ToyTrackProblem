@@ -4,7 +4,7 @@ import LibFunctions as f
 
 
 class TrackMapData:
-    def __init__(self, resolution=2, scaling_factor=10):
+    def __init__(self, resolution=1, scaling_factor=10):
         # replacing the old trackdata
         self.fs = int(scaling_factor) # scaling factor from map size to display dize
         self.res = int(resolution) # how many map blocks to drawn blocks
@@ -65,11 +65,19 @@ class TrackMapData:
 
 
     def check_collision(self, x, hidden_obs=False):
-        [i, j] = self.get_location_value(x)
+        i = x[0]
+        j = x[1]
+        # [i, j] = self.get_location_value(x)
+        if i >= 100 or i < 0: 
+            return True
+        if j >= 100 or j < 0:
+            return True
         if self.track_map[i, j]:
             return True
         if hidden_obs and self.obs_map[i, j]:
             return True
+        #check boundaries
+        # if no collision: return false
         return False
     
     def get_location_value(self, x):
