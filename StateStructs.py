@@ -144,15 +144,15 @@ class CarState(WayPoint, Ranging, CarModel):
         state.append(self.v/max_v)
         state.append(self.theta/max_theta)
 
-        x_glbl_bf = self.relocate_glbl_wp()
-        state.append(x_glbl_bf[0]/max_dis_glbl_wp)
-        state.append(x_glbl_bf[1]/max_dis_glbl_wp)
+        # x_glbl_bf = self.relocate_glbl_wp()
+        # state.append(x_glbl_bf[0]/max_dis_glbl_wp)
+        # state.append(x_glbl_bf[1]/max_dis_glbl_wp)
         for ran in self.ranges:
             r_val = np.around((ran.val/max_range), 4)
             state.append(r_val)
 
         state = np.array(state)
-        state = state[None, :]
+        # state = state[None, :]
         return state
 
     def relocate_glbl_wp(self):

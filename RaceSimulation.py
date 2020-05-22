@@ -15,6 +15,9 @@ from PathTracker import Tracker
 from Interface import show_path, render_ep
 from TrackMapInterface import load_map, show_track_path, render_track_ep
 
+from ValueAgent import Model, ReplayBuffer, RunnerVanilla
+
+
 def get_track_path(load=True, load_path=True):
     track = load_map()
 
@@ -40,7 +43,7 @@ def get_track_path(load=True, load_path=True):
         # show_track_path(track, path)
 
         path = optimise_track_trajectory(path, track)
-        # show_track_path(track, path)
+        show_track_path(track, path)
         path_obj = add_velocity(path)
 
         pickle.dump(path_obj, db_file)
@@ -80,7 +83,7 @@ def get_path(load=False):
 
 def simulation_runner(config):
     # path_obj, track = get_path(True)
-    path_obj, track = get_track_path(True, True)
+    path_obj, track = get_track_path(False, True)
     # show_path(track, path_obj)
 
     # run sim
@@ -98,7 +101,33 @@ def simulation_runner(config):
     # env.render_episode("DataRecords/PathTracker", False)
     render_track_ep(track, path_obj, env.sim_mem)
 
+def learn(config):
+    path_obj, track = get_track_path(True, True)
+    # show_path(track, path_obj)
 
+    # run sim
+    env = RaceEnv(config, track)
+    # tracker = Tracker(path_obj)
+
+    print("Running Vanilla")
+    replay_ratio = 8 #replay ratio of on to off policy learning
+
+    model = Model(3)
+    replay_buffer = ReplayBuffer(20)
+
+    runner = RunnerVanilla(env, model, path_obj)
+    for _ in range(200):
+        b = runner.run_batch()
+        replay_buffer.add_batch(b)
+        model.update_model(b)
+
+        print(f"Loss {model.update_n}: {model._loss_fcn()}")
+
+        for _ in range(replay_ratio):
+            b = replay_buffer.get_random_batch()
+            model.update_model(b)
+
+    render_track_ep(track, path_obj, env.sim_mem)
 
 
 
@@ -106,4 +135,5 @@ if __name__ == "__main__":
     # get_path(False)
     # get_track_path()
     config = create_sim_config()
-    simulation_runner(config)
+    # simulation_runner(config)
+    learn(config)

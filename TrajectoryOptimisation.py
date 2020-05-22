@@ -34,8 +34,8 @@ def reduce_path_diag(path):
         if abs(pt1[1] - pt2[1]) == abs(pt1[0] - pt2[0]): # if diagonal
             continue
         dis = f.get_distance(pt1, pt2)
-        if dis < 5:
-            continue
+        # if dis < 5:
+        #     continue
         
 
         new_path.append(path[i-1]) # add corners
@@ -103,7 +103,7 @@ def preprocess_heat_map(track=None, show=False):
     track_map = track.get_heat_map()
     track_map = np.asarray(track_map, dtype=np.float32)
 
-    for _ in range(5): # blocks up to 5 away will start to have a gradient
+    for _ in range(10): # blocks up to 5 away will start to have a gradient
         for i in range(1, 98):
             for j in range(1, 98):
                 left = track_map[i-1, j]
@@ -195,25 +195,26 @@ def calcTrajOpti(path):
     return path
 
 def optimise_track_trajectory(path, track):
-    traj_map = preprocess_heat_map(track, False)
+    # traj_map = preprocess_heat_map(track, False)
+    traj_map = preprocess_heat_map(track, True)
  
     def trajectory_objective(traj):
-        A = 200
+        A = 1
         traj = np.reshape(traj, (-1, 2))
         for pt in traj:
             if pt[0] > 100 or pt[1] > 100:
                 return 20 * pt[0] * pt[1]
 
     
-        distances = np.array([f.get_distance(traj[i], traj[i+1]) for i in range(len(traj)-1)])
-        cost_distance = np.sum(distances)
+        # distances = np.array([f.get_distance(traj[i], traj[i+1]) for i in range(len(traj)-1)])
+        # cost_distance = np.sum(distances)
 
         obstacle_costs = np.array([traj_map[int(pt[0]-1), int(pt[1])] ** 0.5 for pt in traj])
         obs_cost = np.sum(obstacle_costs) * A
 
-        cost = cost_distance + obs_cost
+        # cost = cost_distance + obs_cost
         # print(f"Cost: {cost} -> dis: {cost_distance} -> Obs: {obs_cost}")
-        return cost
+        return obs_cost
 
     def get_bounds():
         start1 = tuple((path[0][0], path[0][0]))
@@ -232,7 +233,7 @@ def optimise_track_trajectory(path, track):
 
     mthds = ['trust-constr', 'Powell', 'Nelder-Mead', 'SLSQP']
     x0 = np.array(path).flatten()
-    x = so.minimize(fun=trajectory_objective, x0=x0, bounds=bnds, method=mthds[0])
+    x = so.minimize(fun=trajectory_objective, x0=x0, bounds=bnds, method=mthds[3])
 
     print(f"Message: {x.message}")
     print(f"Success: {x.success}")

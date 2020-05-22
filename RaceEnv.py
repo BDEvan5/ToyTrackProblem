@@ -49,7 +49,7 @@ class RaceEnv:
         obs = self.car_state.get_state_observation()
         self.sim_mem.step += 1
 
-        return self.car_state, self.env_state.reward, self.env_state.done
+        return self.car_state.get_state_observation(), self.env_state.reward, self.env_state.done
 
     def reset(self):
         self.car_state.reset_state(self.track.start_location, self.track.start_location)
@@ -57,17 +57,17 @@ class RaceEnv:
         self.sim_mem.clear_mem()
         self.track.reset_obstacles() # turn back on
 
-        # return self.car_state.get_state_observation()
-        return self.car_state
+        return self.car_state.get_state_observation()
+        # return self.car_state
 
     def _get_reward(self, coll_flag):
         # self.car_state.cur_distance = f.get_distance(self.car_state.x, self.track.end_location) 
         self.car_state.cur_distance = 0
-        reward = 0 
-        crash_cost = 1
+        reward = 1 
+        crash_cost = 0
 
         if coll_flag:
-            reward = - crash_cost
+            reward = - crash_cost # 1 or zero
         
         self.env_state.reward = reward
         self.car_state.prev_distance = deepcopy(self.car_state.cur_distance)
@@ -108,17 +108,6 @@ class RaceEnv:
             ran.val = update_val
         # self.car_state.print_ranges()
 
-    def render_episode(self, screen_name_path, pause=False):
-        dt = 60
-        interface = Interface(self.track, dt)
-        interface.save_shot_path = screen_name_path
-        interface.pause_flag = pause
-
-        for step in self.sim_mem.steps:
-            interface.step_q.put(step)
-
-        # self.interface.setup_root()
-        interface.show_path_setup_root(self.pa)
 
 
 
