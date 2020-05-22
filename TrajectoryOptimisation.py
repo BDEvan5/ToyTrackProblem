@@ -27,19 +27,56 @@ def reduce_path_diag(path):
     new_path = []
     new_path.append(path[0]) # starting pos
     pt1 = path[0]
-    for i in range(2, len(path)):
+    for i in range(2, len(path)-1): 
         pt2 = path[i]
         if pt1[0] == pt2[0] or pt1[1] == pt2[1]:
             continue
         if abs(pt1[1] - pt2[1]) == abs(pt1[0] - pt2[0]): # if diagonal
             continue
+        dis = f.get_distance(pt1, pt2)
+        if dis < 5:
+            continue
+        
+
         new_path.append(path[i-1]) # add corners
         pt1 = path[i-1]
+
+    new_path.append(path[-2]) # add end
     new_path.append(path[-1]) # add end
+     
+    print(f"Path Reduced from: {len(path)} to: {len(new_path)}  points")
 
-    print(f"Path Reduced from: {len(path)} to: {len(new_path)} points")
+    path = reduce_diagons(new_path)
+    print(len(path))
 
-    return new_path
+    # path = reduce_diagons(path)
+    # print(len(path))
+
+    # path = reduce_diagons(path)
+    # print(len(path))
+
+    return path
+
+def reduce_diagons(new_path):
+    two_new_path = []
+    for i in range(0, len(new_path)-2):
+        pt1 = new_path[i]
+        pt2 = new_path[i+1]
+        pt3 = new_path[i+2]
+
+        m1 = f.get_gradient(pt1, pt2)
+        m2 = f.get_gradient(pt1, pt3)
+        dm = abs(abs(m1) - abs(m2))
+        if dm > 0.25: # tolerance for different grads
+            two_new_path.append(pt1)
+        elif f.get_distance(pt1, pt2) > 15:
+            two_new_path.append(pt1) # not too far apart
+
+    two_new_path.append(new_path[-2])
+    two_new_path.append(new_path[-1])
+
+    return two_new_path
+
 
 def expand_path(path):
     new_path = []
@@ -65,9 +102,6 @@ def preprocess_heat_map(track=None, show=False):
     #     track.simple_maze()
     track_map = track.get_heat_map()
     track_map = np.asarray(track_map, dtype=np.float32)
-    # ax = plt.gca()
-    # im = ax.imshow(track_map)
-    # plt.show()
 
     for _ in range(5): # blocks up to 5 away will start to have a gradient
         for i in range(1, 98):

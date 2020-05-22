@@ -35,17 +35,19 @@ def get_track_path(load=False, load_path=True):
             np.save(path_file, path)
 
         path = reduce_path_diag(path)
-        # show_track_path(track, path)
-        path = optimise_track_trajectory(path, track)
+        # path = reduce_path_diag(path)
         show_track_path(track, path)
-        # path = optimise_trajectory(path)
-        path_obj = add_velocity(path)
 
-        pickle.dump(path_obj, db_file)
+        # path = optimise_track_trajectory(path, track)
+        # show_track_path(track, path)
+        # # path = optimise_trajectory(path)
+        # path_obj = add_velocity(path)
 
-    db_file.close()
+        # pickle.dump(path_obj, db_file)
 
-    return path_obj, track
+    # db_file.close()
+
+    # return path_obj, track
 
 
 
