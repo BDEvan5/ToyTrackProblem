@@ -13,16 +13,18 @@ from TrajectoryOptimisation import optimise_trajectory, add_velocity
 from TrajectoryOptimisation import reduce_path, reduce_path_diag, optimise_track_trajectory # debugging
 from PathTracker import Tracker
 from Interface import show_path, render_ep
-from TrackMapInterface import load_map, show_track_path
+from TrackMapInterface import load_map, show_track_path, render_track_ep
 
-def get_track_path(load=False, load_path=False):
+def get_track_path(load=True, load_path=True):
     track = load_map()
 
     filename = "DataRecords/path_obj_db"
-    db_file = open(filename, 'bw+')
+    
     if load:
+        db_file = open(filename, 'br+')
         path_obj = pickle.load(db_file)
     else:
+        db_file = open(filename, 'bw+')
         path_file = "DataRecords/path_list.npy"
         if load_path:
             try:
@@ -35,10 +37,10 @@ def get_track_path(load=False, load_path=False):
             np.save(path_file, path)
 
         path = reduce_path_diag(path)
-        show_track_path(track, path)
+        # show_track_path(track, path)
 
         path = optimise_track_trajectory(path, track)
-        show_track_path(track, path)
+        # show_track_path(track, path)
         path_obj = add_velocity(path)
 
         pickle.dump(path_obj, db_file)
@@ -77,7 +79,8 @@ def get_path(load=False):
 
 
 def simulation_runner(config):
-    path_obj, track = get_path(True)
+    # path_obj, track = get_path(True)
+    path_obj, track = get_track_path(True, True)
     # show_path(track, path_obj)
 
     # run sim
@@ -93,7 +96,7 @@ def simulation_runner(config):
         # print(f"Action: [{ref_action[0]:.2f} ; {ref_action[1]:.4f}]")
 
     # env.render_episode("DataRecords/PathTracker", False)
-    render_ep(track, path_obj, env.sim_mem)
+    render_track_ep(track, path_obj, env.sim_mem)
 
 
 
@@ -101,6 +104,6 @@ def simulation_runner(config):
 
 if __name__ == "__main__":
     # get_path(False)
-    get_track_path()
-    # config = create_sim_config()
-    # simulation_runner(config)
+    # get_track_path()
+    config = create_sim_config()
+    simulation_runner(config)

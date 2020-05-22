@@ -35,7 +35,7 @@ class RaceEnv:
         new_x = self.car_state.chech_new_state(control_action, self.config.dt)
 
         # new_state = self.car.chech_new_state(self.car_state, control_action, self.config.dt)
-        coll_flag = self.track._check_collision_hidden(new_x)
+        coll_flag = self.track.check_collision(new_x) # hidden to come
 
         if not coll_flag: # no collsions
             self.car_state.update_controlled_state(control_action, self.config.dt)
@@ -52,17 +52,17 @@ class RaceEnv:
         return self.car_state, self.env_state.reward, self.env_state.done
 
     def reset(self):
-        self.car_state.reset_state(self.track.start_location, self.track.end_location)
+        self.car_state.reset_state(self.track.start_location, self.track.start_location)
         self.reward = 0
         self.sim_mem.clear_mem()
-        self.track.set_up_random_obstacles() # turn back on
+        self.track.reset_obstacles() # turn back on
 
         # return self.car_state.get_state_observation()
         return self.car_state
 
     def _get_reward(self, coll_flag):
-        self.car_state.cur_distance = f.get_distance(self.car_state.x, self.track.end_location) 
-
+        # self.car_state.cur_distance = f.get_distance(self.car_state.x, self.track.end_location) 
+        self.car_state.cur_distance = 0
         reward = 0 
         crash_cost = 1
 
@@ -101,7 +101,7 @@ class RaceEnv:
                 r = dx * i
                 addx = [dx * i * np.sin(th), -dx * i * np.cos(th)] # check
                 x_search = f.add_locations(curr_x, addx)
-                crash_val = self.track._check_collision_hidden(x_search)
+                crash_val = self.track.check_collision(x_search)
                 i += 1
             update_val = (i - 2) * dx # sets the last distance before collision 
             ran.dr = update_val - ran.val # possibly take more than two terms
@@ -118,7 +118,7 @@ class RaceEnv:
             interface.step_q.put(step)
 
         # self.interface.setup_root()
-        interface.show_path_setup_root()
+        interface.show_path_setup_root(self.pa)
 
 
 

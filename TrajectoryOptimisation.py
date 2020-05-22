@@ -195,7 +195,7 @@ def calcTrajOpti(path):
     return path
 
 def optimise_track_trajectory(path, track):
-    traj_map = preprocess_heat_map(track, True)
+    traj_map = preprocess_heat_map(track, False)
  
     def trajectory_objective(traj):
         A = 200
