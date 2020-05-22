@@ -87,25 +87,11 @@ def preprocess_heat_map(track=None, show=False):
                 track_map[i, j] = max(obs_sum / 16, track_map[i, j])
 
     if show:
-        # ax = plt.gca()
-        # im = ax.imshow(track_map)
-        # plt.show()
-
-        xs = [i for i in range(100)]
-        ys = [i for i in range(100)]
-        X, Y = np.meshgrid(xs, ys)
-
-        fig = plt.figure()
-
-
-        ax = fig.gca(projection='3d')
-        surf = ax.plot_surface(X, Y, track_map, cmap='plasma')
-        fig.colorbar(surf)
-        plt.show()
+        show_heat_map(track_map)
 
     return track_map 
 
-def show_heat_map(view3d=True):
+def show_heat_map(track_map, view3d=True):
     if view3d:
         xs = [i for i in range(100)]
         ys = [i for i in range(100)]
