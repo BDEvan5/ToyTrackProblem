@@ -5,6 +5,8 @@ from PathPlanner import get_practice_path, convert_list_to_path
 from StateStructs import Path
 
 import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
+from mpl_toolkits.mplot3d import Axes3D
 from scipy import optimize as so
 
 
@@ -18,6 +20,24 @@ def reduce_path(path):
             new_path.append(path[i-1]) # add corners
             pt1 = path[i-1]
     new_path.append(path[-1]) # add end
+
+    return new_path
+
+def reduce_path_diag(path):
+    new_path = []
+    new_path.append(path[0]) # starting pos
+    pt1 = path[0]
+    for i in range(2, len(path)):
+        pt2 = path[i]
+        if pt1[0] == pt2[0] or pt1[1] == pt2[1]:
+            continue
+        if abs(pt1[1] - pt2[1]) == abs(pt1[0] - pt2[0]): # if diagonal
+            continue
+        new_path.append(path[i-1]) # add corners
+        pt1 = path[i-1]
+    new_path.append(path[-1]) # add end
+
+    print(f"Path Reduced from: {len(path)} to: {len(new_path)} points")
 
     return new_path
 
@@ -39,13 +59,17 @@ def expand_path(path):
 
     return new_path
 
-def preprocess_heat_map(track=None):
-    if track is None:
-        track = TrackData()
-        track.simple_maze()
+def preprocess_heat_map(track=None, show=False):
+    # if track is None:
+    #     track = TrackData()
+    #     track.simple_maze()
     track_map = track.get_heat_map()
+    track_map = np.asarray(track_map, dtype=np.float32)
+    # ax = plt.gca()
+    # im = ax.imshow(track_map)
+    # plt.show()
 
-    for _ in range(1): # blocks up to 5 away will start to have a gradient
+    for _ in range(5): # blocks up to 5 away will start to have a gradient
         for i in range(1, 98):
             for j in range(1, 98):
                 left = track_map[i-1, j]
@@ -62,8 +86,45 @@ def preprocess_heat_map(track=None):
                 obs_sum = sum((left, right, up, down, left_up, left_down, right_up, right_down))
                 track_map[i, j] = max(obs_sum / 16, track_map[i, j])
 
+    if show:
+        # ax = plt.gca()
+        # im = ax.imshow(track_map)
+        # plt.show()
+
+        xs = [i for i in range(100)]
+        ys = [i for i in range(100)]
+        X, Y = np.meshgrid(xs, ys)
+
+        fig = plt.figure()
+
+
+        ax = fig.gca(projection='3d')
+        surf = ax.plot_surface(X, Y, track_map, cmap='plasma')
+        fig.colorbar(surf)
+        plt.show()
+
     return track_map 
-   
+
+def show_heat_map(view3d=True):
+    if view3d:
+        xs = [i for i in range(100)]
+        ys = [i for i in range(100)]
+        X, Y = np.meshgrid(xs, ys)
+
+        fig = plt.figure()
+
+
+        ax = fig.gca(projection='3d')
+        surf = ax.plot_surface(X, Y, track_map, cmap='plasma')
+        fig.colorbar(surf)
+    else:
+        ax = plt.gca()
+        im = ax.imshow(track_map)
+
+    plt.show()
+
+    
+ 
 def calcTrajOpti(path):
     traj_map = preprocess_heat_map()
 
@@ -113,6 +174,57 @@ def calcTrajOpti(path):
 
     return path
 
+def optimise_track_trajectory(path, track):
+    traj_map = preprocess_heat_map(track, True)
+ 
+    def trajectory_objective(traj):
+        A = 200
+        traj = np.reshape(traj, (-1, 2))
+        for pt in traj:
+            if pt[0] > 100 or pt[1] > 100:
+                return 20 * pt[0] * pt[1]
+
+    
+        distances = np.array([f.get_distance(traj[i], traj[i+1]) for i in range(len(traj)-1)])
+        cost_distance = np.sum(distances)
+
+        obstacle_costs = np.array([traj_map[int(pt[0]-1), int(pt[1])] ** 0.5 for pt in traj])
+        obs_cost = np.sum(obstacle_costs) * A
+
+        cost = cost_distance + obs_cost
+        # print(f"Cost: {cost} -> dis: {cost_distance} -> Obs: {obs_cost}")
+        return cost
+
+    def get_bounds():
+        start1 = tuple((path[0][0], path[0][0]))
+        end1 = tuple((path[-1][0], path[-1][0]))
+        start2 = tuple((path[0][1], path[0][1]))
+        end2 = tuple((path[-1][1], path[-1][1]))
+        bnd = [(0, 100)]*((len(path)-2)*2)
+        bnd.insert(0, start1)
+        bnd.insert(1, start2)
+        bnd.insert(-1, end1)
+        bnd.insert(-1, end2)
+
+        return bnd
+
+    bnds = get_bounds()
+
+    mthds = ['trust-constr', 'Powell', 'Nelder-Mead', 'SLSQP']
+    x0 = np.array(path).flatten()
+    x = so.minimize(fun=trajectory_objective, x0=x0, bounds=bnds, method=mthds[0])
+
+    print(f"Message: {x.message}")
+    print(f"Success: {x.success}")
+    print(f"Result: {x.fun}")
+    path = np.reshape(x.x, (-1, 2))
+    # print(f"Path: {path}")
+
+    path_obj = convert_list_to_path(path)
+    # path_obj.show()
+
+    return path
+
 
 
 def run_traj_opti():
@@ -129,11 +241,11 @@ def run_traj_opti():
 
 #external call
 def optimise_trajectory(path):
-    path = reduce_path(path)
-    path = expand_path(path)
-    path = expand_path(path)
+    # path = reduce_path(path)
+    # path = expand_path(path)
+    # path = expand_path(path)
 
-    path = calcTrajOpti(path)
+    # path = calcTrajOpti(path)
 
     return path
 

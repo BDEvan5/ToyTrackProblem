@@ -109,6 +109,9 @@ class TrackMapData:
             return True
         return False
 
+    def get_heat_map(self):
+        return self.track_map
+
 
 
 
