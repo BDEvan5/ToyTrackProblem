@@ -202,15 +202,15 @@ class A_StarPathFinderTrack:
         self.open_node_n = 0
     
     def set_directions(self):
-        # for i in range(3):
-        #     for j in range(3):
-        #         direction = [(j-1)*self.ds, (i-1)*self.ds]
-        #         self.position_list.append(direction)
+        for i in range(3):
+            for j in range(3):
+                direction = [(j-1)*self.ds, (i-1)*self.ds]
+                self.position_list.append(direction)
 
-        # self.position_list.pop(4) # remove stand still
-
+        self.position_list.pop(4) # remove stand still
+        print(self.position_list)
         # this makes it not go diagonal
-        self.position_list = [[1, 0], [0, -1], [-1, 0], [0, 1]]
+        # self.position_list = [[1, 0], [0, -1], [-1, 0], [0, 1]]
         for pos in self.position_list:
             pos[0] = pos[0] * self.ds
             pos[1] = pos[1] * self.ds
@@ -230,7 +230,7 @@ class A_StarPathFinderTrack:
 
             self.generate_children()
             i += 1
-            
+
         if i > 3900:
             print("Max Iterations reached: problem with search")
         path = self.get_path_list()
@@ -367,6 +367,7 @@ def A_StarTrackWrapper(track, ds):
 
         path_finder = A_StarPathFinderTrack(track)
         path = path_finder.run_search(ds)
+        print(path)
 
         for j in range(len(path) -1): # don't add last point
             total_path.append(path[j])
