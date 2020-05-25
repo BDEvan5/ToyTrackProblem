@@ -3,11 +3,18 @@ import numpy as np
 from Models import TrackData
 from PathPlanner import get_practice_path, convert_list_to_path
 from StateStructs import Path
+from TrackMapInterface import load_map, show_track_path
 
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 from mpl_toolkits.mplot3d import Axes3D
 from scipy import optimize as so
+from scipy import interpolate as ip 
+import cvxpy
+from casadi import *
+# import sklearn
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
 
 
 def reduce_path(path):
@@ -156,7 +163,92 @@ def show_heat_map(track_map, view3d=True):
 
     plt.show()
 
-    
+def show_point_heat_map(track):
+    track_map = preprocess_heat_map(track, False)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    xs = ys = range(100)
+    X, Y = np.meshgrid(xs, ys)
+
+    ax.scatter(X, Y, track_map, marker='x')
+    plt.show()
+
+def get_heat_map_eqn(track_map):
+    # aim is to get a polynomial function for the heat map
+    x = range(100)
+    y = range(100)
+    # X, Y = np.meshgrid(x, y)
+    new_map = np.reshape(track_map, (10000, 1))
+    deg = np.asarray(10)
+
+    pre_vals = [10, 10]
+    pre_vals = np.reshape(pre_vals, (1, -1))
+
+    poly = PolynomialFeatures(2)
+    d = []
+    for i in x:
+        for j in y:
+            d.append([i, j])
+    # print(d)
+    trans = poly.fit_transform(d)
+    _pre = poly.fit_transform(pre_vals)
+
+    clf = LinearRegression()
+    clf.fit(trans, new_map)
+
+    prediction = clf.predict(_pre)
+
+    # print(f" Trans: {trans}")
+    print(f"Pre: {_pre}")
+    print(f" Predict: {prediction}")
+    c = clf.coef_[0, :]
+    print(f"Res: {c}")
+
+    p = pre_vals[0, :]
+    res = claculate_value(pre_vals[0, :], clf)
+
+    print(f"Res 2: {res}") 
+
+    return clf
+
+def claculate_value(p, clf):
+    c = clf.coef_[0, :]
+    i = clf.intercept_
+
+    res = c[0] + c[1] * p[0] + c[2] * p[1] + c[3] * p[0]**2 + c[4] * p[0]*p[1] + c[5] * p[1]**2
+    res += i 
+
+    return res
+
+def plot_interp():
+    track = load_map()
+    traj_map = preprocess_heat_map(track, False)
+
+    clf = get_heat_map_eqn(traj_map)
+
+    new_map = np.zeros((100, 100))
+    for i in range(100):
+        for j in range(100):
+            new_map[i, j] = claculate_value([i, j], clf)
+
+    show_heat_map(new_map)
+
+    # x = np.linspace(0, 100, 1000)
+    # y = np.linspace(0, 100, 1000)
+    # X, Y = np.meshgrid(x, y)
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+
+    # new_map = []
+    # for i in x:
+    #     for j in y:
+    #         d = claculate_value([i, j], clf)
+    #         new_map.append(d)
+
+    # ax.scatter(X, Y, new_map, marker='x')
+    # plt.show()
+
  
 def calcTrajOpti(path):
     traj_map = preprocess_heat_map()
@@ -208,26 +300,27 @@ def calcTrajOpti(path):
     return path
 
 def optimise_track_trajectory(path, track):
-    # traj_map = preprocess_heat_map(track, False)
-    traj_map = preprocess_heat_map(track, True)
+    traj_map = preprocess_heat_map(track, False)
+    # traj_map = preprocess_heat_map(track, True)
  
     def trajectory_objective(traj):
-        A = 1
+        A = 20
         traj = np.reshape(traj, (-1, 2))
         for pt in traj:
-            if pt[0] > 100 or pt[1] > 100:
+            if pt[0] >= 100 or pt[1] >= 100:
                 return 20 * pt[0] * pt[1]
 
     
-        # distances = np.array([f.get_distance(traj[i], traj[i+1]) for i in range(len(traj)-1)])
-        # cost_distance = np.sum(distances)
+        distances = np.array([f.get_distance(traj[i], traj[i+1]) for i in range(len(traj)-1)])
+        cost_distance = np.sum(distances)
 
         obstacle_costs = np.array([traj_map[int(pt[0]-1), int(pt[1])] ** 0.5 for pt in traj])
         obs_cost = np.sum(obstacle_costs) * A
 
-        # cost = cost_distance + obs_cost
-        # print(f"Cost: {cost} -> dis: {cost_distance} -> Obs: {obs_cost}")
-        return obs_cost
+        cost = obs_cost
+        # cost += cost_distance
+        print(f"Cost: {cost} -> dis: {cost_distance} -> Obs: {obs_cost}")
+        return cost
 
     def get_bounds():
         start1 = tuple((path[0][0], path[0][0]))
@@ -259,6 +352,72 @@ def optimise_track_trajectory(path, track):
 
     return path
 
+def cvxpy_optimisation(path, track):
+    traj_map = preprocess_heat_map(track, False)
+    # traj_map = preprocess_heat_map(track, True)
+
+    x = cvxpy.Variable((len(path), 2))
+
+    cost = 0.0
+
+    for i in range(1, len(path) - 1): # exclude start and end pts
+        cost += cvxpy.sqrt(cvxpy.abs(cvxpy.square(x[i]) - cvxpy.square(x[i])))
+
+
+    constraints = []
+    constraints += [x[0] == path[0]]
+    constraints += [x[-1] == path[-1]]
+    constraints += [x[:,:] >= 0]
+    constraints += [x[:, :] <= 0]
+    constraints += [traj_map[int(x[:, 0].value), int(x[:, 1].value)] <= 0.5]
+
+    problem = cvxpy.Problem(cvxpy.Minimize(cost), constraints)
+    problem.solve()
+
+
+    print(f"X values: {x.value}")
+
+
+    
+
+def casadi_optimisation(path, track):
+    # heat_map = preprocess_heat_map(track, False)
+    track_map = track.get_heat_map()
+    track_map = np.asarray(track_map, dtype=np.float32)
+
+    def look_up_table(x, y):
+        if x is not None and y is not None:
+            e_val = x
+            return track_map[x, y]
+
+    path_length = len(path)
+
+    x = MX.sym('x', path_length)
+    y = MX.sym('y', path_length)
+    theta = MX.sym('th', path_length)
+    thetas = []
+    for i in range(path_length-1):
+        m = f.get_gradient(path[i], path[i+1])
+        thetas.append(np.arctan(m))
+    thetas.append(np.pi) # straight for last point
+
+    nlp = {\
+        'x':vertcat(x, y),
+        'f':sumsqr(theta),
+        'g':vertcat(look_up_table(x, y))
+        }
+
+    S = nlpsol('S', 'ipopt', nlp, {'ipopt':{'print_level':3, 'max_iter':max_iter}})
+    x0 = thetas 
+
+    r = S(x0=x0, lbg=0, ubg=100)
+
+    x_opt = r['x']
+    print('x_opt: ', x_opt)
+    x_opt = r['y']
+    print('y_opt: ', x_opt)
+    x_opt = r['th']
+    print('theta_opt: ', x_opt)
 
 
 def run_traj_opti():
@@ -274,14 +433,6 @@ def run_traj_opti():
 
 
 #external call
-def optimise_trajectory(path):
-    # path = reduce_path(path)
-    # path = expand_path(path)
-    # path = expand_path(path)
-
-    # path = calcTrajOpti(path)
-
-    return path
 
 def add_velocity(path_obj, car=None):
     max_v = 5
@@ -312,8 +463,37 @@ def add_velocity(path_obj, car=None):
     return path_obj
 
 
+def test_cvxpy_opti(load_opti_path=True, load_path=True):
+    track = load_map()
+    # show_point_heat_map(track)
+
+    path_file = "DataRecords/path_list.npy"
+    path = np.load(path_file)
+
+
+    path = reduce_path_diag(path)
+    # show_track_path(track, path)
+
+    track_map = preprocess_heat_map(track)
+    get_heat_map_eqn(track_map)
+
+    path = cvxpy_optimisation(path, track)
+    # path = casadi_optimisation(path, track)
+    show_track_path(track, path)
+    # path_obj = add_velocity(path)
+
+
+def test_heat_map():
+    track = load_map()
+    traj_map = preprocess_heat_map(track, False)
+
+    get_heat_map_eqn(traj_map)
+
 
 
 
 if __name__ == "__main__":
-    run_traj_opti()
+    # run_traj_opti()
+    # test_cvxpy_opti(False, True)
+    # test_heat_map()
+    plot_interp()

@@ -9,7 +9,7 @@ from RaceEnv import RaceEnv
 from Models import TrackData
 from Config import create_sim_config
 from PathPlanner import A_StarPathFinder, A_StarTrackWrapper
-from TrajectoryOptimisation import optimise_trajectory, add_velocity
+from TrajectoryOptimisation import add_velocity
 from TrajectoryOptimisation import reduce_path, reduce_path_diag, optimise_track_trajectory # debugging
 from PathTracker import Tracker
 from Interface import show_path, render_ep
@@ -40,13 +40,13 @@ def get_track_path(load_opti_path=True, load_path=True):
             np.save(path_file, path)
 
         path = reduce_path_diag(path)
-        show_track_path(track, path)
-
-        # path = optimise_track_trajectory(path, track)
         # show_track_path(track, path)
-        # path_obj = add_velocity(path)
 
-        # pickle.dump(path_obj, db_file)
+        path = optimise_track_trajectory(path, track)
+        show_track_path(track, path)
+        path_obj = add_velocity(path)
+
+        pickle.dump(path_obj, db_file)
 
     db_file.close()
 
@@ -84,6 +84,7 @@ def learn(config):
 
 
 if __name__ == "__main__":
-    get_track_path(False, True)
-    # config = create_sim_config()
-    # learn(config)
+    # get_track_path(False, True)
+    # get_track_path(False, False)
+    config = create_sim_config()
+    learn(config)
