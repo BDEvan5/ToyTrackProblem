@@ -20,6 +20,8 @@ class WayPoint:
     def set_point(self, x, v, theta):
         self.x = x
         self.v = v
+        while theta > (2* np.pi):
+            theta = theta - (2*np.pi)
         self.theta = theta
 
     def print_point(self, text=None):
@@ -132,6 +134,7 @@ class CarState(WayPoint, Ranging, CarModel):
         self.cur_distance = 0.0
         self.prev_distance = 0.0
         self.glbl_wp = WayPoint() # this is what is being navigated towards
+        self.crash_chance = 0.0
 
     def get_state_observation(self):
         # max normalisation constants
@@ -141,6 +144,8 @@ class CarState(WayPoint, Ranging, CarModel):
         max_dis_glbl_wp = 100 # distance to next wp
 
         state = []
+        state.append(self.x[0])
+        state.append(self.x[1])
         state.append(self.v/max_v)
         state.append(self.theta/max_theta)
 
@@ -198,6 +203,8 @@ class SimulationState():
     def _add_env_state(self, env_state):
         self.env_state = env_state
 
+    def print_step(self):
+        self.car_state.print_state()
 
 class SimMem:
     def __init__(self, logger=None):
@@ -227,7 +234,8 @@ class SimMem:
 
     def print_ep(self):
         for i, step in enumerate(self.steps):
-            step.print_step(i)
+            step.print_step()
+            # step.print_step(i)
 
     def save_ep(self, f_name):
         save_file_name =  f_name # + str(datetime.datetime.now())

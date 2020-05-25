@@ -8,7 +8,6 @@ from StateStructs import SimulationState
 import multiprocessing as mp
 
 
-
 class TrackMapBase:
     def __init__(self, track_obj=None):
         if track_obj is None:
@@ -310,7 +309,12 @@ class TrackMapInterface(TrackMapBase):
         self.reward_name.pack()
         self.reward = Label(self.info_p, text="0")
         self.reward.pack()
-        
+
+        self.crash_indicator_name = Label(self.info_p, text="Crash Indicator")
+        self.crash_indicator_name.pack()
+        self.crash_indicator = Label(self.info_p, text="0.0")
+        self.crash_indicator.pack()
+
     def set_up_extra_buttons(self):
         # self.b = Frame(self.info_p, height=self.size[0]/2, width=(self.size[1]/10))
         # self.b.pack(side= BOTTOM)
@@ -401,12 +405,12 @@ class TrackMapInterface(TrackMapBase):
                 self.update_info()
                 self.root.after(self.dt, self.run_interface_loop)
             else:
-                # print("Going to destroy tk inter")
-                self.take_screenshot()
+                print("Going to destroy tk inter: the ep is done")
+                # self.take_screenshot()
                 self.root.destroy()
         else:
-            # print("Going to destroy tk inter")
-            self.take_screenshot()
+            print("Going to destroy tk inter: empty queue")
+            # self.take_screenshot()
             self.root.destroy()
 
 # update functions
@@ -438,6 +442,7 @@ class TrackMapInterface(TrackMapBase):
         distance = np.around(self.step_i.car_state.cur_distance)
         state_vec = np.around(self.step_i.car_state.get_state_observation(), 2)
         agent_action = np.around(self.step_i.env_state.agent_action)
+        crash_indi = np.around(self.step_i.car_state.crash_chance)
 
         step_text = str(step)
         self.step.config(text=step_text)
@@ -457,6 +462,8 @@ class TrackMapInterface(TrackMapBase):
 
         self.state_vec.config(text=str(state_vec))
         self.agent_action.config(text=str(agent_action))
+
+        self.crash_indicator.config(text=str(crash_indi))
         
     def draw_ranges(self):
         for obj in self.range_lines: # deletes old lines
@@ -482,7 +489,8 @@ class TrackMapInterface(TrackMapBase):
         arr = [x, y, x+width, y+height]
         # print(arr)
         path = self.save_shot_path + ".png"
-        pyautogui.screenshot(path, region=arr)
+        pyautogui.screenshotUtil.screenshot(path, region=arr)
+        # pyautogui.screenshot(path, region=arr)
 
 
 
@@ -490,6 +498,7 @@ class TrackMapInterface(TrackMapBase):
 
 
 def load_map(map_name="myTrack0"):
+    map_name="myTrack1"
     filename = "DataRecords/" + map_name 
     db_file = open(filename, 'rb')
     loadmap = load(db_file)
@@ -514,6 +523,7 @@ def render_track_ep(track, path, sim_mem, screen_name_path="DataRecords/PathTrac
     interface.pause_flag = pause
 
     for step in sim_mem.steps:
+        # step.print_point("Step Q")
         interface.step_q.put(step)
 
     interface.show_path_setup_root(path)

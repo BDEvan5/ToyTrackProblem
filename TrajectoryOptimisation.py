@@ -316,6 +316,7 @@ def optimise_track_trajectory(path, track):
 
         obstacle_costs = np.array([traj_map[int(pt[0]-1), int(pt[1])] ** 0.5 for pt in traj])
         obs_cost = np.sum(obstacle_costs) * A
+        # obs_cost += traj_map[int(traj[-1][0]-1), int(traj[-1][1]) * 50
 
         cost = obs_cost
         # cost += cost_distance
@@ -330,8 +331,8 @@ def optimise_track_trajectory(path, track):
         bnd = [(0, 100)]*((len(path)-2)*2)
         bnd.insert(0, start1)
         bnd.insert(1, start2)
-        bnd.insert(-1, end1)
         bnd.insert(-1, end2)
+        bnd.insert(-1, end1)
 
         return bnd
 

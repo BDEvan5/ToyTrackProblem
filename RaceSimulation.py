@@ -14,8 +14,10 @@ from TrajectoryOptimisation import reduce_path, reduce_path_diag, optimise_track
 from PathTracker import Tracker
 from Interface import show_path, render_ep
 from TrackMapInterface import load_map, show_track_path, render_track_ep
+import LibFunctions as f
 
-# from ValueAgent import Model, ReplayBuffer, RunnerVanilla
+from ValueAgent import Model, ReplayBuffer, RunnerVanilla
+from NewRunner import NewRunner
 
 
 def get_track_path(load_opti_path=True, load_path=True):
@@ -39,22 +41,23 @@ def get_track_path(load_opti_path=True, load_path=True):
             path = A_StarTrackWrapper(track, 1)
             np.save(path_file, path)
 
-        path = reduce_path_diag(path)
         # show_track_path(track, path)
+        path = reduce_path_diag(path)
 
         path = optimise_track_trajectory(path, track)
-        show_track_path(track, path)
+        # show_track_path(track, path)
         path_obj = add_velocity(path)
 
         pickle.dump(path_obj, db_file)
 
     db_file.close()
 
-    # return path_obj, track
+    return path_obj, track
 
 
 def learn(config):
     path_obj, track = get_track_path(True, True)
+    # path_obj, track = get_track_path(False, False)
     # show_path(track, path_obj)
 
     # run sim
@@ -67,19 +70,26 @@ def learn(config):
     model = Model(3)
     replay_buffer = ReplayBuffer(20)
 
-    runner = RunnerVanilla(env, model, path_obj)
-    for _ in range(200):
-        b = runner.run_batch()
+    runner = NewRunner(env, model, path_obj)
+    losses = []
+    for _ in range(100):
+        b = runner.run_batch(track)
         replay_buffer.add_batch(b)
         model.update_model(b)
 
-        print(f"Loss {model.update_n}: {model._loss_fcn()}")
+        losses.append(model._loss_fcn())
+        print(f"Loss {model.update_n}: {losses[-1]}")
+        # f.plot(losses, figure_n=3)
+
+        # env.sim_mem.print_ep()
+        # render_track_ep(track, path_obj, env.sim_mem, pause=True)
 
         for _ in range(replay_ratio):
             b = replay_buffer.get_random_batch()
             model.update_model(b)
 
-    render_track_ep(track, path_obj, env.sim_mem)
+    # env.sim_mem.print_ep()
+    # render_track_ep(track, path_obj, env.sim_mem, pause=True)
 
 
 

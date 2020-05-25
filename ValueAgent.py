@@ -185,7 +185,6 @@ class Model:
         variables = self.policy.trainable_variables
         self.policy.opti.minimize(loss = self._loss_fcn, var_list=variables)
 
-        
         self.update_n += 1
 
     def _loss_fcn(self):
@@ -235,7 +234,19 @@ class Model:
 
         return action, mu
 
- 
+    def get_action(self, obs):
+        logits, value = self.policy.predict_on_batch(obs)
+        action = tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
+        action = tf.squeeze(action, axis=-1)
+
+        return action.numpy()
+
+    def get_value(self, obs):
+        logits, value = self.policy.predict_on_batch(obs)
+        value = tf.squeeze(value, axis=-1)
+
+        return value
+
 
 
 

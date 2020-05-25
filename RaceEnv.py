@@ -35,7 +35,7 @@ class RaceEnv:
         new_x = self.car_state.chech_new_state(control_action, self.config.dt)
 
         # new_state = self.car.chech_new_state(self.car_state, control_action, self.config.dt)
-        coll_flag = self.track.check_collision(new_x) # hidden to come
+        coll_flag = self.track.check_collision(new_x, True) # hidden to come
 
         if not coll_flag: # no collsions
             self.car_state.update_controlled_state(control_action, self.config.dt)
@@ -78,9 +78,14 @@ class RaceEnv:
             # print("Ended in collision")
             return True
 
-        if self.car_state.x[1] < 2 + self.config.dx:
-            print("Destination reached")
-            return True # this makes it a finish line not a point
+        # if self.car_state.x[1] < 2 + self.config.dx:
+        #     print("Destination reached")
+        #     return True # this makes it a finish line not a point
+        if len(self.sim_mem.steps) > 2:
+            x1 = self.sim_mem.steps[-1].car_state.x
+            x2 = self.car_state.x
+            if self.track.check_past_start(x1, x2):
+                return True
         
         return False
 

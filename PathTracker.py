@@ -20,8 +20,8 @@ class ControlSystem:
 
         x = state[0]
         y = state[1]
-        v = state[2]
-        theta = state[3]
+        v = state[2] * 5
+        theta = state[3] * np.pi # this undoes the scaling
 
         # run v control
         e_v = v_ref - v # error for controler
