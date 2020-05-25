@@ -240,7 +240,7 @@ class TrackMapInterface(TrackMapBase):
         self.step_q = mp.Queue()
         self.range_lines = []
         self.prev_px = [0, 0]
-        self.save_shot_path = "EndShot"
+        self.save_shot_path = "DataRecords/EndShot"
         self.dt = dt
 
 

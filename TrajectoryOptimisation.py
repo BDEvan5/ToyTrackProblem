@@ -33,10 +33,6 @@ def reduce_path_diag(path):
             continue
         if abs(pt1[1] - pt2[1]) == abs(pt1[0] - pt2[0]): # if diagonal
             continue
-        dis = f.get_distance(pt1, pt2)
-        # if dis < 5:
-        #     continue
-        
 
         new_path.append(path[i-1]) # add corners
         pt1 = path[i-1]
@@ -44,38 +40,55 @@ def reduce_path_diag(path):
     new_path.append(path[-2]) # add end
     new_path.append(path[-1]) # add end
      
-    print(f"Path Reduced from: {len(path)} to: {len(new_path)}  points")
+    print(f"Path Reduced from: {len(path)} to: {len(new_path)}  points by straight analysis")
 
-    # path = reduce_diagons(new_path)
-    # print(len(path))
-
-    # path = reduce_diagons(path)
-    # print(len(path))
-
-    # path = reduce_diagons(path)
-    # print(len(path))
+    new_path = reduce_diagons(new_path)
 
     return new_path
 
-def reduce_diagons(new_path):
-    two_new_path = []
-    for i in range(0, len(new_path)-2):
-        pt1 = new_path[i]
-        pt2 = new_path[i+1]
-        pt3 = new_path[i+2]
+def reduce_diagons(path):
+    new_path = []
+    skip_pts = []
+    tol = 0.2
+    look_ahead = 5 # number of points to consider on line
+    # consider using a distance lookahead too
 
-        m1 = f.get_gradient(pt1, pt2)
-        m2 = f.get_gradient(pt1, pt3)
-        dm = abs(abs(m1) - abs(m2))
-        if dm > 0.25: # tolerance for different grads
-            two_new_path.append(pt1)
-        elif f.get_distance(pt1, pt2) > 15:
-            two_new_path.append(pt1) # not too far apart
+    for i in range(len(path) - look_ahead):
+        pts = []
+        for j in range(look_ahead):
+            pts.append(path[i + j]) # generates a list of current points
 
-    two_new_path.append(new_path[-2])
-    two_new_path.append(new_path[-1])
+        grads = []
+        for j in range(1, look_ahead):
+            m = f.get_gradient(pts[0], pts[j])
+            grads.append(m)
 
-    return two_new_path
+        # delta_grads = []
+        # for j in range(look_ahead - 1):
+        #     dm = abs(grads[-1] - grads[j])
+        #     delta_grads.append(dm)
+
+        for j in range(look_ahead -2):
+            ddm = abs((grads[j] - grads[-1])) / (abs(grads[-1]) + 0.0001) # div 0
+            if ddm > tol: # the grad is within tolerance
+                continue
+            index = i + j + 1
+            if index in skip_pts: # no repeats
+                continue
+            # cur_max_index = max(skip_pts) 
+            # dis = f.get_distance(pts[0], path[index])
+            # if dis > 15: # the distance to nearest point isn't too big.
+            #     continue
+            skip_pts.append(j + i + 1)        
+
+    for i in range(len(path)):
+        if i in skip_pts:
+            continue
+        new_path.append(path[i])
+
+    print(f"Number of skipped pts: {len(skip_pts)}")
+
+    return new_path
 
 
 def expand_path(path):
