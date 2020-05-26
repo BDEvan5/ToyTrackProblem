@@ -497,6 +497,9 @@ def casadi_optimisation_ruan(path, track):
 
     lut = interpolant('lut', 'bspline', [xgrid, ygrid], track_map.flatten())
 
+    start = seed[0, :]
+    end = seed[-1, :]
+
     nlp = {\
        'x':vertcat(x,y,theta,v,w),
        'f': A*(sumsqr(v) + sumsqr(w)) + B*(sumsqr(x-seed[:,0]) + sumsqr(y-seed[:,1])),
@@ -505,8 +508,10 @@ def casadi_optimisation_ruan(path, track):
                    y[1:] - (y[:-1] + delta_t*v[:-1]*sin(theta[:-1])),
                    theta[1:] - (theta[:-1] + delta_t*w[:-1]),
                 #    x[0]-odom[0],y[0]-odom[1],theta[0]-odom[2],
+                x[0]-start[0], y[0]-start[1],
+                x[N-1]-end[0], y[N-1]-end[1],
 #                    x[-1]-seed[-1,0],y[-1]-seed[-1,1],
-                   lut(horzcat(x+1.2,y+1.2).T).T 
+                   lut(horzcat(x,y).T).T 
                   )\
     }
 
@@ -518,8 +523,8 @@ def casadi_optimisation_ruan(path, track):
 
 #     r = S(x0=x0, lbg=[0]*(N-1)*3+[0]*5, ubg=([0]*(N-1)*3+[0]*5), ubx=[3]*N+[3]*N+[np.inf]*N+[1]*N+[2]*N, lbx=[-3]*N+[-3]*N+[-np.inf]*N+[0]*N+[-2]*N)
     # lbg = [0] * (N-1)*3 + [0]*3 + [0.06]*N
-    lbg = [0] * (N-1)*3 + [0.06]*N
-    ubg = ([0]*(N-1)*3 + [inf]*N)
+    lbg = [0] * (N-1)*3 + [-0.1]*4 + [-0.06]*N
+    ubg = ([0]*(N-1)*3 + [0.1]*4 + [0.06]*N)
     ubx = [100]*N + [100]*N + [np.inf]*N + [5]*N + [1]*N
     lbx = [0]*N + [0]*N + [-np.inf]*N + [0]*N + [-1]*N
     r = S(x0=x0, lbg=lbg, ubg=ubg, ubx=ubx, lbx=lbx)
