@@ -495,8 +495,6 @@ class TrackMapInterface(TrackMapBase):
 
 
 
-
-
 def load_map(map_name="myTrack0"):
     map_name="myTrack1"
     filename = "DataRecords/" + map_name 
