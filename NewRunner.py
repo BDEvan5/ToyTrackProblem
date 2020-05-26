@@ -69,8 +69,8 @@ class NewRunner:
             #     self.env.car_state.done = True
 
         destination = self.path[self.pind+1] # next point
-        destination.print_point()
-        print(f"Location: {location}")
+        # destination.print_point()
+        # print(f"Location: {location}")
 
         nn_action, value = self.model.get_action_value(nn_state[None, :])
 

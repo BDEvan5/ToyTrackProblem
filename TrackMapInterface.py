@@ -1,11 +1,12 @@
 import numpy as np  
-from tkinter import *
+import tkinter as tk 
 from TrackMapData import TrackMapData
 from pickle import load, dump
 import LibFunctions as f
 import pyautogui 
 from StateStructs import SimulationState
 import multiprocessing as mp
+import sys
 
 
 class TrackMapBase:
@@ -19,18 +20,18 @@ class TrackMapBase:
 
         self.rect_map = np.zeros_like(self.map_data.track_map, dtype=np.int)
 
-        self.root = Tk()
-        frame = Frame(self.root, height=size[0], width=size[1])
+        self.root = tk.Tk()
+        frame = tk.Frame(self.root, height=size[0], width=size[1])
         frame.grid(row=1, column=1)
-        self.canv = Canvas(frame, height=size[0], width=size[1])
-        self.save_pane = Frame(self.root, height=size[0], width=size[1]/10)
+        self.canv = tk.Canvas(frame, height=size[0], width=size[1])
+        self.save_pane = tk.Frame(self.root, height=size[0], width=size[1]/10)
         self.save_pane.grid(row=1, column=2)
         self.root.bind("<Return>", self.set_wp)
 
         self.set_up_buttons()
 
     def redrawmap(self):
-        block_sz = self.map_data.fs * self.map_data.res
+        # block_sz = self.map_data.fs * self.map_data.res
         c = self.canv
 
         for i in range(self.map_data.n_blocks):
@@ -42,25 +43,28 @@ class TrackMapBase:
 
     def set_up_buttons(self):
         save_pane = self.save_pane
-        quit_button = Button(save_pane, text="Quit", command=self.root.destroy)
+        quit_button_all = tk.Button(save_pane, text="Quit all EP's", command=sys.exit)
+        quit_button_all.pack()
+
+        quit_button = tk.Button(save_pane, text="Quit", command=self.root.destroy)
         quit_button.pack()
 
-        self.name_var = StringVar()
-        self.name_box = Entry(save_pane, text="myTrack0", textvariable=self.name_var)
+        self.name_var = tk.StringVar()
+        self.name_box = tk.Entry(save_pane, text="myTrack0", textvariable=self.name_var)
         self.name_var.set("myTrack0")
         self.name_box.pack()
 
-        save_button = Button(save_pane, text="Save", command=self.save_map)
+        save_button = tk.Button(save_pane, text="Save", command=self.save_map)
         save_button.pack()
-        save_button = Button(save_pane, text="Load", command=self.load_map)
+        save_button = tk.Button(save_pane, text="Load", command=self.load_map)
         save_button.pack()
-        clear_button = Button(save_pane, text="Clear", command=self.clear_map)
+        clear_button = tk.Button(save_pane, text="Clear", command=self.clear_map)
         clear_button.pack()
 
-        reset_obs = Button(save_pane, text="Reset Obs", comman=self.reset_obs)
+        reset_obs = tk.Button(save_pane, text="Reset Obs", comman=self.reset_obs)
         reset_obs.pack()
 
-        add_obs = Button(save_pane, text="Add Obs", command=self.add_obs)
+        add_obs = tk.Button(save_pane, text="Add Obs", command=self.add_obs)
         add_obs.pack()
 
 
@@ -270,49 +274,49 @@ class TrackMapInterface(TrackMapBase):
         # self.info_p.pack(side= RIGHT)
         self.info_p = self.save_pane
 
-        self.step_name = Label(self.info_p, text="Step")
+        self.step_name = tk.Label(self.info_p, text="Step")
         self.step_name.pack()
-        self.step = Label(self.info_p, text=0)
+        self.step = tk.Label(self.info_p, text=0)
         self.step.pack()
 
-        self.location_name = Label(self.info_p, text="Location")
+        self.location_name = tk.Label(self.info_p, text="Location")
         self.location_name.pack()
-        self.loc = Label(self.info_p, text=(0, 0))
+        self.loc = tk.Label(self.info_p, text=(0, 0))
         self.loc.pack()
 
-        self.velocity_name = Label(self.info_p, text="Velocity")
+        self.velocity_name = tk.Label(self.info_p, text="Velocity")
         self.velocity_name.pack()
-        self.velocity = Label(self.info_p, text="0 @ 0")
+        self.velocity = tk.Label(self.info_p, text="0 @ 0")
         self.velocity.pack()
 
-        self.action_name = Label(self.info_p, text="Action")
+        self.action_name = tk.Label(self.info_p, text="Action")
         self.action_name.pack()
-        self.action = Label(self.info_p, text="[0, 0]")
+        self.action = tk.Label(self.info_p, text="[0, 0]")
         self.action.pack()
 
-        self.distance_name = Label(self.info_p, text="Distance To Target")
+        self.distance_name = tk.Label(self.info_p, text="Distance To Target")
         self.distance_name.pack()
-        self.distance = Label(self.info_p, text="0")
+        self.distance = tk.Label(self.info_p, text="0")
         self.distance.pack()
 
-        self.state_name = Label(self.info_p, text="State Vector")
+        self.state_name = tk.Label(self.info_p, text="State Vector")
         self.state_name.pack()
-        self.state_vec = Label(self.info_p, text="0")
+        self.state_vec = tk.Label(self.info_p, text="0")
         self.state_vec.pack()
 
-        self.agent_name = Label(self.info_p, text="Agent Action")
+        self.agent_name = tk.Label(self.info_p, text="Agent Action")
         self.agent_name.pack()
-        self.agent_action = Label(self.info_p, text="0")
+        self.agent_action = tk.Label(self.info_p, text="0")
         self.agent_action.pack()
 
-        self.reward_name = Label(self.info_p, text="Reward")
+        self.reward_name = tk.Label(self.info_p, text="Reward")
         self.reward_name.pack()
-        self.reward = Label(self.info_p, text="0")
+        self.reward = tk.Label(self.info_p, text="0")
         self.reward.pack()
 
-        self.crash_indicator_name = Label(self.info_p, text="Crash Indicator")
+        self.crash_indicator_name = tk.Label(self.info_p, text="Crash Indicator")
         self.crash_indicator_name.pack()
-        self.crash_indicator = Label(self.info_p, text="0.0")
+        self.crash_indicator = tk.Label(self.info_p, text="0.0")
         self.crash_indicator.pack()
 
     def set_up_extra_buttons(self):
@@ -320,13 +324,13 @@ class TrackMapInterface(TrackMapBase):
         # self.b.pack(side= BOTTOM)
         self.b = self.save_pane
 
-        self.b_pause = Button(self.b, text='Pause', command=self.pause_set)
+        self.b_pause = tk.Button(self.b, text='Pause', command=self.pause_set)
         self.b_pause.pack()
         
-        self.b_play = Button(self.b, text="Play", command=self.play_set)
+        self.b_play = tk.Button(self.b, text="Play", command=self.play_set)
         self.b_play.pack()
 
-        self.b_step = Button(self.b, text='SingleStep', command=self.single_step) 
+        self.b_step = tk.Button(self.b, text='SingleStep', command=self.single_step) 
         self.b_step.pack()
 
     
@@ -375,8 +379,8 @@ class TrackMapInterface(TrackMapBase):
         for i, point in enumerate(path):
             new_pt = f.add_locations(point, [0.5, 0.5]) # brings to centre
             x = self._scale_input(new_pt)
-            str_msg = str(i)
             self.end_x = self.canv.create_oval(x[0], x[1], x[0] + 8, x[1] + 8, fill='DeepPink2')
+            str_msg = str(i)
             # self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 12")
 
             self.canv.pack() 
@@ -460,7 +464,9 @@ class TrackMapInterface(TrackMapBase):
 
         self.distance.config(text=str(distance))
 
-        self.state_vec.config(text=str(state_vec))
+        state_vec_str = str(state_vec[0:2]) + "\n"  + str(state_vec[2:4]) + "\n" \
+            + str(state_vec[4:6]) + "\n" + str(state_vec[6::])
+        self.state_vec.config(text=state_vec_str)
         self.agent_action.config(text=str(agent_action))
 
         self.crash_indicator.config(text=str(crash_indi))

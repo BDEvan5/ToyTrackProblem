@@ -46,7 +46,7 @@ class RaceEnv:
         self._update_ranges()
 
         self.sim_mem.add_step(self.car_state, self.env_state)
-        obs = self.car_state.get_state_observation()
+        # obs = self.car_state.get_state_observation()
         self.sim_mem.step += 1
 
         return self.car_state.get_state_observation(), self.env_state.reward, self.env_state.done
@@ -103,10 +103,10 @@ class RaceEnv:
             crash_val = 0
             i = 0
             while crash_val == 0:
-                r = dx * i
+                # r = dx * i
                 addx = [dx * i * np.sin(th), -dx * i * np.cos(th)] # check
                 x_search = f.add_locations(curr_x, addx)
-                crash_val = self.track.check_collision(x_search)
+                crash_val = self.track.check_collision(x_search, True)
                 i += 1
             update_val = (i - 2) * dx # sets the last distance before collision 
             ran.dr = update_val - ran.val # possibly take more than two terms
