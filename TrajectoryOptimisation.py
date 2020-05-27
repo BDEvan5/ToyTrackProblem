@@ -1,9 +1,10 @@
 import LibFunctions as f 
 import numpy as np 
 from Models import TrackData
-from PathPlanner import get_practice_path, convert_list_to_path
+from PathPlanner import get_practice_path, convert_list_to_path, A_StarPathFinderTrack, A_StarTrackWrapper
 from StateStructs import Path
 from TrackMapInterface import load_map, show_track_path
+from Interface import show_path
 
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
@@ -472,19 +473,44 @@ def casadi_optimisation(path, track):
 
     return path
 
+def add_obstacle_map_boundary(track_map):
+    track_map = np.asarray(track_map, dtype=np.float32)
+
+    x_len = track_map.shape[0]
+    y_len = track_map.shape[1]
+    for _ in range(2): # add a buffer of 2 in all directions
+        for i in range(1, x_len-1):
+            for j in range(1, y_len-1):
+                left = track_map[i-1, j]
+                right = track_map[i+1, j]
+                up = track_map[i, j+1]
+                down = track_map[i, j-1]
+
+                # logical directions, not according to actual map orientation
+                left_up = track_map[i-1, j+1] *3
+                left_down = track_map[i-1, j-1]*3
+                right_up = track_map[i+1, j+1]*3
+                right_down = track_map[i+1, j-1]*3
+
+                obs_sum = sum((left, right, up, down, left_up, left_down, right_up, right_down))
+                track_map[i, j] = max(obs_sum / 16, track_map[i, j])
+    
+    return track_map
+
+
 def casadi_optimisation_ruan(path, track):
     # heat_map = preprocess_heat_map(track, False)
     track_map = track.get_heat_map()
+    # track_map = add_obstacle_map_boundary(track_map)
+    # show_heat_map(track_map)
     track_map = np.asarray(track_map, dtype=np.float32)
 
     N = len(path)
     seed = np.asarray(path)
-    A = 5
+    # show_track_path(track, seed)
+    A = 0
     B = 1
-    C = 0.001
-    D = 1e8
     delta_t = 1
-    # print(seed)
 
     x = MX.sym('x', N)
     y = MX.sym('y', N)
@@ -494,39 +520,34 @@ def casadi_optimisation_ruan(path, track):
 
     xgrid = np.linspace(0, 100, 100)
     ygrid = np.linspace(0, 100, 100)
-
     lut = interpolant('lut', 'bspline', [xgrid, ygrid], track_map.flatten())
-
-    ans = lut(horzcat(50, 50).T)
-    print(f"Answer: {ans}")
 
     start = seed[0, :]
     end = seed[-1, :]
 
     nlp = {\
        'x':vertcat(x,y,theta,v,w),
-       'f': A*(sumsqr(v) + sumsqr(w)) + B*(sumsqr(x-seed[:,0]) + sumsqr(y-seed[:,1])),
+    #    'f': A*(sumsqr(v) + sumsqr(w)) + B*(sumsqr(x-seed[:,0]) + sumsqr(y-seed[:,1])),
+    #    'f': -sumsqr(v) + sumsqr(w) ,#+ B*(sumsqr(x-seed[:,0]) + sumsqr(y-seed[:,1])),
+    'f': sum1(sqrt((x[1:] - x[:-1])**2 + (y[1:] - y[:-1])**2)), 
        'g':vertcat(\
                    x[1:] - (x[:-1] + delta_t*v[:-1]*cos(theta[:-1])),
                    y[1:] - (y[:-1] + delta_t*v[:-1]*sin(theta[:-1])),
                    theta[1:] - (theta[:-1] + delta_t*w[:-1]),
-                #    x[0]-odom[0],y[0]-odom[1],theta[0]-odom[2],
-                x[0]-start[0], y[0]-start[1],
-                x[N-1]-end[0], y[N-1]-end[1],
-#                    x[-1]-seed[-1,0],y[-1]-seed[-1,1],
-                   lut(horzcat(x,y).T).T 
+                   x[0]-start[0], y[0]-start[1],
+                   x[N-1]-end[0], y[N-1]-end[1],
+                   lut(horzcat(x,y).T).T * 1e8
                   )\
     }
 
-
-    S = nlpsol('vert', 'ipopt', nlp, {'ipopt':{'print_level':3}})
-    print(S)
+    print(nlp)
+    S = nlpsol('vert', 'ipopt', nlp, {'ipopt':{'print_level':5}})
+    # print(S)
 
     x0 = initSolution(seed)
 
-#     r = S(x0=x0, lbg=[0]*(N-1)*3+[0]*5, ubg=([0]*(N-1)*3+[0]*5), ubx=[3]*N+[3]*N+[np.inf]*N+[1]*N+[2]*N, lbx=[-3]*N+[-3]*N+[-np.inf]*N+[0]*N+[-2]*N)
-    # lbg = [0] * (N-1)*3 + [0]*3 + [0.06]*N
-    box = 15
+
+    box = 60
     lbx_pre = [i-box for i in seed[:, 0]] + [i-box for i in seed[:, 1]] 
     ubx_pre = [i+box for i in seed[:, 0]] + [i+box for i in seed[:, 1]]
 
@@ -538,7 +559,6 @@ def casadi_optimisation_ruan(path, track):
     lbx = lbx_pre + [-np.inf]*N + [0]*N + [-1]*N
     ubx = ubx_pre + [np.inf]*N + [5]*N + [1]*N
     r = S(x0=x0, lbg=lbg, ubg=ubg, ubx=ubx, lbx=lbx)
-#     r = S(x0=x0, lbg=[0]*(N-1)*3+[0]*5+[0.06]*N, ubg=([0]*(N-1)*3+[0]*5+[inf]*N), ubx=[1]*N+[1]*N+[np.inf]*N+[1]*N+[1]*N, lbx=[-1]*N+[-1]*N+[-np.inf]*N+[0]*N+[-1]*N)
     x_opt = r['x']
     # print(S.stats())
     print(f"X_opt: {x_opt}")
@@ -548,6 +568,179 @@ def casadi_optimisation_ruan(path, track):
     th_new = np.array(x_opt[2*N:N*3])
     v_new = np.array(x_opt[3*N:N*4])
     w_new = np.array(x_opt[4*N:N*5])
+
+    # print(f"LUT res")
+    # print(lut(horzcat(x_new, y_new).T))
+
+    path = np.concatenate([x_new, y_new], axis=1)
+    # print(path)
+
+    return path
+
+def casadi_optimisation_track_maze():
+    track = TrackData()
+    track.simple_maze()
+    track_map = track.get_heat_map()
+    track_map = np.asarray(track_map, dtype=np.float32)
+
+    show_heat_map(track_map)
+
+    path = get_practice_path()
+
+    N = len(path)
+    seed = np.asarray(path)
+    # show_track_path(track, seed)
+    A = 0
+    B = 1
+    delta_t = 1
+
+    x = MX.sym('x', N)
+    y = MX.sym('y', N)
+    theta = MX.sym('theta', N)
+    v = MX.sym('v', N)
+    w = MX.sym('w', N)
+
+    xgrid = np.linspace(0, 100, 100)
+    ygrid = np.linspace(0, 100, 100)
+    lut = interpolant('lut', 'bspline', [xgrid, ygrid], track_map.flatten())
+
+    start = seed[0, :]
+    end = seed[-1, :]
+
+    nlp = {\
+       'x':vertcat(x,y,theta,v,w),
+    #    'f': A*(sumsqr(v) + sumsqr(w)) + B*(sumsqr(x-seed[:,0]) + sumsqr(y-seed[:,1])),
+    #    'f': -sumsqr(v) + sumsqr(w) ,#+ B*(sumsqr(x-seed[:,0]) + sumsqr(y-seed[:,1])),
+    'f': sum1(sqrt((x[1:] - x[:-1])**2 + (y[1:] - y[:-1])**2)), 
+       'g':vertcat(\
+                   x[1:] - (x[:-1] + delta_t*v[:-1]*cos(theta[:-1])),
+                   y[1:] - (y[:-1] + delta_t*v[:-1]*sin(theta[:-1])),
+                   theta[1:] - (theta[:-1] + delta_t*w[:-1]),
+                   x[0]-start[0], y[0]-start[1],
+                   x[N-1]-end[0], y[N-1]-end[1],
+                   lut(horzcat(x,y).T).T * 1e8
+                  )\
+    }
+
+    print(nlp)
+    S = nlpsol('vert', 'ipopt', nlp, {'ipopt':{'print_level':5}})
+    # print(S)
+
+    x0 = initSolution(seed)
+
+
+    box = 60
+    lbx_pre = [i-box for i in seed[:, 0]] + [i-box for i in seed[:, 1]] 
+    ubx_pre = [i+box for i in seed[:, 0]] + [i+box for i in seed[:, 1]]
+
+    lbg = [0] * (N-1)*3 + [0]*4 + [0]*N
+    ubg = ([0]*(N-1)*3 + [0]*4 + [0]*N)
+    # lbx = [0]*N + [0]*N + [-np.inf]*N + [0]*N + [-1]*N
+    # ubx = [100]*N + [100]*N + [np.inf]*N + [5]*N + [1]*N
+
+    lbx = lbx_pre + [-np.inf]*N + [0]*N + [-1]*N
+    ubx = ubx_pre + [np.inf]*N + [5]*N + [1]*N
+    r = S(x0=x0, lbg=lbg, ubg=ubg, ubx=ubx, lbx=lbx)
+    x_opt = r['x']
+    # print(S.stats())
+    print(f"X_opt: {x_opt}")
+
+    x_new = np.array(x_opt[0:N])
+    y_new = np.array(x_opt[N:2*N])
+    th_new = np.array(x_opt[2*N:N*3])
+    v_new = np.array(x_opt[3*N:N*4])
+    w_new = np.array(x_opt[4*N:N*5])
+
+    # print(f"LUT res")
+    # print(lut(horzcat(x_new, y_new).T))
+
+    path = np.concatenate([x_new, y_new], axis=1)
+    # print(path)
+
+    show_path(track, convert_list_to_path(path))
+    return path
+
+def casadi_optimisation_ruan_simple(path, track):
+    # heat_map = preprocess_heat_map(track, False)
+    track_map = track.get_heat_map()
+    track_map = np.asarray(track_map, dtype=np.float32)
+
+    N = len(path)
+    seed = np.asarray(path)
+    # show_track_path(track, seed)
+    A = 0
+    B = 1
+    C = 0.001
+    D = 1e8
+    delta_t = 1
+    # print(seed)
+
+    x = MX.sym('x', N)
+    y = MX.sym('y', N)
+    # theta = MX.sym('theta', N)
+    # v = MX.sym('v', N)
+    # w = MX.sym('w', N)
+
+    xgrid = np.linspace(0, 100, 100)
+    ygrid = np.linspace(0, 100, 100)
+
+    lut = interpolant('lut', 'bspline', [xgrid, ygrid], track_map.flatten())
+    # objective = ObjectiveCallback('Object')
+
+
+    ans = lut(horzcat(50, 50).T)
+    print(f"Answer: {ans}")
+
+    start = seed[0, :]
+    end = seed[-1, :]
+
+    nlp = {\
+       'x':vertcat(x,y),
+    #    'f': B*(sumsqr(x-seed[:,0]) + sumsqr(y-seed[:,1])),
+       'f':sq,
+       'g':vertcat(\
+                #    x[1:] - (x[:-1] + delta_t*v[:-1]*cos(theta[:-1])),
+                #    y[1:] - (y[:-1] + delta_t*v[:-1]*sin(theta[:-1])),
+                #    theta[1:] - (theta[:-1] + delta_t*w[:-1]),
+                   x[0]-start[0], y[0]-start[1],
+                   x[N-1]-end[0], y[N-1]-end[1],
+                   lut(horzcat(x,y).T).T 
+                  )\
+    }
+
+    print(nlp)
+    S = nlpsol('vert', 'ipopt', nlp, {'ipopt':{'print_level':3}})
+    # print(S)
+
+    xs = seed[:, 0]
+    ys = seed[:, 1]
+
+    x0 = vertcat(xs, ys)
+
+    box = 15
+    lbx_pre = [i-box for i in xs] + [i-box for i in ys] 
+    ubx_pre = [i+box for i in xs] + [i+box for i in ys]
+
+    lbg =  [0]*4 + [0]*N
+    ubg = [0]*4 + [0]*N
+    # lbx = [0]*N + [0]*N + [-np.inf]*N + [0]*N + [-1]*N
+    # ubx = [100]*N + [100]*N + [np.inf]*N + [5]*N + [1]*N
+
+    lbx = lbx_pre 
+    ubx = ubx_pre 
+    r = S(x0=x0, lbg=lbg, ubg=ubg, ubx=ubx, lbx=lbx)
+    x_opt = r['x']
+    # print(S.stats())
+    print(f"X_opt: {x_opt}")
+
+    x_new = np.array(x_opt[0:N])
+    y_new = np.array(x_opt[N:2*N])
+    # th_new = np.array(x_opt[2*N:N*3])
+    # v_new = np.array(x_opt[3*N:N*4])
+    # w_new = np.array(x_opt[4*N:N*5])
+
+    print(f"LUT res")
+    print(lut(horzcat(x_new, y_new).T))
 
     path = np.concatenate([x_new, y_new], axis=1)
     print(path)
@@ -635,8 +828,14 @@ def test_cvxpy_opti(load_opti_path=True, load_path=True):
     track = load_map()
     # show_point_heat_map(track)
 
-    path_file = "DataRecords/path_list.npy"
-    path = np.load(path_file)
+    # path_file = "DataRecords/path_list.npy"
+    # path = np.load(path_file)
+
+    # path_finder = A_StarPathFinderTrack(track)
+    path = A_StarTrackWrapper(track, 1)
+    # path = path_finder.run_search(2)
+
+    # show_track_path(track, path)
 
 
     path = reduce_path_diag(path)
@@ -648,6 +847,7 @@ def test_cvxpy_opti(load_opti_path=True, load_path=True):
     # path = cvxpy_optimisation(path, track)
     # path = casadi_optimisation(path, track)
     path = casadi_optimisation_ruan(path, track)
+    # path = casadi_optimisation_ruan_simple(path, track)
     # path = convert_list_to_path(path)
     show_track_path(track, path)
     # path_obj = add_velocity(path)
@@ -664,6 +864,7 @@ def test_heat_map():
 
 if __name__ == "__main__":
     # run_traj_opti()
-    test_cvxpy_opti(False, True)
+    # test_cvxpy_opti(False, True)
+    casadi_optimisation_track_maze()
     # test_heat_map()
     # plot_interp()

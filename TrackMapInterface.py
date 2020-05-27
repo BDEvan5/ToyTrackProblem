@@ -502,7 +502,7 @@ class TrackMapInterface(TrackMapBase):
 
 
 def load_map(map_name="myTrack0"):
-    map_name="myTrack1"
+    # map_name="myTrack2"
     filename = "DataRecords/" + map_name 
     db_file = open(filename, 'rb')
     loadmap = load(db_file)
