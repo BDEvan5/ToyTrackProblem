@@ -497,6 +497,9 @@ def casadi_optimisation_ruan(path, track):
 
     lut = interpolant('lut', 'bspline', [xgrid, ygrid], track_map.flatten())
 
+    ans = lut(horzcat(50, 50).T)
+    print(f"Answer: {ans}")
+
     start = seed[0, :]
     end = seed[-1, :]
 
@@ -523,10 +526,17 @@ def casadi_optimisation_ruan(path, track):
 
 #     r = S(x0=x0, lbg=[0]*(N-1)*3+[0]*5, ubg=([0]*(N-1)*3+[0]*5), ubx=[3]*N+[3]*N+[np.inf]*N+[1]*N+[2]*N, lbx=[-3]*N+[-3]*N+[-np.inf]*N+[0]*N+[-2]*N)
     # lbg = [0] * (N-1)*3 + [0]*3 + [0.06]*N
-    lbg = [0] * (N-1)*3 + [-0.1]*4 + [-0.06]*N
-    ubg = ([0]*(N-1)*3 + [0.1]*4 + [0.06]*N)
-    ubx = [100]*N + [100]*N + [np.inf]*N + [5]*N + [1]*N
-    lbx = [0]*N + [0]*N + [-np.inf]*N + [0]*N + [-1]*N
+    box = 15
+    lbx_pre = [i-box for i in seed[:, 0]] + [i-box for i in seed[:, 1]] 
+    ubx_pre = [i+box for i in seed[:, 0]] + [i+box for i in seed[:, 1]]
+
+    lbg = [0] * (N-1)*3 + [0]*4 + [0]*N
+    ubg = ([0]*(N-1)*3 + [0]*4 + [0]*N)
+    # lbx = [0]*N + [0]*N + [-np.inf]*N + [0]*N + [-1]*N
+    # ubx = [100]*N + [100]*N + [np.inf]*N + [5]*N + [1]*N
+
+    lbx = lbx_pre + [-np.inf]*N + [0]*N + [-1]*N
+    ubx = ubx_pre + [np.inf]*N + [5]*N + [1]*N
     r = S(x0=x0, lbg=lbg, ubg=ubg, ubx=ubx, lbx=lbx)
 #     r = S(x0=x0, lbg=[0]*(N-1)*3+[0]*5+[0.06]*N, ubg=([0]*(N-1)*3+[0]*5+[inf]*N), ubx=[1]*N+[1]*N+[np.inf]*N+[1]*N+[1]*N, lbx=[-1]*N+[-1]*N+[-np.inf]*N+[0]*N+[-1]*N)
     x_opt = r['x']
