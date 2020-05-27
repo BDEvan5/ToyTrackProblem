@@ -249,7 +249,7 @@ def plot_interp():
 
     # ax.scatter(X, Y, new_map, marker='x')
     # plt.show()
-
+                    
  
 def calcTrajOpti(path):
     traj_map = preprocess_heat_map()
@@ -596,9 +596,9 @@ def casadi_optimisation_track_maze():
 
     x = MX.sym('x', N)
     y = MX.sym('y', N)
-    theta = MX.sym('theta', N)
-    v = MX.sym('v', N)
-    w = MX.sym('w', N)
+    # theta = MX.sym('theta', N)
+    # v = MX.sym('v', N)
+    # w = MX.sym('w', N)
 
     xgrid = np.linspace(0, 100, 100)
     ygrid = np.linspace(0, 100, 100)
@@ -608,14 +608,14 @@ def casadi_optimisation_track_maze():
     end = seed[-1, :]
 
     nlp = {\
-       'x':vertcat(x,y,theta,v,w),
+       'x':vertcat(x,y),
     #    'f': A*(sumsqr(v) + sumsqr(w)) + B*(sumsqr(x-seed[:,0]) + sumsqr(y-seed[:,1])),
     #    'f': -sumsqr(v) + sumsqr(w) ,#+ B*(sumsqr(x-seed[:,0]) + sumsqr(y-seed[:,1])),
     'f': sum1(sqrt((x[1:] - x[:-1])**2 + (y[1:] - y[:-1])**2)), 
        'g':vertcat(\
-                   x[1:] - (x[:-1] + delta_t*v[:-1]*cos(theta[:-1])),
-                   y[1:] - (y[:-1] + delta_t*v[:-1]*sin(theta[:-1])),
-                   theta[1:] - (theta[:-1] + delta_t*w[:-1]),
+                #    x[1:] - (x[:-1] + delta_t*v[:-1]*cos(theta[:-1])),
+                #    y[1:] - (y[:-1] + delta_t*v[:-1]*sin(theta[:-1])),
+                #    theta[1:] - (theta[:-1] + delta_t*w[:-1]),
                    x[0]-start[0], y[0]-start[1],
                    x[N-1]-end[0], y[N-1]-end[1],
                    lut(horzcat(x,y).T).T * 1e8
@@ -626,20 +626,25 @@ def casadi_optimisation_track_maze():
     S = nlpsol('vert', 'ipopt', nlp, {'ipopt':{'print_level':5}})
     # print(S)
 
-    x0 = initSolution(seed)
+    # x0 = initSolution(seed)
+    xs = seed[:, 0]
+    ys = seed[:, 1]
 
+    x0 = vertcat(xs, ys)
 
     box = 60
     lbx_pre = [i-box for i in seed[:, 0]] + [i-box for i in seed[:, 1]] 
     ubx_pre = [i+box for i in seed[:, 0]] + [i+box for i in seed[:, 1]]
 
-    lbg = [0] * (N-1)*3 + [0]*4 + [0]*N
-    ubg = ([0]*(N-1)*3 + [0]*4 + [0]*N)
+    # lbg = [0] * (N-1)*3 + [0]*4 + [0]*N
+    # ubg = ([0]*(N-1)*3 + [0]*4 + [0]*N)
+    lbg =  [0]*4 + [0]*N
+    ubg = [0]*4 + [0]*N
     # lbx = [0]*N + [0]*N + [-np.inf]*N + [0]*N + [-1]*N
     # ubx = [100]*N + [100]*N + [np.inf]*N + [5]*N + [1]*N
 
-    lbx = lbx_pre + [-np.inf]*N + [0]*N + [-1]*N
-    ubx = ubx_pre + [np.inf]*N + [5]*N + [1]*N
+    lbx = lbx_pre # + [-np.inf]*N + [0]*N + [-1]*N
+    ubx = ubx_pre #+ [np.inf]*N + [5]*N + [1]*N
     r = S(x0=x0, lbg=lbg, ubg=ubg, ubx=ubx, lbx=lbx)
     x_opt = r['x']
     # print(S.stats())
@@ -647,9 +652,9 @@ def casadi_optimisation_track_maze():
 
     x_new = np.array(x_opt[0:N])
     y_new = np.array(x_opt[N:2*N])
-    th_new = np.array(x_opt[2*N:N*3])
-    v_new = np.array(x_opt[3*N:N*4])
-    w_new = np.array(x_opt[4*N:N*5])
+    # th_new = np.array(x_opt[2*N:N*3])
+    # v_new = np.array(x_opt[3*N:N*4])
+    # w_new = np.array(x_opt[4*N:N*5])
 
     # print(f"LUT res")
     # print(lut(horzcat(x_new, y_new).T))
