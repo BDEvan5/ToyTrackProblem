@@ -1,7 +1,7 @@
 import LibFunctions as f 
 import numpy as np 
 from Models import TrackData
-from PathPlanner import get_practice_path, convert_list_to_path, A_StarPathFinderTrack, A_StarTrackWrapper
+from PathPlanner import get_practice_path, convert_list_to_path, A_StarFinderMod, A_StarTrackWrapper
 from StateStructs import Path
 from TrackMapInterface import load_map, show_track_path
 from Interface import show_path
@@ -112,8 +112,8 @@ def expand_path(path):
         pt = next_pt
 
     new_path.append(path[-1])
-    new_path.remove(new_path[1])
-    new_path.remove(new_path[-2])
+    # new_path.remove(new_path[1])
+    # new_path.remove(new_path[-2])
 
     return new_path
 
@@ -752,6 +752,82 @@ def casadi_optimisation_ruan_simple(path, track):
 
     return path
 
+def casadi_optimisation_startend(path, track):
+    # heat_map = preprocess_heat_map(track, False)
+    track_map = track.get_heat_map()
+    # track_map = add_obstacle_map_boundary(track_map)
+    # show_heat_map(track_map)
+    track_map = np.asarray(track_map, dtype=np.float32)
+
+    N = len(path)
+    seed = np.asarray(path)
+    # show_track_path(track, seed)
+
+    delta_t = 1
+
+    x = MX.sym('x', N)
+    y = MX.sym('y', N)
+    theta = MX.sym('theta', N)
+    v = MX.sym('v', N)
+    w = MX.sym('w', N)
+
+    xgrid = np.linspace(0, 100, 100)
+    ygrid = np.linspace(0, 100, 100)
+    lut = interpolant('lut', 'bspline', [xgrid, ygrid], track_map.flatten())
+
+    start = seed[0, :]
+    end = seed[-1, :]
+
+    nlp = {\
+       'x':vertcat(x,y,theta,v,w),
+    #    'f': A*(sumsqr(v) + sumsqr(w)) + B*(sumsqr(x-seed[:,0]) + sumsqr(y-seed[:,1])),
+    # 'f': sum1(sqrt((x[1:] - x[:-1])**2 + (y[1:] - y[:-1])**2)), 
+    'f': 5*(sumsqr(v) + sumsqr(w)) + (sumsqr(x-seed[:,0]) + sumsqr(y-seed[:,1])),
+       'g':vertcat(\
+                   x[1:] - (x[:-1] + delta_t*v[:-1]*cos(theta[:-1])),
+                   y[1:] - (y[:-1] + delta_t*v[:-1]*sin(theta[:-1])),
+                   theta[1:] - (theta[:-1] + delta_t*w[:-1]),
+                   x[0]-start[0], y[0]-start[1],
+                   x[N-1]-end[0], y[N-1]-end[1],
+                   lut(horzcat(x,y).T).T * 1e8
+                  )\
+    }
+
+    print(nlp)
+    S = nlpsol('vert', 'ipopt', nlp, {'ipopt':{'print_level':5}})
+    # print(S)
+
+    x0 = initSolution(seed)
+
+    box = 60
+    lbx_pre = [i-box for i in seed[:, 0]] + [i-box for i in seed[:, 1]] 
+    ubx_pre = [i+box for i in seed[:, 0]] + [i+box for i in seed[:, 1]]
+
+    lbg = [0] * (N-1)*3 + [0]*4 + [0]*N
+    ubg = ([0]*(N-1)*3 + [0]*4 + [0]*N)
+
+    # lbx = [0]*N + [0]*N + [-np.inf]*N + [0]*N + [-1]*N
+    # ubx = [100]*N + [100]*N + [np.inf]*N + [5]*N + [1]*N
+
+    lbx = lbx_pre + [-np.inf]*N + [0]*N + [-1]*N
+    ubx = ubx_pre + [np.inf]*N + [5]*N + [1]*N
+    r = S(x0=x0, lbg=lbg, ubg=ubg, ubx=ubx, lbx=lbx)
+    x_opt = r['x']
+    # print(S.stats())
+    print(f"X_opt: {x_opt}")
+
+    x_new = np.array(x_opt[0:N])
+    y_new = np.array(x_opt[N:2*N])
+    th_new = np.array(x_opt[2*N:N*3])
+    v_new = np.array(x_opt[3*N:N*4])
+    w_new = np.array(x_opt[4*N:N*5])
+
+    path = np.concatenate([x_new, y_new], axis=1)
+    # print(path)
+
+    return path
+
+
 def initSolution(seed):
     max_v = 5
     vs = []
@@ -828,9 +904,30 @@ def add_velocity(path_obj, car=None):
 
     return path_obj
 
+def test_start_end_opti():
+    track = load_map("myTrack3")
+
+    path_file = "DataRecords/maze_path_list.npy"
+    try:
+        path = np.load(path_file)
+    except:
+        path = A_StarFinderMod(track, 1)
+        np.save(path_file, path)
+
+        show_track_path(track, path)
+
+
+    path = reduce_path_diag(path)
+    path = expand_path(path)
+    # show_track_path(track, path)
+
+    path = casadi_optimisation_startend(path, track)
+
+    show_track_path(track, path)
+
 
 def test_cvxpy_opti(load_opti_path=True, load_path=True):
-    track = load_map()
+    track = load_map("myTrack2")
     # show_point_heat_map(track)
 
     # path_file = "DataRecords/path_list.npy"
@@ -870,6 +967,7 @@ def test_heat_map():
 if __name__ == "__main__":
     # run_traj_opti()
     # test_cvxpy_opti(False, True)
-    casadi_optimisation_track_maze()
+    # casadi_optimisation_track_maze()
+    test_start_end_opti()
     # test_heat_map()
     # plot_interp()

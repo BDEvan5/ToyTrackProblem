@@ -216,7 +216,7 @@ class A_StarPathFinderTrack:
             pos[1] = pos[1] * self.ds
         # print(self.position_list)
 
-    def run_search(self, ds, max_steps=4000):
+    def run_search(self, ds, max_steps=10000):
         self.ds = ds
         self.set_directions()
         self.set_up_start_node()
@@ -231,9 +231,10 @@ class A_StarPathFinderTrack:
             self.generate_children()
             i += 1
 
-        if i > 3900:
-            print("Max Iterations reached: problem with search")
+        assert i > 3900, "Max Iterations reached: problem with search"
         path = self.get_path_list()
+
+        assert len(self.open_list) > 0, "Unable to find path through maze"
 
         return path
 
@@ -384,6 +385,19 @@ def A_StarTrackWrapper(track, ds):
     # total_path = total_path.flatten()
 
     return total_path
+
+def A_StarFinderMod(track, ds):
+    # path start and end are already set
+    
+    assert track.path_start_location is not None, "No start location set"
+    assert track.path_end_location is not None, "No end location set"
+    
+    path_finder = A_StarPathFinderTrack(track)
+    path = path_finder.run_search(ds)
+
+    return path
+
+
 """
 RTT* algorithm
 """
