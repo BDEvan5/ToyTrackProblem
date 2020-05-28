@@ -3,6 +3,7 @@ import numpy as np
 from PathPlanner import get_practice_path, convert_list_to_path, A_StarFinderMod, A_StarTrackWrapper
 from StateStructs import Path
 from TrackMapInterface import load_map, show_track_path
+import sys
 
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
@@ -90,16 +91,13 @@ def expand_path(path):
 def smart_casadi_opti(track, path):
     # symbols
     N = len(path)
+    print(f"N: {N}")
     seed = np.asarray(path)
-    delta_t = 1
-    
-    x, y = MX.sym('x', N), MX.sym('y', N) 
-    theta = MX.sym('theta', N)
 
     lut = get_look_up_table(track)
-    nlp = get_feed_dict(x, y, theta, seed, delta_t, lut, N)
+    nlp = get_feed_dict(seed, lut, N)
 
-    S = nlpsol('Solver', 'ipopt', nlp, {'ipopt':{'print_level':5}})
+    S = nlpsol('Solver', 'ipopt', nlp, {'ipopt':{'print_level':5, 'max_iter':6000}})
 
     x0 = initSolution(seed)
     lbx, ubx, lbg, ubg = get_bound_cons(seed, N)
@@ -107,15 +105,16 @@ def smart_casadi_opti(track, path):
     r = S(x0=x0, lbg=lbg, ubg=ubg, ubx=ubx, lbx=lbx)
     x_opt = r['x']
 
-    print(f"X_opt: {x_opt}")
-
     x_new = np.array(x_opt[0:N])
     y_new = np.array(x_opt[N:2*N])
-    th_new = np.array(x_opt[2*N:N*3])
+    # th_new = np.array(x_opt[2*N:N*3])
+    if S.stats()['success'] or True:
+        path = np.concatenate([x_new, y_new], axis=1)
 
-    path = np.concatenate([x_new, y_new], axis=1)
-
-    return path
+        return path
+    else:
+        print("No success")
+        sys.exit()
 
 # helpers for opt  
 def get_heat_map(track):
@@ -138,7 +137,7 @@ def initSolution(seed):
             continue
         gradient = f.get_gradient(last_wp, wp)
         theta = np.arctan(gradient) # - np.pi/2  # gradient to next point
-        v = max_v * (np.pi - abs(theta)) / np.pi
+        v = max_v * (np.pi - abs(theta)) / np.pi # wrong
 
         ths.append(theta)
         vs.append(v)
@@ -154,9 +153,9 @@ def initSolution(seed):
     xs = seed[:, 0]
     ys = seed[:, 1]
 
-    ret = vertcat(xs, ys, ths)
+    ret = vertcat(xs, ys)
 
-    print(ret)
+    print(horzcat(xs, ys))
 
     return ret
 
@@ -169,32 +168,17 @@ def get_look_up_table(track):
 
     return lut
 
-def get_feed_dict(x, y, theta, seed, delta_t, lut, N):
-    # possibly move variable delcatrations here
-    # only place needed
-
-    #todo: consider using norm_2 function for distance
-     # distance
-    # sum2(sqrt((x[1:] - x[:-1])**2 + (y[1:] - y[:-1])**2) * tan(theta[:-1])) 
-    # f = (norm_2((x[1:] - x[:-1]) + (y[1:] - y[:-1])) * tan(theta[:-1]))
-    # print(f.shape)
-    # f = sum1(f)
-    # print(f.shape)
+def get_feed_dict(seed, lut, N):
+    x, y = MX.sym('x', N), MX.sym('y', N) 
+    # theta = MX.sym('theta', N)
     
     nlp = {\
-       'x':vertcat(x,y,theta),
-       'f':sum1(norm_2((x[1:] - x[:-1]) + (y[1:] - y[:-1])) * tan(theta[:-1])) ,
+       'x':vertcat(x,y),
+       'f':sum1(sqrt((x[1:] - x[:-1])**2 + (y[1:] - y[:-1])**2) ) ,
        'g':vertcat(\
-                #    x[1:] - (x[:-1] + \
-                #        norm_2((x[1:] - x[:-1]) + (y[1:] - y[:-1]))*\
-                #            (tan(theta[:-1])**2) * cos(theta[:-1])),
-                #    y[1:] - (y[:-1] + \
-                #        norm_2((x[1:] - x[:-1]) + (y[1:] - y[:-1]))*\
-                #            (tan(theta[:-1])**2) * sin(theta[:-1])),
-                   theta[:-1] - (sum2(atan((y[1:] - y[:-1])/(x[1:] - x[:-1])))),
-                   x[0]-seed[0, 0], y[0]-seed[0, 1],
-                   x[N-1]-seed[-1, 0], y[N-1]-seed[-1, 1],
-                   lut(horzcat(x,y).T).T * 1e4
+                   x[0]-seed[0, 0], y[0]-seed[0, 1], # start
+                   x[N-1]-seed[-1, 0], y[N-1]-seed[-1, 1], # end
+                #    lut(horzcat(x,y).T).T * 1e4
                   )\
     }
 
@@ -202,17 +186,20 @@ def get_feed_dict(x, y, theta, seed, delta_t, lut, N):
 
 def get_bound_cons(seed, N):
     box = 60
-    lbx_pre = [i-box for i in seed[:, 0]] + [i-box for i in seed[:, 1]] 
-    ubx_pre = [i+box for i in seed[:, 0]] + [i+box for i in seed[:, 1]]
+    # lbx_pre = [i-box for i in seed[:, 0]] + [i-box for i in seed[:, 1]] 
+    # ubx_pre = [i+box for i in seed[:, 0]] + [i+box for i in seed[:, 1]]
 
-    lbg = [0] * (N-1)*1 + [0]*4 + [0]*N
-    ubg = [0] * (N-1)*1 + [0]*4 + [0]*N
+    lbg = [0] * (N-1)*0 + [0]*4 # + [0]*N
+    ubg = [0] * (N-1)*0 + [0]*4 # + [0]*N
 
     # lbx = [0]*N + [0]*N + [-np.inf]*N + [0]*N + [-1]*N
     # ubx = [100]*N + [100]*N + [np.inf]*N + [5]*N + [1]*N
 
-    lbx = lbx_pre + [-np.inf]*N 
-    ubx = ubx_pre + [np.inf]*N
+    # lbx = lbx_pre 
+    # ubx = ubx_pre 
+
+    lbx = [0] * 2*N
+    ubx = [100] * 2*N
 
     return lbx, ubx, lbg, ubg
 
@@ -232,11 +219,11 @@ def run_opti():
         show_track_path(track, path)
 
 
-    # path = reduce_path_diag(path)
+    path = reduce_path_diag(path)
     # path = expand_path(path)
     # show_track_path(track, path)
 
-    path = smart_casadi_opti(track, path)
+    path = smart_casadi_opti(track, path[:-1]) # last wp appears twice 
 
     show_track_path(track, path)
 
