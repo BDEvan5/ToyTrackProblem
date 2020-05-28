@@ -11,7 +11,7 @@ from PathPlanner import A_StarTrackWrapper, A_StarFinderMod
 from TrackMapInterface import load_map, show_track_path, render_track_ep
 from PathPrep import process_path
 
-from ValueAgent import Model, ReplayBuffer, RunnerVanilla
+from ValueAgent import Model, ReplayBuffer
 from NewRunner import NewRunner
 
 
@@ -48,8 +48,8 @@ def get_track_path(load_opti_path=True, load_path=True):
 
 
 def learn(config):
-    # path_obj, track = get_track_path(True, True)
-    path_obj, track = get_track_path(False, False)
+    path_obj, track = get_track_path(True, True)
+    # path_obj, track = get_track_path(False, False)
     # show_path(track, path_obj)
 
     # run sim
@@ -72,9 +72,6 @@ def learn(config):
         losses.append(model._loss_fcn())
         print(f"Loss {model.update_n}: {losses[-1]}")
         # f.plot(losses, figure_n=3)
-
-        # env.sim_mem.print_ep()
-        # render_track_ep(track, path_obj, env.sim_mem, pause=True)
 
         for _ in range(replay_ratio):
             b = replay_buffer.get_random_batch()

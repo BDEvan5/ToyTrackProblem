@@ -29,9 +29,10 @@ class NewRunner:
             ref_action, value = self.act(state)
             env.car_state.crash_chance = (1-value.numpy())
             next_state, reward, done = env.step(ref_action)
+            new_reward = reward + self.check_wp_done(state[0:2])
             self.ep_rewards[-1] += reward
 
-            b.add(state[2::], 1, value, reward, done) # nn action = 1
+            b.add(state[2::], 1, value, new_reward, done) # nn action = 1
 
             if done:
                 # f.plot(self.ep_rewards)
@@ -39,22 +40,29 @@ class NewRunner:
                 print("Episode: %03d, Reward: %03d" % (len(self.ep_rewards) - 1, self.ep_rewards[-2]))
 
                 # env.sim_mem.print_ep()
-                render_track_ep(track, self.path_obj, env.sim_mem, pause=True)
+                # render_track_ep(track, self.path_obj, env.sim_mem, pause=True)
                 next_state = env.reset()
                 self.pind = 0
-
-
 
             state = next_state
 
         self.state = next_state
         nn_state = state[2::]
-        _, q_val = self.model.get_action_value(nn_state[None, :])
+        q_val = self.model.get_action_value(nn_state[None, :])
         b.last_q_val = q_val
 
         # render_track_ep(track, self.path_obj, env.sim_mem, pause=True)
         
         return b
+
+    def check_wp_done(self, location):
+        car_dist = f.get_distance(self.path[self.pind].x, location)
+        ds = f.get_distance(self.path[self.pind].x, self.path[self.pind+1].x)
+        if car_dist > ds: 
+            return 1
+        return 0
+
+
 
     def act(self, state):
         location = state[0:4]
@@ -72,7 +80,7 @@ class NewRunner:
         # destination.print_point()
         # print(f"Location: {location}")
 
-        nn_action, value = self.model.get_action_value(nn_state[None, :])
+        value = self.model.get_action_value(nn_state[None, :])
 
         control_action = self.control_system(location, destination)
 

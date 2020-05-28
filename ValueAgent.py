@@ -92,47 +92,6 @@ def get_moving_average(period, values):
     return moving_avg
 
 
-class RunnerVanilla:
-    def __init__(self, env, model, path_obj):
-        self.env = env
-        self.model = model
-        self.buffer = BufferVanilla()
-        self.path_obj = path_obj
-
-        self.ep_rewards = [0.0]
-        self.state = self.env.reset()
-
-    def run_batch(self):
-        tracker = Tracker(self.path_obj)
-        b = BufferVanilla()
-        nsteps = 64
-        env, model = self.env, self.model
-        state = self.state
-        while len(b) <= nsteps:
-            ref_action = tracker.act(state[0:4])
-            nn_state = state[2::]
-            action, value = model.get_action_value(nn_state[None, :])
-            next_state, reward, done = env.step(ref_action)
-            self.ep_rewards[-1] += reward
-
-            b.add(nn_state, action, value, reward, done)
-
-            if done:
-                plot(self.ep_rewards)
-                self.ep_rewards.append(0.0)
-                next_state = env.reset()
-                print("Episode: %03d, Reward: %03d" % (len(self.ep_rewards) - 1, self.ep_rewards[-2]))
-
-            state = next_state
-
-        self.state = next_state
-        nn_state = state[2::]
-        _, q_val = self.model.get_action_value(nn_state[None, :])
-        b.last_q_val = q_val
-        
-        return b
-
-
 class Policy(tf.keras.Model):
     def __init__(self, num_actions):
         super().__init__()
@@ -140,21 +99,15 @@ class Policy(tf.keras.Model):
         self.hidden_values = tf.keras.layers.Dense(128, activation='relu')
         self.value = tf.keras.layers.Dense(1)
 
-        self.hidden_logs = tf.keras.layers.Dense(128, activation='relu')
-        self.logits = tf.keras.layers.Dense(num_actions)
-
         self.opti = tf.keras.optimizers.RMSprop(lr=7e-3)
 
     def call(self, inputs, **kwargs):
         x = tf.convert_to_tensor(inputs)
 
-        hidden_logs = self.hidden_logs(x)
-        logits = self.logits(hidden_logs)
-
         hidden_values = self.hidden_values(x)
         value = self.value(hidden_values)
 
-        return logits, value
+        return value
 
 
 class Model:
@@ -166,17 +119,10 @@ class Model:
         self.update_n = 0
 
     def get_action_value(self, obs):
-        logits, value = self.policy.predict_on_batch(obs)
-
-        action = tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
-        # action = 0
-        # if logits[0, 0] < logits[0, 1]:
-        #     action = 1
-
+        value = self.policy.predict_on_batch(obs)
         value = tf.squeeze(value, axis=-1)
-        action = tf.squeeze(action, axis=-1)
 
-        return action.numpy(), value
+        return value
 
     def update_model(self, buffer):
         self.buffer = buffer
@@ -196,53 +142,21 @@ class Model:
             q_val = reward + gamma * q_val * (1.0-done)
             q_vals[len(buffer)-1 - i] = q_val
 
-        advs = q_vals - buffer.values
-
-        acts = np.array(buffer.actions)[:, None]
+        # advs = q_vals - buffer.values
 
         obs = tf.convert_to_tensor(buffer.states)
-        logits, values = self.policy(obs) 
+        values = self.policy(obs) 
 
         # value
         value_c = 0.5
         value_loss = value_c * tf.keras.losses.mean_squared_error(q_vals, values)
         value_loss = tf.reduce_mean(value_loss)
 
-        # logits
-        entropy_c = 1e-4
-        acts = tf.cast(acts, tf.int32)
-
-        weighted_ce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-        policy_loss = weighted_ce(acts, logits, sample_weight=advs)
-
-        probs = tf.nn.softmax(logits)
-        entropy_loss = tf.keras.losses.categorical_crossentropy(probs, probs)
-
-        logits_loss = policy_loss - entropy_c * entropy_loss
-
         total_loss = value_loss #+ logits_loss
         return total_loss
 
-    def step(self, obs):
-        logits, _ = self.policy.predict_on_batch(obs)
-
-        action = tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
-
-        action = tf.squeeze(action, axis=-1).numpy()
-        logits = tf.squeeze(logits, axis=0)
-        mu = logits[action]
-
-        return action, mu
-
-    def get_action(self, obs):
-        logits, value = self.policy.predict_on_batch(obs)
-        action = tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
-        action = tf.squeeze(action, axis=-1)
-
-        return action.numpy()
-
     def get_value(self, obs):
-        logits, value = self.policy.predict_on_batch(obs)
+        value = self.policy.predict_on_batch(obs)
         value = tf.squeeze(value, axis=-1)
 
         return value
