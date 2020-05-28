@@ -27,6 +27,8 @@ class TrackMapBase:
         self.save_pane = tk.Frame(self.root, height=size[0], width=size[1]/10)
         self.save_pane.grid(row=1, column=2)
         self.root.bind("<Return>", self.set_wp)
+        self.root.bind("s", self.set_start)
+        self.root.bind("e", self.set_end)
 
         self.set_up_buttons()
 
@@ -120,6 +122,30 @@ class TrackMapBase:
             self.map_data.way_pts.append(x)
         self.redrawmap()
 
+    def set_start(self, event):
+        x = event.x_root - self.root.winfo_x()
+        y = event.y_root - self.root.winfo_y()
+
+        x, y = self.get_loaction_value(x, y)
+        x = [x, y]
+
+        self.map_data.path_start_location = x 
+        self.redrawmap()
+
+        print(f"Start Location: {self.map_data.path_start_location}")
+
+    def set_end(self, event):
+        x = event.x_root - self.root.winfo_x()
+        y = event.y_root - self.root.winfo_y()
+
+        x, y = self.get_loaction_value(x, y)
+        x = [x, y]
+
+        self.map_data.path_end_location = x 
+        self.redrawmap()
+        print(f"End Location: {self.map_data.path_end_location}")
+
+
 
 # helpers
     def get_map_color(self, i, j):
@@ -137,6 +163,8 @@ class TrackMapBase:
             color = 'spring green'
         elif [i, j] in self.map_data.way_pts:
             color = 'light sea green'
+        elif [i, j] == self.map_data.path_start_location or [i, j] == self.map_data.path_end_location:
+            color = 'turquoise1'
 
         return color
 
@@ -153,7 +181,8 @@ class TrackGenerator(TrackMapBase):
     def __init__(self):
         super().__init__()
 
-        self.root.bind("<Return>", self.set_wp)
+        # self.root.bind("<Return>", self.set_wp)
+        
         self.create_map()
         self.root.mainloop()
 
@@ -502,7 +531,7 @@ class TrackMapInterface(TrackMapBase):
 
 
 def load_map(map_name="myTrack0"):
-    map_name="myTrack1"
+    # map_name="myTrack2"
     filename = "DataRecords/" + map_name 
     db_file = open(filename, 'rb')
     loadmap = load(db_file)

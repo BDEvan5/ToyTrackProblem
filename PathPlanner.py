@@ -216,7 +216,7 @@ class A_StarPathFinderTrack:
             pos[1] = pos[1] * self.ds
         # print(self.position_list)
 
-    def run_search(self, ds, max_steps=4000):
+    def run_search(self, ds, max_steps=10000):
         self.ds = ds
         self.set_directions()
         self.set_up_start_node()
@@ -231,9 +231,10 @@ class A_StarPathFinderTrack:
             self.generate_children()
             i += 1
 
-        if i > 3900:
-            print("Max Iterations reached: problem with search")
+        assert i < max_steps, "Max Iterations reached: problem with search"
         path = self.get_path_list()
+
+        assert len(self.open_list) > 0, "Unable to find path through maze"
 
         return path
 
@@ -284,7 +285,8 @@ class A_StarPathFinderTrack:
             new_position = f.add_locations(self.current_node.position, direction)
 
             # if self.track.check_collision(new_position):
-            if self.track.check_line_collision(self.current_node.position, new_position): 
+            if self.track.check_hm_line_collision(self.current_node.position, new_position):
+            # if self.track.check_line_collision(self.current_node.position, new_position): 
                 continue # collision - skp this direction
             # Create new node - no obstacle
             new_node = Node(self.current_node, new_position)
@@ -384,6 +386,19 @@ def A_StarTrackWrapper(track, ds):
     # total_path = total_path.flatten()
 
     return total_path
+
+def A_StarFinderMod(track, ds):
+    # path start and end are already set
+    
+    assert track.path_start_location is not None, "No start location set"
+    assert track.path_end_location is not None, "No end location set"
+    
+    path_finder = A_StarPathFinderTrack(track)
+    path = path_finder.run_search(ds)
+
+    return path
+
+
 """
 RTT* algorithm
 """
@@ -660,6 +675,33 @@ def show_path_interface(path):
 
     interface = Interface(track, 100)
     interface.show_planned_path(path)
+
+def process_heat_map(track):
+    track_map = track.get_heat_map()
+    track_map = np.asarray(track_map, dtype=np.float32)
+    new_map = np.zeros_like(track_map)
+
+    for _ in range(1): # blocks up to 5 away will start to have a gradient
+        for i in range(1, 98):
+            for j in range(1, 98):
+                left = track_map[i-1, j]
+                right = track_map[i+1, j]
+                up = track_map[i, j+1]
+                down = track_map[i, j-1]
+
+                # logical directions, not according to actual map orientation
+                left_up = track_map[i-1, j+1] *3
+                left_down = track_map[i-1, j-1]*3
+                right_up = track_map[i+1, j+1]*3
+                right_down = track_map[i+1, j-1]*3
+
+                obs_sum = sum((left, right, up, down, left_up, left_down, right_up, right_down))
+                new_map[i, j] = max(obs_sum / 16, track_map[i, j])
+
+    if show:
+        show_heat_map(track_map)
+
+    return track_map 
 
 
 

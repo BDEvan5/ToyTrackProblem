@@ -52,7 +52,7 @@ class RaceEnv:
         return self.car_state.get_state_observation(), self.env_state.reward, self.env_state.done
 
     def reset(self):
-        self.car_state.reset_state(self.track.start_location, self.track.start_location)
+        self.car_state.reset_state(self.track.path_start_location, self.track.path_start_location)
         self.reward = 0
         self.sim_mem.clear_mem()
         self.track.reset_obstacles() # turn back on
@@ -84,7 +84,8 @@ class RaceEnv:
         if len(self.sim_mem.steps) > 2:
             x1 = self.sim_mem.steps[-1].car_state.x
             x2 = self.car_state.x
-            if self.track.check_past_start(x1, x2):
+            # if self.track.check_past_start(x1, x2):
+            if self.track.check_done(self.car_state.x):
                 return True
         
         return False

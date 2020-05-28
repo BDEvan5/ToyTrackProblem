@@ -6,22 +6,17 @@ import os
 import pickle
 
 from RaceEnv import RaceEnv
-from Models import TrackData
 from Config import create_sim_config
-from PathPlanner import A_StarPathFinder, A_StarTrackWrapper
-from TrajectoryOptimisation import add_velocity
-from TrajectoryOptimisation import reduce_path, reduce_path_diag, optimise_track_trajectory # debugging
-from PathTracker import Tracker
-from Interface import show_path, render_ep
+from PathPlanner import A_StarTrackWrapper, A_StarFinderMod
 from TrackMapInterface import load_map, show_track_path, render_track_ep
-import LibFunctions as f
+from PathPrep import process_path
 
 from ValueAgent import Model, ReplayBuffer, RunnerVanilla
 from NewRunner import NewRunner
 
 
 def get_track_path(load_opti_path=True, load_path=True):
-    track = load_map()
+    track = load_map("myTrack4")
 
     filename = "DataRecords/path_obj_db"
     
@@ -35,29 +30,26 @@ def get_track_path(load_opti_path=True, load_path=True):
             try:
                 path = np.load(path_file)
             except:
-                path = A_StarTrackWrapper(track, 1)
+                # path = A_StarTrackWrapper(track, 1)
+                path = A_StarFinderMod(track, 1)
                 np.save(path_file, path)
         else:
-            path = A_StarTrackWrapper(track, 1)
+            path = A_StarFinderMod(track, 1)
             np.save(path_file, path)
 
-        # show_track_path(track, path)
-        path = reduce_path_diag(path)
-
-        path = optimise_track_trajectory(path, track)
-        # show_track_path(track, path)
-        path_obj = add_velocity(path)
+        path_obj, path = process_path(path)
 
         pickle.dump(path_obj, db_file)
 
+        show_track_path(track, path)
     db_file.close()
 
     return path_obj, track
 
 
 def learn(config):
-    path_obj, track = get_track_path(True, True)
-    # path_obj, track = get_track_path(False, False)
+    # path_obj, track = get_track_path(True, True)
+    path_obj, track = get_track_path(False, False)
     # show_path(track, path_obj)
 
     # run sim
