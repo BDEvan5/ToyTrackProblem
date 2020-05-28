@@ -95,12 +95,11 @@ def smart_casadi_opti(track, path):
     
     x, y = MX.sym('x', N), MX.sym('y', N) 
     theta = MX.sym('theta', N)
-    v, w = MX.sym('v', N), MX.sym('w', N) 
 
     lut = get_look_up_table(track)
-    nlp = get_feed_dict(x, y, theta, v, w, seed, delta_t, lut, N)
+    nlp = get_feed_dict(x, y, theta, seed, delta_t, lut, N)
 
-    S = nlpsol('vert', 'ipopt', nlp, {'ipopt':{'print_level':5}})
+    S = nlpsol('Solver', 'ipopt', nlp, {'ipopt':{'print_level':5}})
 
     x0 = initSolution(seed)
     lbx, ubx, lbg, ubg = get_bound_cons(seed, N)
@@ -113,8 +112,6 @@ def smart_casadi_opti(track, path):
     x_new = np.array(x_opt[0:N])
     y_new = np.array(x_opt[N:2*N])
     th_new = np.array(x_opt[2*N:N*3])
-    v_new = np.array(x_opt[3*N:N*4])
-    w_new = np.array(x_opt[4*N:N*5])
 
     path = np.concatenate([x_new, y_new], axis=1)
 
@@ -140,24 +137,24 @@ def initSolution(seed):
             last_wp = wp
             continue
         gradient = f.get_gradient(last_wp, wp)
-        theta = np.arctan(gradient) - np.pi/2  # gradient to next point
+        theta = np.arctan(gradient) # - np.pi/2  # gradient to next point
         v = max_v * (np.pi - abs(theta)) / np.pi
 
         ths.append(theta)
         vs.append(v)
-    ths.append(0)
+    ths.append(0) # end grad
     vs.append(max_v)
 
-    dt = 1
-    for i in range(len(ths)-1):
-        w = (ths[i + 1] - ths[i])/dt 
-        ws.append(w)
-    ws.append(0)
+    # dt = 1
+    # for i in range(len(ths)-1):
+    #     w = (ths[i + 1] - ths[i])/dt 
+    #     ws.append(w)
+    # ws.append(0)
 
     xs = seed[:, 0]
     ys = seed[:, 1]
 
-    ret = vertcat(xs, ys, ths, vs, ws)
+    ret = vertcat(xs, ys, ths)
 
     print(ret)
 
@@ -172,18 +169,32 @@ def get_look_up_table(track):
 
     return lut
 
-def get_feed_dict(x, y, theta, v, w, seed, delta_t, lut, N):
+def get_feed_dict(x, y, theta, seed, delta_t, lut, N):
+    # possibly move variable delcatrations here
+    # only place needed
+
+    #todo: consider using norm_2 function for distance
+     # distance
+    # sum2(sqrt((x[1:] - x[:-1])**2 + (y[1:] - y[:-1])**2) * tan(theta[:-1])) 
+    # f = (norm_2((x[1:] - x[:-1]) + (y[1:] - y[:-1])) * tan(theta[:-1]))
+    # print(f.shape)
+    # f = sum1(f)
+    # print(f.shape)
     
     nlp = {\
-       'x':vertcat(x,y,theta,v,w),
-       'f': 5*(-sumsqr(v) + sumsqr(w)) + (sumsqr(x-seed[:,0]) + sumsqr(y-seed[:,1])),
+       'x':vertcat(x,y,theta),
+       'f':sum1(norm_2((x[1:] - x[:-1]) + (y[1:] - y[:-1])) * tan(theta[:-1])) ,
        'g':vertcat(\
-                   x[1:] - (x[:-1] + delta_t*v[:-1]*cos(theta[:-1])),
-                   y[1:] - (y[:-1] + delta_t*v[:-1]*sin(theta[:-1])),
-                   theta[1:] - (theta[:-1] + delta_t*w[:-1]),
+                #    x[1:] - (x[:-1] + \
+                #        norm_2((x[1:] - x[:-1]) + (y[1:] - y[:-1]))*\
+                #            (tan(theta[:-1])**2) * cos(theta[:-1])),
+                #    y[1:] - (y[:-1] + \
+                #        norm_2((x[1:] - x[:-1]) + (y[1:] - y[:-1]))*\
+                #            (tan(theta[:-1])**2) * sin(theta[:-1])),
+                   theta[:-1] - (sum2(atan((y[1:] - y[:-1])/(x[1:] - x[:-1])))),
                    x[0]-seed[0, 0], y[0]-seed[0, 1],
                    x[N-1]-seed[-1, 0], y[N-1]-seed[-1, 1],
-                   lut(horzcat(x,y).T).T * 1e8
+                   lut(horzcat(x,y).T).T * 1e4
                   )\
     }
 
@@ -194,14 +205,14 @@ def get_bound_cons(seed, N):
     lbx_pre = [i-box for i in seed[:, 0]] + [i-box for i in seed[:, 1]] 
     ubx_pre = [i+box for i in seed[:, 0]] + [i+box for i in seed[:, 1]]
 
-    lbg = [0] * (N-1)*3 + [0]*4 + [0]*N
-    ubg = ([0]*(N-1)*3 + [0]*4 + [0]*N)
+    lbg = [0] * (N-1)*1 + [0]*4 + [0]*N
+    ubg = [0] * (N-1)*1 + [0]*4 + [0]*N
 
     # lbx = [0]*N + [0]*N + [-np.inf]*N + [0]*N + [-1]*N
     # ubx = [100]*N + [100]*N + [np.inf]*N + [5]*N + [1]*N
 
-    lbx = lbx_pre + [-np.inf]*N + [0]*N + [-1]*N
-    ubx = ubx_pre + [np.inf]*N + [5]*N + [1]*N
+    lbx = lbx_pre + [-np.inf]*N 
+    ubx = ubx_pre + [np.inf]*N
 
     return lbx, ubx, lbg, ubg
 
@@ -223,7 +234,7 @@ def run_opti():
 
     # path = reduce_path_diag(path)
     # path = expand_path(path)
-    show_track_path(track, path)
+    # show_track_path(track, path)
 
     path = smart_casadi_opti(track, path)
 

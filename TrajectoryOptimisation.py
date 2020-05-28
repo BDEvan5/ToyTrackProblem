@@ -828,39 +828,6 @@ def casadi_optimisation_startend(path, track):
     return path
 
 
-def initSolution(seed):
-    max_v = 5
-    vs = []
-    ths = []
-    ws = []
-    for i, wp in enumerate(seed):
-        if i == 0:
-            last_wp = wp
-            continue
-        gradient = f.get_gradient(last_wp, wp)
-        theta = np.arctan(gradient) - np.pi/2  # gradient to next point
-        v = max_v * (np.pi - abs(theta)) / np.pi
-
-        ths.append(theta)
-        vs.append(v)
-    ths.append(0)
-    vs.append(max_v)
-
-    dt = 1
-    for i in range(len(ths)-1):
-        w = (ths[i + 1] - ths[i])/dt 
-        ws.append(w)
-    ws.append(0)
-
-    xs = seed[:, 0]
-    ys = seed[:, 1]
-
-    ret = vertcat(xs, ys, ths, vs, ws)
-
-    print(ret)
-
-    return ret
-
 
 def run_traj_opti():
     path = get_practice_path()
