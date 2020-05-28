@@ -1,5 +1,7 @@
 import numpy as np
 import LibFunctions as f
+from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 
 
@@ -13,6 +15,7 @@ class TrackMapData:
         self.n_blocks = int(self.map_size[0]/self.res) # how many blocks per dimension
 
         self.track_map = np.zeros((self.n_blocks, self.n_blocks), dtype=np.bool)
+        self.track_hm = None
         self.obs_map = np.zeros_like(self.track_map) # stores heatmap of obstacles
         
         self.start_x1 = None 
@@ -63,11 +66,9 @@ class TrackMapData:
             x = int((self.start_x1[0] + self.start_x2[0])/2)
             self.start_location = [x, y]
 
-
     def check_collision(self, x, hidden_obs=False):
         i = int(x[0])
         j = int(x[1])
-        # [i, j] = self.get_location_value(x)
         if i >= 100 or i < 0: 
             return True
         if j >= 100 or j < 0:
@@ -76,10 +77,36 @@ class TrackMapData:
             return True
         if hidden_obs and self.obs_map[i, j]:
             return True
-        #check boundaries
-        # if no collision: return false
         return False
     
+    def check_hm_collision(self, x): # used for safe path finding
+        if self.track_hm is None:
+            self.track_hm = process_heat_map(self)
+            print("Processed Heat Map")
+        i = int(x[0])
+        j = int(x[1])
+        if i >= 95 or i < 1: 
+            return True
+        if j >= 95 or j < 1:
+            return True
+        if self.track_hm[i, j]:
+            return True
+        return False
+
+    def check_hm_line_collision(self, x1, x2):
+        n_pts = 15
+        m = f.get_gradient(x1, x2)
+        x_search = np.linspace(0, x2[0] - x1[0], n_pts)
+        for i in range(n_pts):
+            pt_add = [x_search[i], m * x_search[i]]
+            pt = f.add_locations(pt_add, x1)
+            if self.check_hm_collision(pt):
+                return True
+        return False
+    
+
+
+
     def get_location_value(self, x):
         block_size = self.fs * self.res
 
@@ -109,9 +136,68 @@ class TrackMapData:
             return True
         return False
 
+    def check_done(self, x):
+        if f.get_distance(x, self.path_end_location) < 10:
+            return True
+        return False
+
     def get_heat_map(self):
         return self.track_map
 
+
+def process_heat_map(track, show=True):
+    show = False
+    track_map = track.get_heat_map()
+    track_map = np.asarray(track_map, dtype=np.float32)
+    new_map = np.zeros_like(track_map)
+
+    for _ in range(3): # blocks up to 5 away will start to have a gradient
+        new_map = np.zeros_like(track_map)
+        for i in range(1, 98):
+            for j in range(1, 98):
+                left = track_map[i-1, j]
+                right = track_map[i+1, j]
+                up = track_map[i, j+1]
+                down = track_map[i, j-1]
+
+                # logical directions, not according to actual map orientation
+                left_up = track_map[i-1, j+1] *3
+                left_down = track_map[i-1, j-1]*3
+                right_up = track_map[i+1, j+1]*3
+                right_down = track_map[i+1, j-1]*3
+
+                centre = track_map[i, j]
+
+                obs_sum = sum((centre, left, right, up, down, left_up, left_down, right_up, right_down))
+                if obs_sum > 0:
+                    new_map[i, j] = 1
+                # new_map[i, j] = max(obs_sum / 16, track_map[i, j])
+        track_map = new_map
+
+    if show:
+        # show_heat_map(track_map)
+        show_heat_map(track_map)
+
+    return track_map 
+
+
+def show_heat_map(track_map, view3d=True):
+    if view3d:
+        xs = [i for i in range(100)]
+        ys = [i for i in range(100)]
+        X, Y = np.meshgrid(xs, ys)
+
+        fig = plt.figure()
+
+
+        ax = fig.gca(projection='3d')
+        surf = ax.plot_surface(X, Y, track_map, cmap='plasma')
+        fig.colorbar(surf)
+    else:
+        ax = plt.gca()
+        im = ax.imshow(track_map)
+
+    plt.show()
 
 
 
