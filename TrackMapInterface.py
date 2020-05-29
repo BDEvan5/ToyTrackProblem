@@ -178,13 +178,14 @@ class TrackMapBase:
 
 
 class TrackGenerator(TrackMapBase):
-    def __init__(self):
+    def __init__(self, auto_start=True):
         super().__init__()
 
         # self.root.bind("<Return>", self.set_wp)
         
         self.create_map()
-        self.root.mainloop()
+        if auto_start:
+            self.root.mainloop()
 
     def create_map(self):
         block_sz = self.map_data.fs * self.map_data.res
@@ -206,6 +207,8 @@ class TrackGenerator(TrackMapBase):
                 c.tag_bind(tag_string, "<B3-Motion>", self.set_button_empty)
                 c.tag_bind(tag_string, "<Button-2>", self.set_x)
 
+    def manual_start(self):
+        self.root.mainloop()
 
     # bindings
     def set_button_fill(self, info):
@@ -470,12 +473,13 @@ class TrackMapInterface(TrackMapBase):
         x = np.around(self.step_i.car_state.x, 2)
         v = np.around(self.step_i.car_state.v, 2)
         th = np.around(self.step_i.car_state.theta, 2)
-        reward = np.around(self.step_i.env_state.reward, 3)
+        # reward = np.around(self.step_i.env_state.reward, 3)
+        reward = self.step_i.env_state.reward
         action = np.around(self.step_i.env_state.control_action, 2)
         distance = np.around(self.step_i.car_state.cur_distance)
         state_vec = np.around(self.step_i.car_state.get_state_observation(), 2)
         agent_action = np.around(self.step_i.env_state.agent_action)
-        crash_indi = np.around(self.step_i.car_state.crash_chance)
+        crash_indi = np.around(self.step_i.car_state.crash_chance, 4)
 
         step_text = str(step)
         self.step.config(text=step_text)
@@ -560,6 +564,7 @@ def render_track_ep(track, path, sim_mem, screen_name_path="DataRecords/PathTrac
         interface.step_q.put(step)
 
     interface.show_path_setup_root(path)
+
 
 if __name__ == "__main__":
     myTrackMap = TrackGenerator()

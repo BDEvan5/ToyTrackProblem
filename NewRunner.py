@@ -1,5 +1,5 @@
 import numpy as np 
-from VanillaAgent import BufferVanilla
+from ValueAgent import BufferVanilla
 from PathTracker import ControlSystem 
 import LibFunctions as f
 from TrackMapInterface import render_track_ep
@@ -25,20 +25,27 @@ class NewRunner:
         nsteps = 64
         env = self.env
         state = self.state
+        reward = 0
         while len(b) <= nsteps:
+            check_wp = self.check_wp_done(state[0:2])
             ref_action, value = self.act(state)
-            env.car_state.crash_chance = (1-value.numpy())
+            value_store = value.numpy()[0]
+            # print(value_store)
+            env.car_state.crash_chance = (value_store)
             next_state, reward, done = env.step(ref_action)
-            new_reward = reward + self.check_wp_done(state[0:2])
+            # print(f"Rewards: {new_reward} @ {len(b)}")
             self.ep_rewards[-1] += reward
-
-            b.add(state[2::], 1, value, new_reward, done) # nn action = 1
+            new_reward = reward + check_wp
+            new_done = done or bool(check_wp)
+            b.add(state[2::], 1, value, new_reward, new_done) # nn action = 1
 
             if done:
                 # f.plot(self.ep_rewards)
                 self.ep_rewards.append(0.0)
+                print(f"Last val: {b.values[-1]}")
                 print("Episode: %03d, Reward: %03d" % (len(self.ep_rewards) - 1, self.ep_rewards[-2]))
 
+                
                 # env.sim_mem.print_ep()
                 # render_track_ep(track, self.path_obj, env.sim_mem, pause=True)
                 next_state = env.reset()
@@ -50,6 +57,7 @@ class NewRunner:
         nn_state = state[2::]
         q_val = self.model.get_action_value(nn_state[None, :])
         b.last_q_val = q_val
+        # b.print_batch()
 
         # render_track_ep(track, self.path_obj, env.sim_mem, pause=True)
         

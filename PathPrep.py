@@ -1,8 +1,10 @@
 import numpy as np 
+import pickle
 
 import LibFunctions as f 
 from StateStructs import WayPoint, Path
-from TrackMapInterface import show_track_path
+from TrackMapInterface import show_track_path, TrackGenerator, load_map
+from PathPlanner import A_StarFinderMod
 
 
 
@@ -151,13 +153,105 @@ def convert_list_to_path(path):
     return new_path
 
 
-# external total call
-def process_path(path):
+# external calls
+
+def make_new_path(name):
+    print(f"Generating Map: {name}")
+    # generate
+    myTrackMap = TrackGenerator()
+    myTrackMap.name_var.set(name)
+    myTrackMap.save_map()
+
+    track = load_map(myTrackMap.name_var.get())
+
+
+    # path = A_StarTrackWrapper(track, 1)
+    path = A_StarFinderMod(track, 1)
+
     path = reduce_path_diag(path)
     # path = reduce_diagons(path)
-    path = expand_path(path)
+    # path = expand_path(path)
 
     path_obj = convert_list_to_path(path)
 
-    return path_obj, path
+    # save
+    name = "DataRecords/" + name
+    path_name = name + "_path_list.npy"
+    path_db_name = name + "_path_obj"
 
+    db_file = open(path_db_name, 'bw+')
+    np.save(path_name, path)
+    pickle.dump(path_obj, db_file)
+    db_file.close()
+
+    print(f"Path Saved: {name}")
+    show_track_path(track, path)
+
+    return track, path_obj
+
+def load_generated_map(name, show_map=False):
+    print(f"Loading Map: {name}")
+    track = load_map(name)
+
+    name = "DataRecords/" + name
+    path_name = name + "_path_list.npy"
+    path_db_name = name + "_path_obj"
+
+    db_file = open(path_db_name, 'br+')
+    path = np.load(path_name) 
+    path_obj = pickle.load(db_file)
+    db_file.close()
+
+    if show_map:
+        show_track_path(track, path)
+
+    return track, path_obj
+
+def edit_map(name):
+    print(f"Editing map: {name}")
+    myTrackMap = TrackGenerator(False)
+    myTrackMap.name_var.set(name)
+    try:
+        myTrackMap.load_map()
+        myTrackMap.manual_start()
+    except:
+        track, path_obj = make_new_path(name)
+        return track, path_obj
+    # edit map here
+    myTrackMap.save_map()
+
+    track = load_map(myTrackMap.name_var.get())
+
+    path = A_StarFinderMod(track, 1)
+
+    path = reduce_path_diag(path)
+    # path = reduce_diagons(path)
+    # path = expand_path(path)
+
+    path_obj = convert_list_to_path(path)
+
+    # save
+    name = "DataRecords/" + name
+    path_name = name + "_path_list.npy"
+    path_db_name = name + "path_obj"
+
+    db_file = open(path_db_name, 'bw+')
+    np.save(path_name, path)
+    pickle.dump(path_obj, db_file)
+    db_file.close()
+
+    show_track_path(track, path)
+
+    return track, path_obj
+
+
+
+
+if __name__ == "__main__":
+    test_name = "testTrack0"
+    generator_name = "ValueTrack1"
+    # track, path_obj = make_new_path(generator_name)
+
+    # track, path_obj = load_generated_map(test_name, True)
+
+    track, path_obj = edit_map(generator_name)

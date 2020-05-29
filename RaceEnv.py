@@ -67,7 +67,7 @@ class RaceEnv:
         crash_cost = 1
 
         if coll_flag:
-            reward = - crash_cost # 1 or zero
+            reward = - crash_cost # -1 or zero
         
         self.env_state.reward = reward
         self.car_state.prev_distance = deepcopy(self.car_state.cur_distance)

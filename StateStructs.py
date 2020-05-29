@@ -258,7 +258,12 @@ class SimMem:
         self.steps.clear()
         self.step = 0
 
+    def print_rewards(self):
+        rewards = []
+        for s in self.steps:
+            rewards.append(s.env_state.reward)
 
+        print(rewards)
 
 
 

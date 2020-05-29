@@ -47,6 +47,18 @@ class BufferVanilla():
     def __len__(self):
         return len(self.rewards)
 
+    def print_rewards(self):
+        print(self.rewards)
+
+    def print_batch(self):
+        new_values = []
+        for val in self.values:
+            new_values.append(val.numpy()[0])
+        zipped = zip(new_values, self.rewards, self.dones)
+        for iteration in zipped:
+            print(iteration)
+
+
 class ReplayBuffer:
     def __init__(self, size=5000):
         self.size = 5000
@@ -135,7 +147,7 @@ class Model:
 
     def _loss_fcn(self):
         buffer, q_val = self.buffer, self.q_val
-        gamma = 0.99
+        gamma = 0.9999
         q_vals = np.zeros((len(buffer), 1))
 
         for i, (_, _, _, reward, done) in enumerate(buffer.reversed()):
