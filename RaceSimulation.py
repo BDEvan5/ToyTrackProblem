@@ -10,6 +10,7 @@ from Config import create_sim_config
 from PathPlanner import A_StarTrackWrapper, A_StarFinderMod
 from TrackMapInterface import load_map, show_track_path, render_track_ep
 from PathPrep import process_path
+import LibFunctions as f 
 
 from ValueAgent import Model, ReplayBuffer
 from NewRunner import NewRunner
@@ -71,7 +72,7 @@ def learn(config):
 
         losses.append(model._loss_fcn())
         print(f"Loss {model.update_n}: {losses[-1]}")
-        # f.plot(losses, figure_n=3)
+        f.plot(losses, figure_n=3)
 
         for _ in range(replay_ratio):
             b = replay_buffer.get_random_batch()
