@@ -3,6 +3,7 @@ import tensorflow as tf
 import gym
 from matplotlib import pyplot as plt
 from PathTracker import Tracker
+import LibFunctions as f
 
 
 class BufferVanilla():
@@ -147,7 +148,7 @@ class Model:
 
     def _loss_fcn(self):
         buffer, q_val = self.buffer, self.q_val
-        gamma = 0.9999
+        gamma = 0.96
         q_vals = np.zeros((len(buffer), 1))
 
         for i, (_, _, _, reward, done) in enumerate(buffer.reversed()):
@@ -162,6 +163,9 @@ class Model:
         # value
         value_c = 0.5
         value_loss = value_c * tf.keras.losses.mean_squared_error(q_vals, values)
+
+        f.plot_three(values, q_vals, value_loss)
+
         value_loss = tf.reduce_mean(value_loss)
 
         total_loss = value_loss #+ logits_loss

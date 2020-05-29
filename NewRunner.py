@@ -35,7 +35,8 @@ class NewRunner:
             next_state, reward, done = env.step(ref_action)
 
             self.ep_rewards[-1] += reward
-            new_reward = reward + check_wp * 0.5
+            new_reward = reward + check_wp
+            # print(new_reward)
             new_done = done or bool(check_wp)
             b.add(nn_state, 1, value, new_reward, new_done) # nn action = 1
 
@@ -59,7 +60,7 @@ class NewRunner:
         # nn_state = state[2::] + 
         # q_val = self.model.get_action_value(nn_state[None, :])
         b.last_q_val = q_val
-        f.plot_comp(b.values, b.rewards, figure_n=4)
+        # f.plot_comp(b.values, b.rewards, figure_n=4)
         # b.print_batch()
 
         # render_track_ep(track, self.path_obj, env.sim_mem, pause=True)

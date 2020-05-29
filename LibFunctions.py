@@ -59,17 +59,43 @@ def plot_comp(values1, values2,  moving_avg_period=10, title="Results", figure_n
     plt.title(title)
     plt.xlabel('Episode')
     plt.ylabel('Duration')
-    # plt.plot(values1)
+    plt.plot(values1)
 
     moving_avg = get_moving_average(moving_avg_period, values1)
-    plt.plot(moving_avg)    
+    # plt.plot(moving_avg)    
 
-    # plt.plot(values2)
+    plt.plot(values2)
     moving_avg = get_moving_average(moving_avg_period, values2)
-    plt.plot(moving_avg)    
+    # plt.plot(moving_avg)    
  
     plt.legend(['RL Moving Avg', "Classical Moving Avg"])
     # plt.legend(['RL Agent', 'RL Moving Avg', 'Classical Agent', "Classical Moving Avg"])
+    plt.pause(0.001)
+
+def plot_three(values1, values2, values3, moving_avg_period=10, title="Results", figure_n=2):
+    plt.figure(figure_n)
+    plt.clf()        
+    plt.title(title)
+    plt.xlabel('Episode')
+    plt.ylabel('Duration')
+
+    plt.ylim(-2, 2)
+
+    plt.plot(values1)
+    # moving_avg = get_moving_average(moving_avg_period, values1)
+    # plt.plot(moving_avg)    
+
+    plt.plot(values2)
+    # moving_avg = get_moving_average(moving_avg_period, values2)
+    # plt.plot(moving_avg)    
+
+    plt.plot(values3)
+    # moving_avg = get_moving_average(moving_avg_period, values2)
+    # plt.plot(moving_avg)    
+ 
+    # plt.legend(['RL Moving Avg', "Classical Moving Avg"])
+    # plt.legend(['RL Agent', 'RL Moving Avg', 'Classical Agent', "Classical Moving Avg"])
+    plt.legend(['Values', 'Q_vals', 'Loss'])
     plt.pause(0.001)
 
 def get_moving_average(period, values):

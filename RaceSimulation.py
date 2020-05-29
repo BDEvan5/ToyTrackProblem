@@ -14,6 +14,22 @@ import LibFunctions as f
 from ValueAgent import Model, ReplayBuffer
 from NewRunner import NewRunner
 
+def plot(values, moving_avg_period=10, title="Results", figure_n=2):
+    plt.figure(figure_n)
+    plt.clf()        
+    plt.title(title)
+    plt.xlabel('Episode')
+    plt.ylabel('Duration')
+    plt.plot(values)
+
+    plt.ylim(0, 2)
+
+    moving_avg = f.get_moving_average(moving_avg_period, values)
+    plt.plot(moving_avg)    
+    moving_avg = f.get_moving_average(moving_avg_period * 5, values)
+    plt.plot(moving_avg)    
+    plt.pause(0.001)
+
 
 
 def learn(config):
@@ -24,7 +40,7 @@ def learn(config):
     # run sim
     env = RaceEnv(config, track)
 
-    replay_ratio = 8 #replay ratio of on to off policy learning
+    replay_ratio = 1 #replay ratio of on to off policy learning
 
     model = Model(3)
     replay_buffer = ReplayBuffer(20)
@@ -38,7 +54,7 @@ def learn(config):
 
         losses.append(model._loss_fcn())
         # print(f"Loss {model.update_n}: {losses[-1]}")
-        f.plot(losses, figure_n=3, title="Lossses")
+        plot(losses, figure_n=3, title="Lossses")
 
         for _ in range(replay_ratio):
             b = replay_buffer.get_random_batch()
