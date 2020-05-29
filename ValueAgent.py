@@ -171,13 +171,11 @@ class Model:
         total_loss = value_loss #+ logits_loss
         return total_loss
 
-    def get_value(self, obs):
-        value = self.policy.predict_on_batch(obs)
+    def __call__(self, nn_state):
+        value = self.policy.predict_on_batch(nn_state[None, :])
         value = tf.squeeze(value, axis=-1)
 
         return value
-
-
 
 
 
