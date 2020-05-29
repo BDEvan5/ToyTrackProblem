@@ -53,7 +53,7 @@ def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     # print("Episode", (len(values)), "\n", \
     #     moving_avg_period, "episode moving avg:", moving_avg)
 
-def plot_comp(values1, values2, moving_avg_period, title, figure_n):
+def plot_comp(values1, values2,  moving_avg_period=10, title="Results", figure_n=2):
     plt.figure(figure_n)
     plt.clf()        
     plt.title(title)

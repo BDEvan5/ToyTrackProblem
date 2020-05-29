@@ -38,7 +38,7 @@ def learn(config):
 
         losses.append(model._loss_fcn())
         # print(f"Loss {model.update_n}: {losses[-1]}")
-        f.plot(losses, figure_n=3)
+        f.plot(losses, figure_n=3, title="Lossses")
 
         for _ in range(replay_ratio):
             b = replay_buffer.get_random_batch()

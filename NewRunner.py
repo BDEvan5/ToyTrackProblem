@@ -28,21 +28,22 @@ class NewRunner:
         reward = 0
         while len(b) <= nsteps:
             check_wp = self.check_wp_done(state[0:2])
-            ref_action, value = self.act(state)
+            ref_action, value, nn_state = self.act(state)
             value_store = value.numpy()[0]
-            # print(value_store)
+
             env.car_state.crash_chance = (value_store)
             next_state, reward, done = env.step(ref_action)
-            # print(f"Rewards: {new_reward} @ {len(b)}")
+
             self.ep_rewards[-1] += reward
-            new_reward = reward + check_wp
+            new_reward = reward + check_wp * 0.5
             new_done = done or bool(check_wp)
-            b.add(state[2::], 1, value, new_reward, new_done) # nn action = 1
+            b.add(nn_state, 1, value, new_reward, new_done) # nn action = 1
 
             if done:
                 # f.plot(self.ep_rewards)
                 self.ep_rewards.append(0.0)
                 print(f"Last val: {b.values[-1]}")
+                print(f"Last reward: {b.rewards[-1]}")
                 print("Episode: %03d, Reward: %03d" % (len(self.ep_rewards) - 1, self.ep_rewards[-2]))
 
                 
@@ -54,9 +55,11 @@ class NewRunner:
             state = next_state
 
         self.state = next_state
-        nn_state = state[2::]
-        q_val = self.model.get_action_value(nn_state[None, :])
+        _, q_val, _ = self.act(state)
+        # nn_state = state[2::] + 
+        # q_val = self.model.get_action_value(nn_state[None, :])
         b.last_q_val = q_val
+        f.plot_comp(b.values, b.rewards, figure_n=4)
         # b.print_batch()
 
         # render_track_ep(track, self.path_obj, env.sim_mem, pause=True)
@@ -88,6 +91,10 @@ class NewRunner:
         # destination.print_point()
         # print(f"Location: {location}")
 
+        relative_destination = destination.x - state[0:2]
+
+        nn_state = np.append(nn_state, relative_destination)
+
         value = self.model.get_action_value(nn_state[None, :])
 
         control_action = self.control_system(location, destination)
@@ -96,5 +103,5 @@ class NewRunner:
         ref_action = control_action # + nn_action
         # print(ref_action)
 
-        return ref_action, value
+        return ref_action, value, nn_state
 

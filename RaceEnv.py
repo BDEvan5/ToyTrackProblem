@@ -63,11 +63,11 @@ class RaceEnv:
     def _get_reward(self, coll_flag):
         # self.car_state.cur_distance = f.get_distance(self.car_state.x, self.track.end_location) 
         self.car_state.cur_distance = 0
-        reward = 0
+        reward = 0.5
         crash_cost = 1
 
         if coll_flag:
-            reward = - crash_cost # -1 or zero
+            reward = 0 # -1 or zero
         
         self.env_state.reward = reward
         self.car_state.prev_distance = deepcopy(self.car_state.cur_distance)
