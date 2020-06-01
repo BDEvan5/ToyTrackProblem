@@ -9,7 +9,6 @@ import pickle
 import datetime
 import os
 from StateStructs import SimMem, CarState, EnvState, SimulationState, WayPoint
-from Interface import Interface
 from Models import TrackData
 
 

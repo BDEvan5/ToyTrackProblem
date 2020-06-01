@@ -42,8 +42,8 @@ def test(config):
     model.load_weights()
 
     runner = NewRunner(env, model, path_obj)
-    runner.run_test(track)
-    # render_track_ep(track, path_obj, env.sim_mem, pause=True)
+    avg = runner.run_test(track)
+    print(f"Average: {avg}")
 
 
 def learn(config):
@@ -88,5 +88,5 @@ def learn(config):
 
 if __name__ == "__main__":
     config = create_sim_config()
-    learn(config)
-    # test(config)
+    # learn(config)
+    test(config)

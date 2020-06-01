@@ -1,7 +1,6 @@
 import LibFunctions as f 
 import numpy as np 
 from copy import deepcopy
-from Interface import Interface
 from Models import TrackData
 from StateStructs import WayPoint, Path
 

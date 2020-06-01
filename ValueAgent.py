@@ -253,8 +253,8 @@ class Model:
     def load_weights(self):
         value_model = 'Networks/ValueModel'
         action_model = 'Networks/ActionModel'
-        self.v_policy.load_weights(value_model)
-        self.a_policy.load_weights(action_model)
+        self.v_policy = tf.keras.models.load_model(value_model)
+        self.a_policy = tf.keras.models.load_model(action_model)
 
 
 if __name__ == "__main__":

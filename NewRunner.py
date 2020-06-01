@@ -24,7 +24,7 @@ class NewRunner:
 
     def run_batch(self, track): 
         print(f"Running batch")
-        f_show = 2
+        f_show = 20
         b, reward = BufferVanilla(), 0
         env, state = self.env, self.state
         reward = 0
@@ -41,12 +41,12 @@ class NewRunner:
             self.store_outputs(b, nn_state, nn_action, nn_value, reward, done)         
 
             if done:
-                # f.plot(self.ep_rewards)
+                f.plot(self.ep_rewards, figure_n=5)
                 self.ep_rewards.append(0.0)
                 print("Episode: %03d, Reward: %03d" % (len(self.ep_rewards) - 1, self.ep_rewards[-2]))
 
                 if len(self.ep_rewards) % f_show == 1:
-                    render_track_ep(track, self.path_obj, env.sim_mem, pause=True, dt=300)
+                    render_track_ep(track, self.path_obj, env.sim_mem, pause=False, dt=30)
                     # snap_track(track, self.path_obj, env.sim_mem)
                 next_state = env.reset()
                 self.pind = 0
@@ -60,7 +60,7 @@ class NewRunner:
         
         return b
 
-    def run_test(self, track, tests=100):
+    def run_test(self, track, tests=100, show_eps=False):
         f_show = 5
         env, state = self.env, self.state
 
@@ -73,14 +73,14 @@ class NewRunner:
 
             env.car_state.crash_chance = (nn_value) #UNnEAT
             next_state, reward, done = env.step(ref_action)
-            self.ep_rewards[-1] += reward
+            self.ep_rewards[-1] += (reward + self.wp_done)
 
             if done:
                 f.plot(self.ep_rewards)
                 self.ep_rewards.append(0.0)
                 print("Episode: %03d, Reward: %03d" % (len(self.ep_rewards) - 1, self.ep_rewards[-2]))
 
-                if len(self.ep_rewards) % f_show == 1:
+                if len(self.ep_rewards) % f_show == 1 and show_eps:
                     render_track_ep(track, self.path_obj, env.sim_mem, pause=False, dt=40)
                     # snap_track(track, self.path_obj, env.sim_mem)
                 next_state = env.reset()
@@ -88,7 +88,7 @@ class NewRunner:
 
             state = next_state
 
-        self.state = next_state # remember for next batch
+        return np.mean(self.ep_rewards)
 
 
 
