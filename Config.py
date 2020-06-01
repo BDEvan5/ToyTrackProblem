@@ -40,7 +40,7 @@ class Configuration:
 
         # model parameters
         self.dx = 8 # distance it must be from final target
-        self.dt = 0.4 # controller frequency
+        self.dt = 1 # controller frequency
 
         # agent parameters
         self.max_steps = 200

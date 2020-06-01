@@ -105,8 +105,8 @@ def get_moving_average(period, values):
     return moving_avg
 
 
-class Policy(tf.keras.Model):
-    def __init__(self, num_actions):
+class ValuePolicy(tf.keras.Model):
+    def __init__(self):
         super().__init__()
 
         self.hidden_values = tf.keras.layers.Dense(128, activation='relu')
@@ -122,31 +122,69 @@ class Policy(tf.keras.Model):
 
         return value
 
+class ActionPolicy(tf.keras.Model):
+    def __init__(self, num_actions):
+        super().__init__()
+
+        self.hidden_logs = tf.keras.layers.Dense(128, activation='relu')
+        self.logits = tf.keras.layers.Dense(num_actions)
+
+        self.opti = tf.keras.optimizers.RMSprop(lr=7e-3)
+
+    def call(self, inputs, **kwargs):
+        x = tf.convert_to_tensor(inputs)
+
+        hidden_logs = self.hidden_logs(x)
+        logits = self.logits(hidden_logs)
+
+        return logits
+
 
 class Model:
     def __init__(self, num_actions):
-        self.policy = Policy(num_actions)
+        self.v_policy = ValuePolicy()
+        self.a_policy = ActionPolicy(num_actions)
 
         self.buffer = None
         self.q_val = None
         self.update_n = 0
+        self.show_plot = False
 
-    def get_action_value(self, obs):
-        value = self.policy.predict_on_batch(obs)
+    def get_value(self, nn_state):
+        value = self.v_policy.predict_on_batch(nn_state[None, :])
         value = tf.squeeze(value, axis=-1)
+        value = value.numpy()[0]
 
         return value
 
-    def update_model(self, buffer):
-        self.buffer = buffer
-        self.q_val = buffer.last_q_val
+    def get_action(self, nn_state):
+        logits = self.a_policy.predict_on_batch(nn_state[None, :])
+        # logits = tf.squeeze(logits, axis=-1)
+        action = tf.random.categorical(logits, 1)
+        action = tf.squeeze(action, axis=0) # axis doesn't matter (1, 1)
+        action = action.numpy()[0]
 
-        variables = self.policy.trainable_variables
-        self.policy.opti.minimize(loss = self._loss_fcn, var_list=variables)
+        return action
+
+    def update_model(self, buffer, show_plot=False):
+        f_save = 50
+
+        self.buffer = buffer    
+        self.q_val = buffer.last_q_val
+        self.show_plot = show_plot
+
+        variables = self.v_policy.trainable_variables
+        self.v_policy.opti.minimize(loss = self._loss_fcn_value, var_list=variables)
+
+        variables = self.a_policy.trainable_variables
+        self.a_policy.opti.minimize(loss=self._loss_fcn_action, var_list=variables)
+
+        if self.update_n % f_save == 1:
+            self.save_model()
 
         self.update_n += 1
 
-    def _loss_fcn(self):
+    def _loss_fcn_value(self):
         buffer, q_val = self.buffer, self.q_val
         gamma = 0.96
         q_vals = np.zeros((len(buffer), 1))
@@ -158,30 +196,68 @@ class Model:
         # advs = q_vals - buffer.values
 
         obs = tf.convert_to_tensor(buffer.states)
-        values = self.policy(obs) 
+        values = self.v_policy(obs) 
 
         # value
         value_c = 0.5
         value_loss = value_c * tf.keras.losses.mean_squared_error(q_vals, values)
 
-        # f.plot_three(values, q_vals, value_loss)
+        if self.show_plot:
+            f.plot_three(values, q_vals, value_loss)
 
         value_loss = tf.reduce_mean(value_loss)
+        return value_loss
 
-        total_loss = value_loss #+ logits_loss
-        return total_loss
+    def _loss_fcn_action(self):
+        buffer, q_val = self.buffer, self.q_val
+        gamma = 0.96
+        q_vals = np.zeros((len(buffer), 1))
+
+        for i, (_, _, _, reward, done) in enumerate(buffer.reversed()):
+            q_val = reward + gamma * q_val * (1.0-done)
+            q_vals[len(buffer)-1 - i] = q_val
+
+        q_vals = q_vals[:, 0] # effectivly squeezing axis=-1
+        advs = q_vals - buffer.values
+        acts = np.array(buffer.actions)[:, None]
+
+        obs = tf.convert_to_tensor(buffer.states)
+        logits = self.a_policy(obs) 
+
+        # logits
+        entropy_c = 1e-4
+        acts = tf.cast(acts, tf.int32)
+
+        weighted_ce = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        policy_loss = weighted_ce(acts, logits, sample_weight=advs)
+
+        probs = tf.nn.softmax(logits)
+        entropy_loss = tf.keras.losses.categorical_crossentropy(probs, probs)
+
+        logits_loss = policy_loss - entropy_c * entropy_loss
+
+        return logits_loss
 
     def __call__(self, nn_state):
-        value = self.policy.predict_on_batch(nn_state[None, :])
-        value = tf.squeeze(value, axis=-1)
-        value = value.numpy()[0]
+        value = self.get_value(nn_state)
+        action = self.get_action(nn_state)
 
-        return value
+        return action, value
 
+    def save_model(self):
+        value_model = 'Networks/ValueModel'
+        action_model = 'Networks/ActionModel'
+        self.v_policy.save(value_model)
+        self.a_policy.save(action_model)
 
+    def load_weights(self):
+        value_model = 'Networks/ValueModel'
+        action_model = 'Networks/ActionModel'
+        self.v_policy.load_weights(value_model)
+        self.a_policy.load_weights(action_model)
 
 
 if __name__ == "__main__":
-    learn()
+    pass
 
 

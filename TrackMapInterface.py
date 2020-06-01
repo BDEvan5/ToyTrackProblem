@@ -275,7 +275,7 @@ class TrackMapInterface(TrackMapBase):
         self.step_i = SimulationState()
         self.step_q = mp.Queue()
         self.range_lines = []
-        self.prev_px = track_obj.path_start_location # should fix weird line
+        self.prev_px = self._scale_input(track_obj.path_start_location) # should fix weird line
         self.save_shot_path = "DataRecords/EndShot"
         self.dt = dt
 
@@ -298,7 +298,7 @@ class TrackMapInterface(TrackMapBase):
                 last_pt = x
                 self.canv.pack()   
         
-        self.prev_px = self._scale_input(sim_mem.steps[0].car_state.x)
+        # self.prev_px = self._scale_input(sim_mem.steps[0].car_state.x)
         for step in sim_mem.steps:
             self.draw_snap_step(step) # todo: remove the need for a queu, just have a list
 

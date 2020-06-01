@@ -31,9 +31,23 @@ def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     plt.pause(0.001)
 
 
+def test(config):
+    f_show = 20
+    map_name = "ValueTrack1"
+    track, path_obj = load_generated_map(map_name, False)
+
+    # run sim
+    env = RaceEnv(config, track)
+    model = Model(3)
+    model.load_weights()
+
+    runner = NewRunner(env, model, path_obj)
+    runner.run_test(track)
+    # render_track_ep(track, path_obj, env.sim_mem, pause=True)
+
 
 def learn(config):
-    f_show = 50
+    f_show = 20
     map_name = "ValueTrack1"
     track, path_obj = load_generated_map(map_name, False)
     # track, path_obj = load_generated_map(map_name, True)
@@ -48,18 +62,23 @@ def learn(config):
 
     runner = NewRunner(env, model, path_obj)
     losses = []
-    for _ in range(1000):
+    for n in range(1000):
+
         b = runner.run_batch(track)
         replay_buffer.add_batch(b)
-        model.update_model(b)
+        show_plot = False
+        if n % f_show == 1:
+            show_plot = True
+        model.update_model(b, show_plot)
 
-        losses.append(model._loss_fcn())
+        losses.append(model._loss_fcn_value())
         plot(losses, figure_n=3, title="Lossses")
 
         for _ in range(replay_ratio):
             b = replay_buffer.get_random_batch()
             model.update_model(b)
 
+    model.save_model()
     fig = plt.figure(3)
     fig.savefig('DataRecords/LosssesTraining')
     # env.sim_mem.print_ep()
@@ -70,3 +89,4 @@ def learn(config):
 if __name__ == "__main__":
     config = create_sim_config()
     learn(config)
+    # test(config)
