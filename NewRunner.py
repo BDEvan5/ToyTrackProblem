@@ -2,7 +2,7 @@ import numpy as np
 from ValueAgent import BufferVanilla
 from PathTracker import ControlSystem 
 import LibFunctions as f
-from TrackMapInterface import render_track_ep
+from TrackMapInterface import render_track_ep, snap_track
 
 
 class NewRunner:
@@ -23,6 +23,7 @@ class NewRunner:
         self.control_system = ControlSystem()
 
     def run_batch(self, track): # temp track
+        f_show = 50
         b, reward = BufferVanilla(), 0
         env, state = self.env, self.state
         reward = 0
@@ -33,27 +34,26 @@ class NewRunner:
             
             ref_action = self.add_actions(control_action, nn_action)
 
-            env.car_state.crash_chance = (nn_value.numpy()[0]) #UNnEAT
+            env.car_state.crash_chance = (nn_value) #UNnEAT
             next_state, reward, done = env.step(ref_action)
 
-            self.store_outputs(b, nn_state, nn_action, nn_value, reward, done)            
+            self.store_outputs(b, nn_state, nn_action, nn_value, reward, done)         
 
             if done:
                 # f.plot(self.ep_rewards)
                 self.ep_rewards.append(0.0)
-                print(f"Last val: {b.values[-1]}")
-                print(f"Last reward: {b.rewards[-1]}")
                 print("Episode: %03d, Reward: %03d" % (len(self.ep_rewards) - 1, self.ep_rewards[-2]))
 
-                # render_track_ep(track, self.path_obj, env.sim_mem, pause=True)
+                if len(self.ep_rewards) % f_show == 1:
+                    render_track_ep(track, self.path_obj, env.sim_mem, pause=False, dt=40)
+                    # snap_track(track, self.path_obj, env.sim_mem)
                 next_state = env.reset()
                 self.pind = 0
 
             state = next_state
 
-        self.state = next_state
-        _, q_val, _ = self.act(state)
-        b.last_q_val = q_val
+        self.state = next_state # remember for next batch
+        b.last_q_val = self.model(nn_state)
         # f.plot_comp(b.values, b.rewards, figure_n=4)
 
         # render_track_ep(track, self.path_obj, env.sim_mem, pause=True)
@@ -69,6 +69,8 @@ class NewRunner:
             if self.pind < (self.n_inds-1):
                 self.pind += 1
             self.wp_done = 1
+            car_dist = f.get_distance(self.path[self.pind].x, state[0:2])
+            ds = f.get_distance(self.path[self.pind].x, self.path[self.pind+1].x)
 
         destination = self.path[self.pind+1] # next point
 
@@ -79,9 +81,9 @@ class NewRunner:
         return destination, nn_state
 
     def store_outputs(self, b, nn_state, nn_action, nn_value, reward, done):
-        self.ep_rewards[-1] += reward
         new_reward = reward + self.wp_done
 
+        self.ep_rewards[-1] += new_reward
         new_done = done or bool(self.wp_done)
         b.add(nn_state, 1, nn_value, new_reward, new_done) # nn action = 1
 
@@ -92,27 +94,5 @@ class NewRunner:
             print("Unknown NN action")
             raise ValueError
 
-    # def act(self, state):
-    #     location = state[0:4]
-    #     nn_state = state[2::]
 
-    #     car_dist = f.get_distance(self.path[self.pind].x, state[0:2])
-    #     ds = f.get_distance(self.path[self.pind].x, self.path[self.pind+1].x)
-    #     if car_dist > ds: 
-    #         if self.pind < (self.n_inds-1):
-    #             self.pind += 1
-
-    #     destination = self.path[self.pind+1] # next point
-
-    #     relative_destination = destination.x - state[0:2]
-    #     nn_state = np.append(nn_state, relative_destination)
-    #     value = self.model.get_action_value(nn_state[None, :])
-
-    #     control_action = self.control_system(location, destination)
-
-    #     # add nn_action and control action
-    #     ref_action = control_action # + nn_action
-    #     # print(ref_action)
-
-    #     return ref_action, value, nn_state
 

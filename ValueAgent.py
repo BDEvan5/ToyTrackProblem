@@ -164,7 +164,7 @@ class Model:
         value_c = 0.5
         value_loss = value_c * tf.keras.losses.mean_squared_error(q_vals, values)
 
-        f.plot_three(values, q_vals, value_loss)
+        # f.plot_three(values, q_vals, value_loss)
 
         value_loss = tf.reduce_mean(value_loss)
 
@@ -174,6 +174,7 @@ class Model:
     def __call__(self, nn_state):
         value = self.policy.predict_on_batch(nn_state[None, :])
         value = tf.squeeze(value, axis=-1)
+        value = value.numpy()[0]
 
         return value
 

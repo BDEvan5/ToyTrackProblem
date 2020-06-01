@@ -86,6 +86,7 @@ class RaceEnv:
             x2 = self.car_state.x
             # if self.track.check_past_start(x1, x2):
             if self.track.check_done(self.car_state.x):
+                # print("Destination reached")
                 return True
         
         return False

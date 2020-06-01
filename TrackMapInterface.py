@@ -3,10 +3,11 @@ import tkinter as tk
 from TrackMapData import TrackMapData
 from pickle import load, dump
 import LibFunctions as f
-import pyautogui 
+from pyscreenshot import grab
 from StateStructs import SimulationState
 import multiprocessing as mp
 import sys
+
 
 
 class TrackMapBase:
@@ -263,7 +264,7 @@ class TrackGenerator(TrackMapBase):
 
 
 class TrackMapInterface(TrackMapBase):
-    def __init__(self, track_obj, dt=100):
+    def __init__(self, track_obj, dt=100, snap=False):
         super().__init__(track_obj=track_obj)
 
         self.create_map()
@@ -274,9 +275,62 @@ class TrackMapInterface(TrackMapBase):
         self.step_i = SimulationState()
         self.step_q = mp.Queue()
         self.range_lines = []
-        self.prev_px = [0, 0]
+        self.prev_px = track_obj.path_start_location # should fix weird line
         self.save_shot_path = "DataRecords/EndShot"
         self.dt = dt
+
+# snap functionality
+    def snap(self, sim_mem, path=None, show=True):
+        # function to produce snap view of map.
+        # p0 = [50, 50]
+        # px = f.sub_locations(self.prev_px, p0)
+        # self.canv.move(self.o, px[0], px[1])
+        # self.canv.pack()
+
+        if path is not None:
+            last_pt = self._scale_input(path.route[0].x)
+            for i, point in enumerate(path.route):
+                x = self._scale_input(point.x)
+                str_msg = str(i)
+                # self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
+                self.canv.create_oval(x[0], x[1], x[0] + 8, x[1] + 8, fill='DeepPink2')
+                self.canv.create_line(last_pt, x, fill='IndianRed1', width=2)
+                last_pt = x
+                self.canv.pack()   
+        
+        self.prev_px = self._scale_input(sim_mem.steps[0].car_state.x)
+        for step in sim_mem.steps:
+            self.draw_snap_step(step) # todo: remove the need for a queu, just have a list
+
+
+        self.root.after(500, self.root.destroy)
+        self.root.mainloop()
+
+        
+
+    def draw_snap_step(self, step):
+        current_pos = self._scale_input(step.car_state.x)
+
+        # add line segment
+        self.canv.create_line(self.prev_px, current_pos, fill='purple', width=4)
+        x = current_pos
+        y = 8 # size of oval
+        self.canv.create_oval(x[0], x[1], x[0] + y, x[1] + y, fill='deep sky blue')
+        self.prev_px = current_pos
+
+    def take_snap_shot(self, shot_name):
+        x = self.root.winfo_x()
+        y = self.root.winfo_y()
+        width = self.root.winfo_reqwidth()
+        height = self.root.winfo_reqheight()
+        arr = [x, y, x+width, y+height]
+        # print(arr)
+        if shot_name is None:
+            path = self.save_shot_path + ".png"
+        else: 
+            path = shot_name + ".png"
+        shot = grab()
+        shot.show()
 
 
 # set up - define create map and additional buttons
@@ -368,36 +422,25 @@ class TrackMapInterface(TrackMapBase):
     
 # run
     def run_loop(self):
+        self.root.after(0, self.run_interface_loop)
         self.root.mainloop()
 
-    def setup_root(self):
-        # print("Setup root called")
+    def start_interface(self, sim_mem, path=None):
         p0 = [50, 50]
         px = f.sub_locations(self.prev_px, p0)
-
         self.canv.move(self.o, px[0], px[1])
-        
-        self.canv.pack()
-        self.root.after(0, self.run_interface_loop)
-        self.run_loop()
-
-    def show_path_setup_root(self, path):
-        # print("Setup root called")
-        p0 = [50, 50]
-        px = f.sub_locations(self.prev_px, p0)
-
-        self.canv.move(self.o, px[0], px[1])
-        
         self.canv.pack()
 
-        for i, point in enumerate(path.route):
-            x = self._scale_input(point.x)
-            str_msg = str(i)
-            self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
+        if path is not None:
+            for i, point in enumerate(path.route):
+                x = self._scale_input(point.x)
+                str_msg = str(i)
+                self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
+                self.canv.pack()   
 
-            self.canv.pack()   
+        for step in sim_mem.steps:
+            self.step_q.put(step) # todo: remove the need for a queu, just have a list
 
-        self.root.after(0, self.run_interface_loop)
         self.run_loop()
 
     # main function with logic
@@ -458,7 +501,6 @@ class TrackMapInterface(TrackMapBase):
 
         # add line segment
         self.canv.create_line(self.prev_px, current_pos, fill='purple', width=4)
-
         self.prev_px = current_pos
 
         # direction line
@@ -520,14 +562,17 @@ class TrackMapInterface(TrackMapBase):
             self.canv.pack()
             self.range_lines.append(l)
 
-    def take_screenshot(self):
+    def take_screenshot(self, shot_name=None):
         x = self.root.winfo_x()
         y = self.root.winfo_y()
         width = self.root.winfo_reqwidth()
         height = self.root.winfo_reqheight()
         arr = [x, y, x+width, y+height]
         # print(arr)
-        path = self.save_shot_path + ".png"
+        if shot_name is None:
+            path = self.save_shot_path + ".png"
+        else: 
+            path = shot_name + ".png"
         pyautogui.screenshotUtil.screenshot(path, region=arr)
         # pyautogui.screenshot(path, region=arr)
 
@@ -553,18 +598,21 @@ def show_track_path(track, path):
     myTrackInterface = TrackMapInterface(track)
     myTrackInterface.show_planned_path(path)
 
-def render_track_ep(track, path, sim_mem, screen_name_path="DataRecords/PathTracker", pause=False):
-    dt = 60
+def render_track_ep(track, path, sim_mem, screen_name_path="DataRecords/PathTracker", pause=False, dt=60):
     interface = TrackMapInterface(track, dt)
-    interface.save_shot_path = screen_name_path
+    interface.save_shot_path = screen_name_path #todo: move to a setup function
     interface.pause_flag = pause
 
-    for step in sim_mem.steps:
-        # step.print_point("Step Q")
-        interface.step_q.put(step)
+    interface.start_interface(sim_mem, path)
 
-    interface.show_path_setup_root(path)
+def snap_track(track, path, sim_mem, screen_name_path="DataRecords/PathTracker"):
+    # print(f"ShowingTrackSnap")
+    dt = 60
+    interface = TrackMapInterface(track, dt)
+    interface.save_shot_path = screen_name_path #todo: move to a setup function
 
+    interface.snap(sim_mem, path)
+    # print(f"Snapped")
 
 if __name__ == "__main__":
     myTrackMap = TrackGenerator()

@@ -22,7 +22,7 @@ def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     plt.ylabel('Duration')
     plt.plot(values)
 
-    plt.ylim(0, 2)
+    plt.ylim(0, 0.2)
 
     moving_avg = f.get_moving_average(moving_avg_period, values)
     plt.plot(moving_avg)    
@@ -33,6 +33,7 @@ def plot(values, moving_avg_period=10, title="Results", figure_n=2):
 
 
 def learn(config):
+    f_show = 50
     map_name = "ValueTrack1"
     track, path_obj = load_generated_map(map_name, False)
     # track, path_obj = load_generated_map(map_name, True)
@@ -47,19 +48,20 @@ def learn(config):
 
     runner = NewRunner(env, model, path_obj)
     losses = []
-    for _ in range(500):
+    for _ in range(1000):
         b = runner.run_batch(track)
         replay_buffer.add_batch(b)
         model.update_model(b)
 
         losses.append(model._loss_fcn())
-        # print(f"Loss {model.update_n}: {losses[-1]}")
         plot(losses, figure_n=3, title="Lossses")
 
         for _ in range(replay_ratio):
             b = replay_buffer.get_random_batch()
             model.update_model(b)
 
+    fig = plt.figure(3)
+    fig.savefig('DataRecords/LosssesTraining')
     # env.sim_mem.print_ep()
     # render_track_ep(track, path_obj, env.sim_mem, pause=True)
 
