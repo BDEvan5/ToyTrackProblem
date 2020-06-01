@@ -115,6 +115,9 @@ class RaceEnv:
             ran.val = update_val
         # self.car_state.print_ranges()
 
+    def render_episode(self):
+        dt = 30
+        self.interface = Interface(self.track, dt)
 
 
 
