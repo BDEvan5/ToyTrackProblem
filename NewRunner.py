@@ -1,15 +1,16 @@
 import numpy as np 
-from VanillaAgent import BufferVanilla
+from ValueAgent import BufferVanilla
 from PathTracker import ControlSystem 
 import LibFunctions as f
-from TrackMapInterface import render_track_ep
+from TrackMapInterface import render_track_ep, snap_track
 
 
 class NewRunner:
-    def __init__(self, env, model, path_obj):
+    def __init__(self, env, model, path_obj, nsteps=64):
         self.env = env
         self.model = model
         self.path_obj = path_obj
+        self.nsteps = nsteps
 
         self.ep_rewards = [0.0]
         self.state = self.env.reset()
@@ -18,67 +19,118 @@ class NewRunner:
         self.n_inds = len(self.path) -1
 
         self.pind = 0
+        self.wp_done = 0
         self.control_system = ControlSystem()
 
-    def run_batch(self, track): # temp track
-        b = BufferVanilla()
-        nsteps = 64
-        env = self.env
-        state = self.state
-        while len(b) <= nsteps:
-            ref_action, value = self.act(state)
-            env.car_state.crash_chance = (1-value.numpy())
-            next_state, reward, done = env.step(ref_action)
-            self.ep_rewards[-1] += reward
+    def run_batch(self, track): 
+        print(f"Running batch")
+        f_show = 2
+        b, reward = BufferVanilla(), 0
+        env, state = self.env, self.state
+        reward = 0
+        while len(b) <= self.nsteps:
+            destination, nn_state = self.determine_destination(state)
+            control_action = self.control_system(state[0:4], destination)
+            nn_action, nn_value = self.model(nn_state)
+            
+            ref_action = self.add_actions(control_action, nn_action)
 
-            b.add(state[2::], 1, value, reward, done) # nn action = 1
+            env.car_state.crash_chance = (nn_value) #UNnEAT
+            next_state, reward, done = env.step(ref_action)
+
+            self.store_outputs(b, nn_state, nn_action, nn_value, reward, done)         
 
             if done:
                 # f.plot(self.ep_rewards)
                 self.ep_rewards.append(0.0)
                 print("Episode: %03d, Reward: %03d" % (len(self.ep_rewards) - 1, self.ep_rewards[-2]))
 
-                # env.sim_mem.print_ep()
-                render_track_ep(track, self.path_obj, env.sim_mem, pause=True)
+                if len(self.ep_rewards) % f_show == 1:
+                    render_track_ep(track, self.path_obj, env.sim_mem, pause=True, dt=300)
+                    # snap_track(track, self.path_obj, env.sim_mem)
                 next_state = env.reset()
                 self.pind = 0
 
-
-
             state = next_state
 
-        self.state = next_state
-        nn_state = state[2::]
-        _, q_val = self.model.get_action_value(nn_state[None, :])
-        b.last_q_val = q_val
-
+        self.state = next_state # remember for next batch
+        _, b.last_q_val = self.model(nn_state)
+        # f.plot_comp(b.values, b.rewards, figure_n=4)
         # render_track_ep(track, self.path_obj, env.sim_mem, pause=True)
         
         return b
 
-    def act(self, state):
-        location = state[0:4]
-        nn_state = state[2::]
+    def run_test(self, track, tests=100):
+        f_show = 5
+        env, state = self.env, self.state
 
+        while len(self.ep_rewards) < tests:
+            destination, nn_state = self.determine_destination(state)
+            control_action = self.control_system(state[0:4], destination)
+            nn_action, nn_value = self.model(nn_state)
+            
+            ref_action = self.add_actions(control_action, nn_action)
+
+            env.car_state.crash_chance = (nn_value) #UNnEAT
+            next_state, reward, done = env.step(ref_action)
+            self.ep_rewards[-1] += reward
+
+            if done:
+                f.plot(self.ep_rewards)
+                self.ep_rewards.append(0.0)
+                print("Episode: %03d, Reward: %03d" % (len(self.ep_rewards) - 1, self.ep_rewards[-2]))
+
+                if len(self.ep_rewards) % f_show == 1:
+                    render_track_ep(track, self.path_obj, env.sim_mem, pause=False, dt=40)
+                    # snap_track(track, self.path_obj, env.sim_mem)
+                next_state = env.reset()
+                self.pind = 0
+
+            state = next_state
+
+        self.state = next_state # remember for next batch
+
+
+
+    def determine_destination(self, state):
+        self.wp_done = 0
         car_dist = f.get_distance(self.path[self.pind].x, state[0:2])
         ds = f.get_distance(self.path[self.pind].x, self.path[self.pind+1].x)
-        if car_dist > ds: 
+        while car_dist > ds: # makes sure will keep going until reached
             if self.pind < (self.n_inds-1):
                 self.pind += 1
-            # else:
-            #     self.env.car_state.done = True
+            self.wp_done = 1
+            car_dist = f.get_distance(self.path[self.pind].x, state[0:2])
+            ds = f.get_distance(self.path[self.pind].x, self.path[self.pind+1].x)
 
         destination = self.path[self.pind+1] # next point
-        # destination.print_point()
-        # print(f"Location: {location}")
 
-        nn_action, value = self.model.get_action_value(nn_state[None, :])
+        nn_state = state[2::]
+        relative_destination = destination.x - state[0:2]
+        nn_state = np.append(nn_state, relative_destination)
 
-        control_action = self.control_system(location, destination)
+        return destination, nn_state
 
-        # add nn_action and control action
-        ref_action = control_action # + nn_action
-        # print(ref_action)
+    def store_outputs(self, b, nn_state, nn_action, nn_value, reward, done):
+        action_cost = abs(nn_action - 1) * 0.05
+        new_reward = reward + self.wp_done - action_cost
+        self.env.env_state.agent_action = nn_action
 
-        return ref_action, value
+        self.ep_rewards[-1] += new_reward
+        new_done = done or bool(self.wp_done)
+        b.add(nn_state, 1, nn_value, new_reward, new_done) # nn action = 1
+
+    def add_actions(self, control_action, nn_action):
+        m = 1
+        theta_mod = 0.1
+        if nn_action == m:
+            return control_action
+        elif nn_action < m:
+            action = [control_action[0], control_action[1] - theta_mod]
+            return action
+        elif nn_action > m:
+            action = [control_action[0], control_action[1] + theta_mod]
+            return action
+
+
 

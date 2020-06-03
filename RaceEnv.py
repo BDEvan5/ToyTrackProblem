@@ -67,7 +67,7 @@ class RaceEnv:
         crash_cost = 1
 
         if coll_flag:
-            reward = - crash_cost # 1 or zero
+            reward = -1 # -1 or zero
         
         self.env_state.reward = reward
         self.car_state.prev_distance = deepcopy(self.car_state.cur_distance)
@@ -86,6 +86,7 @@ class RaceEnv:
             x2 = self.car_state.x
             # if self.track.check_past_start(x1, x2):
             if self.track.check_done(self.car_state.x):
+                # print("Destination reached")
                 return True
         
         return False
@@ -114,6 +115,9 @@ class RaceEnv:
             ran.val = update_val
         # self.car_state.print_ranges()
 
+    def render_episode(self):
+        dt = 30
+        self.interface = Interface(self.track, dt)
 
 
 

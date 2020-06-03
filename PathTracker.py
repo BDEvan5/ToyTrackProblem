@@ -41,7 +41,7 @@ class ControlSystem:
 
         delta = np.arctan(e_th * self.L / (new_v)) * 1
 
-        if abs(delta) > 1:
+        if abs(delta) > 1.5:
             print(f"Probelms: delta trying to be {delta} which is >1") 
             # raise ValueError
 

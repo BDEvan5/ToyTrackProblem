@@ -3,6 +3,7 @@ import tensorflow as tf
 import gym
 from matplotlib import pyplot as plt
 from PathTracker import Tracker
+import LibFunctions as f
 
 
 class BufferVanilla():
@@ -46,6 +47,18 @@ class BufferVanilla():
     
     def __len__(self):
         return len(self.rewards)
+
+    def print_rewards(self):
+        print(self.rewards)
+
+    def print_batch(self):
+        new_values = []
+        for val in self.values:
+            new_values.append(val.numpy()[0])
+        zipped = zip(new_values, self.rewards, self.dones)
+        for iteration in zipped:
+            print(iteration)
+
 
 class ReplayBuffer:
     def __init__(self, size=5000):
@@ -92,53 +105,26 @@ def get_moving_average(period, values):
     return moving_avg
 
 
-class RunnerVanilla:
-    def __init__(self, env, model, path_obj):
-        self.env = env
-        self.model = model
-        self.buffer = BufferVanilla()
-        self.path_obj = path_obj
-
-        self.ep_rewards = [0.0]
-        self.state = self.env.reset()
-
-    def run_batch(self):
-        tracker = Tracker(self.path_obj)
-        b = BufferVanilla()
-        nsteps = 64
-        env, model = self.env, self.model
-        state = self.state
-        while len(b) <= nsteps:
-            ref_action = tracker.act(state[0:4])
-            nn_state = state[2::]
-            action, value = model.get_action_value(nn_state[None, :])
-            next_state, reward, done = env.step(ref_action)
-            self.ep_rewards[-1] += reward
-
-            b.add(nn_state, action, value, reward, done)
-
-            if done:
-                plot(self.ep_rewards)
-                self.ep_rewards.append(0.0)
-                next_state = env.reset()
-                print("Episode: %03d, Reward: %03d" % (len(self.ep_rewards) - 1, self.ep_rewards[-2]))
-
-            state = next_state
-
-        self.state = next_state
-        nn_state = state[2::]
-        _, q_val = self.model.get_action_value(nn_state[None, :])
-        b.last_q_val = q_val
-        
-        return b
-
-
-class Policy(tf.keras.Model):
-    def __init__(self, num_actions):
+class ValuePolicy(tf.keras.Model):
+    def __init__(self):
         super().__init__()
 
         self.hidden_values = tf.keras.layers.Dense(128, activation='relu')
         self.value = tf.keras.layers.Dense(1)
+
+        self.opti = tf.keras.optimizers.RMSprop(lr=7e-3)
+
+    def call(self, inputs, **kwargs):
+        x = tf.convert_to_tensor(inputs)
+
+        hidden_values = self.hidden_values(x)
+        value = self.value(hidden_values)
+
+        return value
+
+class ActionPolicy(tf.keras.Model):
+    def __init__(self, num_actions):
+        super().__init__()
 
         self.hidden_logs = tf.keras.layers.Dense(128, activation='relu')
         self.logits = tf.keras.layers.Dense(num_actions)
@@ -151,62 +137,92 @@ class Policy(tf.keras.Model):
         hidden_logs = self.hidden_logs(x)
         logits = self.logits(hidden_logs)
 
-        hidden_values = self.hidden_values(x)
-        value = self.value(hidden_values)
-
-        return logits, value
+        return logits
 
 
 class Model:
     def __init__(self, num_actions):
-        self.policy = Policy(num_actions)
+        self.v_policy = ValuePolicy()
+        self.a_policy = ActionPolicy(num_actions)
 
         self.buffer = None
         self.q_val = None
         self.update_n = 0
+        self.show_plot = False
 
-    def get_action_value(self, obs):
-        logits, value = self.policy.predict_on_batch(obs)
-
-        action = tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
-        # action = 0
-        # if logits[0, 0] < logits[0, 1]:
-        #     action = 1
-
+    def get_value(self, nn_state):
+        value = self.v_policy.predict_on_batch(nn_state[None, :])
         value = tf.squeeze(value, axis=-1)
-        action = tf.squeeze(action, axis=-1)
+        value = value.numpy()[0]
 
-        return action.numpy(), value
+        return value
 
-    def update_model(self, buffer):
-        self.buffer = buffer
+    def get_action(self, nn_state):
+        logits = self.a_policy.predict_on_batch(nn_state[None, :])
+        # logits = tf.squeeze(logits, axis=-1)
+        action = tf.random.categorical(logits, 1)
+        action = tf.squeeze(action, axis=0) # axis doesn't matter (1, 1)
+        action = action.numpy()[0]
+
+        return action
+
+    def update_model(self, buffer, show_plot=False):
+        f_save = 50
+
+        self.buffer = buffer    
         self.q_val = buffer.last_q_val
+        self.show_plot = show_plot
 
-        variables = self.policy.trainable_variables
-        self.policy.opti.minimize(loss = self._loss_fcn, var_list=variables)
+        variables = self.v_policy.trainable_variables
+        self.v_policy.opti.minimize(loss = self._loss_fcn_value, var_list=variables)
+
+        variables = self.a_policy.trainable_variables
+        self.a_policy.opti.minimize(loss=self._loss_fcn_action, var_list=variables)
+
+        if self.update_n % f_save == 1:
+            self.save_model()
 
         self.update_n += 1
 
-    def _loss_fcn(self):
+    def _loss_fcn_value(self):
         buffer, q_val = self.buffer, self.q_val
-        gamma = 0.99
+        gamma = 0.96
         q_vals = np.zeros((len(buffer), 1))
 
         for i, (_, _, _, reward, done) in enumerate(buffer.reversed()):
             q_val = reward + gamma * q_val * (1.0-done)
             q_vals[len(buffer)-1 - i] = q_val
 
-        advs = q_vals - buffer.values
-
-        acts = np.array(buffer.actions)[:, None]
+        # advs = q_vals - buffer.values
 
         obs = tf.convert_to_tensor(buffer.states)
-        logits, values = self.policy(obs) 
+        values = self.v_policy(obs) 
 
         # value
         value_c = 0.5
         value_loss = value_c * tf.keras.losses.mean_squared_error(q_vals, values)
+
+        if self.show_plot:
+            f.plot_three(values, q_vals, value_loss)
+
         value_loss = tf.reduce_mean(value_loss)
+        return value_loss
+
+    def _loss_fcn_action(self):
+        buffer, q_val = self.buffer, self.q_val
+        gamma = 0.96
+        q_vals = np.zeros((len(buffer), 1))
+
+        for i, (_, _, _, reward, done) in enumerate(buffer.reversed()):
+            q_val = reward + gamma * q_val * (1.0-done)
+            q_vals[len(buffer)-1 - i] = q_val
+
+        q_vals = q_vals[:, 0] # effectivly squeezing axis=-1
+        advs = q_vals - buffer.values
+        acts = np.array(buffer.actions)[:, None]
+
+        obs = tf.convert_to_tensor(buffer.states)
+        logits = self.a_policy(obs) 
 
         # logits
         entropy_c = 1e-4
@@ -220,39 +236,28 @@ class Model:
 
         logits_loss = policy_loss - entropy_c * entropy_loss
 
-        total_loss = value_loss #+ logits_loss
-        return total_loss
+        return logits_loss
 
-    def step(self, obs):
-        logits, _ = self.policy.predict_on_batch(obs)
+    def __call__(self, nn_state):
+        value = self.get_value(nn_state)
+        action = self.get_action(nn_state)
 
-        action = tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
+        return action, value
 
-        action = tf.squeeze(action, axis=-1).numpy()
-        logits = tf.squeeze(logits, axis=0)
-        mu = logits[action]
+    def save_model(self):
+        value_model = 'Networks/ValueModel'
+        action_model = 'Networks/ActionModel'
+        self.v_policy.save(value_model)
+        self.a_policy.save(action_model)
 
-        return action, mu
-
-    def get_action(self, obs):
-        logits, value = self.policy.predict_on_batch(obs)
-        action = tf.squeeze(tf.random.categorical(logits, 1), axis=-1)
-        action = tf.squeeze(action, axis=-1)
-
-        return action.numpy()
-
-    def get_value(self, obs):
-        logits, value = self.policy.predict_on_batch(obs)
-        value = tf.squeeze(value, axis=-1)
-
-        return value
-
-
-
-
+    def load_weights(self):
+        value_model = 'Networks/ValueModel'
+        action_model = 'Networks/ActionModel'
+        self.v_policy.load_weights(value_model)
+        self.a_policy.load_weights(action_model)
 
 
 if __name__ == "__main__":
-    learn()
+    pass
 
 

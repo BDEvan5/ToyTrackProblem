@@ -109,6 +109,10 @@ class CarModel:
         self.v += a * dt - self.friction * self.v
 
         self.theta += self.v / self.L * np.tan(action[1])
+        while self.theta > (np.pi * 2):
+            self.theta - (2 * np.pi)
+        while self.theta < -(np.pi * 2):
+            self.theta + (2 * np.pi)
         r = self.v * dt
         self.x[0] += r * np.sin(self.theta)
         self.x[1] += - r * np.cos(self.theta)
@@ -258,7 +262,12 @@ class SimMem:
         self.steps.clear()
         self.step = 0
 
+    def print_rewards(self):
+        rewards = []
+        for s in self.steps:
+            rewards.append(s.env_state.reward)
 
+        print(rewards)
 
 
 

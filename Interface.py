@@ -4,7 +4,7 @@ from StateStructs import SimMem, SimulationState
 import LibFunctions as f
 import time
 import numpy as np 
-import pyautogui 
+
 import os
 
 
