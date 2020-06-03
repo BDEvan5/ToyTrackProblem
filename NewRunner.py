@@ -33,7 +33,8 @@ class NewRunner:
             control_action = self.control_system(state[0:4], destination)
             nn_action, nn_value = self.model(nn_state)
             
-            ref_action = self.add_actions(control_action, nn_action)
+            # ref_action = self.add_actions(control_action, nn_action)
+            ref_action = control_action
 
             env.car_state.crash_chance = (nn_value) #UNnEAT
             next_state, reward, done = env.step(ref_action)
@@ -57,6 +58,39 @@ class NewRunner:
         _, b.last_q_val = self.model(nn_state)
         # f.plot_comp(b.values, b.rewards, figure_n=4)
         # render_track_ep(track, self.path_obj, env.sim_mem, pause=True)
+        
+        return b
+
+    def run_training_batch(self, track): 
+        print(f"Running batch")
+        b, reward = BufferVanilla(), 0
+        env, state = self.env, self.state
+        reward = 0
+        while len(b) <= self.nsteps:
+            destination, nn_state = self.determine_destination(state)
+            control_action = self.control_system(state[0:4], destination)
+            nn_action, nn_value = self.model(nn_state)
+            
+            ref_action = self.add_actions(control_action, nn_action)
+            ref_action = control_action
+
+            env.car_state.crash_chance = (nn_value) #UNnEAT
+            next_state, reward, done = env.step(ref_action)
+
+            self.store_outputs(b, nn_state, nn_action, nn_value, reward, done)         
+
+            if done:
+                f.plot(self.ep_rewards, figure_n=5)
+                self.ep_rewards.append(0.0)
+                print("Episode: %03d, Reward: %03d" % (len(self.ep_rewards) - 1, self.ep_rewards[-2]))
+
+                next_state = env.reset()
+                self.pind = 0
+
+            state = next_state
+
+        self.state = next_state # remember for next batch
+        _, b.last_q_val = self.model(nn_state)
         
         return b
 
