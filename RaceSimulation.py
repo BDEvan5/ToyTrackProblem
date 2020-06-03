@@ -45,7 +45,7 @@ def test(config):
     avg = runner.run_test(track)
     print(f"Average: {avg}")
 
-
+# ready for Fred
 def learn(config):
     f_show = 20
     map_name = "ValueTrack1"
