@@ -1,10 +1,7 @@
 import LibFunctions as f 
 import numpy as np 
 from copy import deepcopy
-from Models import TrackData
-from StateStructs import WayPoint, Path
 
-from collections import deque
 import matplotlib.pyplot as plt
 from matplotlib import collections  as mc
 

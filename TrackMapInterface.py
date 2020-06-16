@@ -4,7 +4,6 @@ from TrackMapData import TrackMapData
 from pickle import load, dump
 import LibFunctions as f
 from pyscreenshot import grab
-from StateStructs import SimulationState
 import multiprocessing as mp
 import sys
 
@@ -272,10 +271,7 @@ class TrackMapInterface(TrackMapBase):
         self.set_up_extra_buttons()
 
         self.pause_flag = True # start in b_pause mode
-        self.step_i = SimulationState()
-        self.step_q = mp.Queue()
         self.memory = None
-        self.step_num = 0
         self.range_lines = []
         self.prev_px = self._scale_input(track_obj.path_start_location) # should fix weird line
         self.save_shot_path = "DataRecords/EndShot"
@@ -425,24 +421,6 @@ class TrackMapInterface(TrackMapBase):
         self.root.after(0, self.run_interface_loop)
         self.root.mainloop()
 
-    def start_interface(self, sim_mem, path=None):
-        p0 = [50, 50]
-        px = f.sub_locations(self.prev_px, p0)
-        self.canv.move(self.o, px[0], px[1])
-        self.canv.pack()
-
-        if path is not None:
-            for i, point in enumerate(path.route):
-                x = self._scale_input(point.x)
-                str_msg = str(i)
-                self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 20 bold")
-                self.canv.pack()   
-
-        for step in sim_mem.steps:
-            self.step_q.put(step) # todo: remove the need for a queu, just have a list
-
-        self.run_loop()
-
     def start_interface_list(self, memory, full_path=None):
         p0 = [50, 50]
         px = f.sub_locations(self.prev_px, p0)
@@ -460,25 +438,12 @@ class TrackMapInterface(TrackMapBase):
         self.memory = memory
         self.run_loop()
 
-
     # main function with logic
     def run_interface_loop(self):
         if  not self.pause_flag:
             self.single_step()
         else:
             self.root.after(self.dt, self.run_interface_loop)
-
-    def show_planned_path(self, path):
-        for i, point in enumerate(path):
-            new_pt = f.add_locations(point, [0.5, 0.5]) # brings to centre
-            x = self._scale_input(new_pt)
-            self.end_x = self.canv.create_oval(x[0], x[1], x[0] + 8, x[1] + 8, fill='DeepPink2')
-            str_msg = str(i)
-            # self.end_x = self.canv.create_text(x[0], x[1], text=str_msg, fill='black', font = "Times 12")
-
-            self.canv.pack() 
-
-        self.run_loop()
 
     def _scale_input(self, x_in):
         x_out = [0, 0]
@@ -494,28 +459,13 @@ class TrackMapInterface(TrackMapBase):
         self.pause_flag = False
 
     def single_step(self):
-        # if not self.step_q.empty():
-        #     self.step_i = self.step_q.get()
-        #     if self.step_i.env_state.done is False:
-        #         self.update_car_position()
-        #         self.draw_ranges()
-        #         self.update_info()
-        #         self.root.after(self.dt, self.run_interface_loop)
-        #     else:
-        #         print("Going to destroy tk inter: the ep is done")
-        #         # self.take_screenshot()
-        #         self.root.destroy()
-        # else:
-        #     print("Going to destroy tk inter: empty queue")
-        #     # self.take_screenshot()
-        #     self.root.destroy()
-
         if len(self.memory) > 0:
             transition = self.memory.pop(0)
             s, a, r, s_p, d = transition
 
             if d is False:
-                self.update_car_position(s[0:2])
+                th = s[3] * np.pi # reverse the scale
+                self.update_car_position(s[0:2], th)
                 self.draw_ranges(s)
                 self.update_info(s, r, a)
                 self.root.after(self.dt, self.run_interface_loop)
@@ -527,11 +477,11 @@ class TrackMapInterface(TrackMapBase):
             print("Going to destroy tk inter: empty queue")
             # self.take_screenshot()
             self.root.destroy()
+
 # update functions
-    def update_car_position(self, x):
+    def update_car_position(self, x, theta):
         current_pos = self._scale_input(x)
         # move dot
-        # current_pos = self._scale_input(self.step_i.car_state.x)
         px = f.sub_locations(current_pos, self.prev_px)
         self.canv.move(self.o, px[0], px[1])
 
@@ -542,36 +492,17 @@ class TrackMapInterface(TrackMapBase):
         # direction line
         length = 40
         self.canv.delete(self.th)
-        add_coord = [length * np.sin(self.step_i.car_state.theta), -length * np.cos(self.step_i.car_state.theta)]
-        new_pos = f.add_locations(self.prev_px, add_coord)
-        self.th = self.canv.create_line(self.prev_px, new_pos, fill='green', width=6)
+        add_coord = [length * np.sin(theta), -length * np.cos(theta)]
+        new_pos = f.add_locations(current_pos, add_coord)
+        self.th = self.canv.create_line(current_pos, new_pos, fill='green', width=6)
 
     def update_info(self, s, r, a):
-        # step = self.step_i.step
-        # x = np.around(self.step_i.car_state.x, 2)
-        # v = np.around(self.step_i.car_state.v, 2)
-        # th = np.around(self.step_i.car_state.theta, 2)
-        # # reward = np.around(self.step_i.env_state.reward, 3)
-        # reward = self.step_i.env_state.reward
-        # action = np.around(self.step_i.env_state.control_action, 2)
-        # distance = np.around(self.step_i.car_state.cur_distance)
-        # state_vec = np.around(self.step_i.car_state.get_state_observation(), 2)
-        # agent_action = np.around(self.step_i.env_state.agent_action)
-        # crash_indi = np.around(self.step_i.car_state.crash_chance, 4)
-
         x = np.around(s[0:2], 2)
         v = np.around(s[2], 2)
         th = np.around(s[3], 2)
-        # reward = np.around(self.step_i.env_state.reward, 3)
         reward = r
         action = np.around(a, 2)
-        # distance = np.around(self.step_i.car_state.cur_distance)
         state_vec = np.around(s, 2)
-        # agent_action = np.around(self.step_i.env_state.agent_action)
-        # crash_indi = np.around(self.step_i.car_state.crash_chance, 4)
-
-        # step_text = str(step)
-        # self.step.config(text=step_text)
 
         location_text = str(x)
         self.loc.config(text=location_text)
@@ -584,47 +515,30 @@ class TrackMapInterface(TrackMapBase):
         action_text = str(action)
         self.action.config(text=action_text)
 
-        # self.distance.config(text=str(distance))
-
         state_vec_str = str(state_vec[0:2]) + "\n"  + str(state_vec[2:4]) + "\n" \
             + str(state_vec[4:6]) + "\n" + str(state_vec[6::])
         self.state_vec.config(text=state_vec_str)
-        # self.agent_action.config(text=str(agent_action))
-
-        # self.crash_indicator.config(text=str(crash_indi))
         
     def draw_ranges(self, s):
         for obj in self.range_lines: # deletes old lines
             self.canv.delete(obj)
 
         x = s[0:2]
-        th = s[3]
-        ranges = s[4:]
+        theta_car = s[3] * np.pi
+        ranges = s[4:] 
 
-        # x_scale = self._scale_input(self.step_i.car_state.x)
         x_scale = self._scale_input(x)
         n_ranges = 5
         dth = np.pi / (n_ranges-1)
         for i in range(n_ranges):
-            th = i * dth - np.pi/2 + th
-            dx = [ranges[i] * np.sin(th), - ranges[i] * np.cos(th)]
+            th = i * dth + theta_car - np.pi/2
+            value = ranges[i] * 100 #unscale
+            dx = [value * np.sin(th), - value * np.cos(th)]
             x1 = f.add_locations(dx, x)
             node = self._scale_input(x1)
             l = self.canv.create_line(x_scale, node, fill='red', width=4)
             self.canv.pack()
             self.range_lines.append(l)
-
-
-        # for ran in self.step_i.car_state.ranges:
-        #     th = ran.angle + self.step_i.car_state.theta
-            #   dx = [ran.val * np.sin(th), - ran.val * np.cos(th)]
-        #     x1 = f.add_locations(dx, self.step_i.car_state.x)
-
-        #     node = self._scale_input(x1)
-
-        #     l = self.canv.create_line(x_scale, node, fill='red', width=4)
-        #     self.canv.pack()
-        #     self.range_lines.append(l)
 
     def take_screenshot(self, shot_name=None):
         x = self.root.winfo_x()

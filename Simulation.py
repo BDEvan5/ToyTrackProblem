@@ -102,7 +102,6 @@ class SimulationCarState:
         max_v = 5
         max_theta = np.pi
         max_range = 100
-        max_dis_glbl_wp = 100 # distance to next wp
 
         state = []
         state.append(self.x[0])

@@ -38,15 +38,15 @@ def RunSimulationLearning():
 
 def RunSimulationTest():
     name = "ValueTrack1"
-    make_new_map(name)
+    # make_new_map(name)
     track = load_map(name)
     vehicle = Vehicle()
-    full_path = vehicle.plan_path(track, load=False)
+    full_path = vehicle.plan_path(track, load=True)
     simulator = Simulation(track)
 
     ep_histories = []
 
-    for i in range(10):
+    for i in range(1):
         state, score, done = simulator.reset(), 0, False
         vehicle.reset()
         length, memory = 0, []
