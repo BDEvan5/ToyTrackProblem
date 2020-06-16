@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 class TrackMapData:
-    def __init__(self, resolution=1, scaling_factor=10):
+    def __init__(self, name, resolution=1, scaling_factor=10):
         # replacing the old trackdata
         self.fs = int(scaling_factor) # scaling factor from map size to display dize
         self.res = int(resolution) # how many map blocks to drawn blocks
@@ -25,6 +25,8 @@ class TrackMapData:
         self.way_pts = []
         self.path_end_location = None
         self.path_start_location = None
+
+        self.name = name
 
 
         # boundariy?? not needed

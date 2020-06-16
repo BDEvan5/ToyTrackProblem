@@ -158,11 +158,12 @@ def convert_list_to_path(path):
 def make_new_path(name):
     print(f"Generating Map: {name}")
     # generate
-    myTrackMap = TrackGenerator()
+    myTrackMap = TrackGenerator(name)
     myTrackMap.name_var.set(name)
     myTrackMap.save_map()
 
     track = load_map(myTrackMap.name_var.get())
+    
 
 
     # path = A_StarTrackWrapper(track, 1)
@@ -250,8 +251,8 @@ def edit_map(name):
 if __name__ == "__main__":
     test_name = "testTrack0"
     generator_name = "ValueTrack1"
-    # track, path_obj = make_new_path(generator_name)
+    track, path_obj = make_new_path(generator_name)
 
     # track, path_obj = load_generated_map(test_name, True)
 
-    track, path_obj = edit_map(generator_name)
+    # track, path_obj = edit_map(generator_name)

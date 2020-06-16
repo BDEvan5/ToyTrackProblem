@@ -11,9 +11,9 @@ import sys
 
 
 class TrackMapBase:
-    def __init__(self, track_obj=None):
+    def __init__(self, name, track_obj=None):
         if track_obj is None:
-            self.map_data = TrackMapData()
+            self.map_data = TrackMapData(name)
         else:
             self.map_data = track_obj
 
@@ -106,7 +106,7 @@ class TrackMapBase:
         self.reset_obs()
 
     def clear_map(self):
-        self.map_data = TrackMapData()
+        self.map_data = TrackMapData(self.map_data.name)
         self.redrawmap()
 
     def set_wp(self, info):
@@ -179,8 +179,8 @@ class TrackMapBase:
 
 
 class TrackGenerator(TrackMapBase):
-    def __init__(self, auto_start=True):
-        super().__init__()
+    def __init__(self, name, auto_start=True):
+        super().__init__(name)
 
         # self.root.bind("<Return>", self.set_wp)
         
@@ -265,7 +265,7 @@ class TrackGenerator(TrackMapBase):
 
 class TrackMapInterface(TrackMapBase):
     def __init__(self, track_obj, dt=100, snap=False):
-        super().__init__(track_obj=track_obj)
+        super().__init__(name, track_obj=track_obj)
 
         self.create_map()
         self.set_up_info_pannel()
