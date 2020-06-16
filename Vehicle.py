@@ -39,6 +39,8 @@ class Vehicle:
 
         self.local_planner.set_path(full_path)
 
+        return full_path
+
     def reset(self):
         self.local_planner.pind = 0
 

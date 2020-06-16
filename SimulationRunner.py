@@ -4,11 +4,12 @@ It will have a funciton with the big training loop
 
 """
 import numpy as np 
+from collections import deque
 
 from Simulation import Simulation
 from Vehicle import Vehicle
 
-from TrackMapInterface import load_map
+from TrackMapInterface import load_map, render_ep, make_new_map
 
 
 def RunSimulationLearning():
@@ -35,37 +36,37 @@ def RunSimulationLearning():
 
 
 
-
-
 def RunSimulationTest():
     name = "ValueTrack1"
+    make_new_map(name)
     track = load_map(name)
     vehicle = Vehicle()
-    vehicle.plan_path(track, load=True)
+    full_path = vehicle.plan_path(track, load=False)
     simulator = Simulation(track)
 
-    for i in range(1000):
+    ep_histories = []
+
+    for i in range(10):
         state, score, done = simulator.reset(), 0, False
         vehicle.reset()
-        length = 0
+        length, memory = 0, []
         while not done:
             action = vehicle.get_action(state)
 
             new_state, reward, done = simulator.step(action)
+            memory.append((state, action, reward, new_state, done))
             score += reward
             length += 1
             state = new_state
 
         print(f"{i}:-> Score: {score} -> Length: {length}")
-
+        render_ep(track, full_path, memory, True)
+        ep_histories.append(memory)
+        
 
 """Helpers"""
-def make_new_path(name):
-    print(f"Generating Map: {name}")
-    # generate
-    myTrackMap = TrackGenerator(name)
-    myTrackMap.name_var.set(name)
-    myTrackMap.save_map()
+
+
 
 
 if __name__ == "__main__":
