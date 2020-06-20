@@ -6,7 +6,7 @@ This will be one day implemented in ros on the actual vehicle
 import numpy as np 
 
 from PathPlanner import A_StarFinderMod
-# import agent
+from ReplacementDDPG import Agent()
 import LibFunctions as lib
 
 """ This is basically a wrapper for the three different systems """
@@ -15,17 +15,40 @@ class Vehicle:
         self.local_planner = LocalPlanner()
         self.control_system = ControlSystem()
 
-        # self.agent = Agent()
+        self.agent = Agent()
 
     def get_action(self, state):
         target = self.local_planner(state)
+        nn_state = self.get_nn_state(state, target)
 
-        # write code here to modify the action based on the agent
-        # write function to get relative desitnation then use that for nn and controller
+        obs = np.concatenate(nn_state)
+        new_target = self.agent(obs)
 
-        action = self.control_system(state, target)
+        action = self.control_system(state, new_target)
 
         return action
+
+    def get_nn_state(self, state, target):
+        relative_target = self.modify_target(state, target)
+
+        #relative_target_direction, v, theta, range finders
+        ret_state = state.copy()
+        ret_state[0:2] = relative_target
+
+        return ret_state
+
+    def modify_target(self, target, state):
+        relative_target = target - state[0:2]
+
+        # modify the length of the target to fixed size
+        target_size = 1 # normalise direction
+
+        ratio = relative_target[0] / relative_target [1]
+        y = np.sqrt(target_size ** 2 / (1 + ratio ** 2))
+        x = ratio * y
+        
+        ret = np.array([x, y])
+        return ret
 
     def plan_path(self, track, load):
         name = track.name + "_path_list.npy"
