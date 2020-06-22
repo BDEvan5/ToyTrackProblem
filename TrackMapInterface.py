@@ -163,7 +163,7 @@ class TrackMapBase:
             color = 'spring green'
         elif [i, j] in self.map_data.way_pts:
             color = 'light sea green'
-        elif [i, j] == self.map_data.path_start_location or [i, j] == self.map_data.path_end_location:
+        elif [i, j] == list(self.map_data.path_start_location) or [i, j] == list(self.map_data.path_end_location):
             color = 'turquoise1'
 
         return color
@@ -436,7 +436,17 @@ class TrackMapInterface(TrackMapBase):
                 self.canv.pack()  
 
         self.memory = memory
+        self.draw_start_end()
         self.run_loop()
+    
+    def draw_start_end(self):
+        start = self.map_data.path_start_location
+        end = self.map_data.path_end_location
+        x = self._scale_input(start)
+        self.canv.create_text(x[0], x[1], text='S', fill='orange', font = "Times 20 bold")
+        x = self._scale_input(end)
+        self.canv.create_text(x[0], x[1], text='E', fill='orange', font = "Times 20 bold")
+
 
     # main function with logic
     def run_interface_loop(self):
@@ -464,7 +474,7 @@ class TrackMapInterface(TrackMapBase):
             s, a, r, s_p, d = transition
 
             if d is False:
-                th = s[3] * np.pi # reverse the scale
+                th = s[2] # reverse the scale
                 self.update_car_position(s[0:2], th)
                 self.draw_ranges(s)
                 self.update_info(s, r, a)
@@ -524,8 +534,8 @@ class TrackMapInterface(TrackMapBase):
             self.canv.delete(obj)
 
         x = s[0:2]
-        theta_car = s[3] * np.pi
-        ranges = s[4:] 
+        theta_car = s[2]
+        ranges = s[3:] 
 
         x_scale = self._scale_input(x)
         n_ranges = 5
@@ -593,11 +603,14 @@ def snap_track(track, path, sim_mem, screen_name_path="DataRecords/PathTracker")
     # print(f"Snapped")
 
 # new functions
-def render_ep(track, full_path, memory, pause=True):
+def render_ep(track, memory, full_path=None, pause=True):
     interface = TrackMapInterface(track, 100)
     interface.pause_flag = pause
 
-    interface.start_interface_list(memory, full_path)
+    if full_path is not None:
+        interface.start_interface_list(memory, full_path)
+    else:
+        interface.start_interface_list(memory)
 
 def make_new_map(name):
     print(f"Generating Map: {name}")

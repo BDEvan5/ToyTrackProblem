@@ -1,15 +1,9 @@
-"""
-The aim of this class is to represent what a physical car would be
-This class should take in motor control signals and it should return sensor data
-That is what the car will do - this should be the block to be replaced by a car
-"""
-
 import numpy as np 
 
 import LibFunctions as lib
 
 
-class Simulation:
+class MakeEnv:
     def __init__(self, track):
         self.track = track
 
@@ -18,25 +12,25 @@ class Simulation:
 
     def step(self, action):
         self.steps += 1
-        x, v, th = self.vehicle_model.evaluate_new_position(action)
+        x = self.vehicle_model.evaluate_new_position(action)
         if self.track.check_collision(x, True):
             done = True
             reward = -1
             state = self.vehicle_model.get_state_obs()
-            print("Colission")
+            print("Collision")
             return state, reward, done
         else:
-            self.vehicle_model.update_position(x, v, th)
+            self.vehicle_model.update_position(x)
             self._update_ranges()
-            # reward, done = self._get_reward()
             reward, done = self._get_training_reward()
             state = self.vehicle_model.get_state_obs()
 
             return state, reward, done
 
     def reset(self):
-        self.vehicle_model.reset_location(self.track.path_start_location)
-        self.track.reset_obstacles()
+        self.start, self.end = self.track.random_start_end()
+        self.vehicle_model.reset_location(self.start, self.end)
+        # self.track.reset_obstacles()
         self.steps = 0
 
         return self.vehicle_model.get_state_obs()
@@ -72,14 +66,17 @@ class Simulation:
             update_val = (i - 2) * dx # sets the last distance before collision 
             ran[1] = update_val
 
+    def ss(self):
+        return self.vehicle_model.get_replay_obs()
+
 
 """ This is a class to hold the car data inside the simulation"""
 class SimulationCarState:
     def __init__(self, n_ranges=5, dt=1):
         self.dt = dt
         self.x = [0, 0]
-        self.v = 0
         self.th = 0
+        self.end = None
 
         self.n_ranges = n_ranges
         self.ranges = np.zeros((n_ranges, 2)) # holds the angle and value
@@ -93,33 +90,37 @@ class SimulationCarState:
         self.L = 1
 
     def evaluate_new_position(self, action):
+        # action range = [-1, 1]
+        theta = action * np.pi # changes range to full 2pi
+
         x = [0.0, 0.0]
-        v = action[0] * self.dt + (1 - self.friction) * self.v  
-
-        theta = self.v / self.L * np.tan(action[1]) + self.th
-
-        r = v * self.dt
+        r = 2
         x[0] = r * np.sin(theta) + self.x[0]
         x[1] = - r * np.cos(theta) + self.x[1]
         
-        return x, v, theta
+        return x
 
-    def update_position(self, x, v, th):
+    def update_position(self, x):
+        self.th = -np.tan(lib.get_gradient(self.x, x)**-1) + np.pi
         self.x = x
-        self.v = v
-        self.th = th
 
     def get_state_obs(self):
         # max normalisation constants
-        max_v = 5
         max_theta = np.pi
         max_range = 100
 
+        relative_end = lib.sub_locations(self.end, self.x)
+        d_end = np.linalg.norm(relative_end)
+        th_end = np.tan((relative_end[0]/relative_end[1])) # x/y
+        # should i scale these? probably a good idea?
+        try:
+            th_end = th_end[0]
+        except:
+            pass
+
         state = []
-        state.append(self.x[0])
-        state.append(self.x[1])
-        state.append(self.v/max_v)
-        state.append(self.th/max_theta)
+        state.append(d_end)
+        state.append(th_end)
 
         for ran in self.ranges:
             r_val = np.around((ran[1]/max_range), 4)
@@ -129,8 +130,26 @@ class SimulationCarState:
         # state = state[None, :]
         return state
 
-    def reset_location(self, start_location):
+    def get_replay_obs(self):
+        # max normalisation constants
+        max_theta = np.pi
+        max_range = 100
+
+        state = []
+        state.append(float(self.x[0]))
+        state.append(float(self.x[1]))
+        state.append(float(self.th))
+
+        for ran in self.ranges:
+            r_val = np.around((ran[1]/max_range), 4)
+            state.append(r_val)
+
+        state = np.array(state)
+        # state = state[None, :]
+        return state
+
+
+    def reset_location(self, start_location, end_location):
         self.x = start_location
-        self.v = 0
-        self.th = 0
+        self.end = end_location
 
