@@ -22,7 +22,7 @@ class Vehicle:
         nn_state = self.get_nn_state(state, target)
 
         obs = np.concatenate(nn_state)
-        new_target = self.agent(obs)
+        new_target = self.agent.get_new_target(obs)
 
         action = self.control_system(state, new_target)
 
