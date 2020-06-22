@@ -109,6 +109,8 @@ class TD3(object):
 
         self.max_action = max_action
         self.act_dim = action_dim
+        self.replay_buffer = ReplayBuffer()
+        self.last_action = None
 
     def select_action(self, state, noise=0.1):
         state = torch.FloatTensor(state.reshape(1, -1))
@@ -119,10 +121,28 @@ class TD3(object):
             
         return action.clip(-self.max_action, self.max_action)
 
-    def train(self, replay_buffer, iterations):
+    def get_new_target(self, state, noise=0.1):
+        state = torch.FloatTensor(state.reshape(1, -1))
+
+        action = self.actor(state).data.numpy().flatten()
+        if noise != 0: 
+            action = (action + np.random.normal(0, noise, size=self.act_dim))
+            
+        a = action.clip(-self.max_action, self.max_action)
+
+        self.last_action = a
+
+        return a
+
+    def add_data(self, obs, new_obs, reward, done):
+        data = (obs, new_obs, self.last_action, reward, done)
+        self.replay_buffer.add(data)
+
+    def train(self):
+        iterations = 1 # number of times to train per step
         for it in range(iterations):
             # Sample replay buffer 
-            x, y, u, r, d = replay_buffer.sample(BATCH_SIZE)
+            x, y, u, r, d = self.replay_buffer.sample(BATCH_SIZE)
             state = torch.FloatTensor(x)
             action = torch.FloatTensor(u)
             next_state = torch.FloatTensor(y)

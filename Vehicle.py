@@ -6,7 +6,7 @@ This will be one day implemented in ros on the actual vehicle
 import numpy as np 
 
 from PathPlanner import A_StarFinderMod
-from ReplacementDDPG import Agent()
+from ReplacementTD3 import TD3
 import LibFunctions as lib
 
 """ This is basically a wrapper for the three different systems """
@@ -15,16 +15,26 @@ class Vehicle:
         self.local_planner = LocalPlanner()
         self.control_system = ControlSystem()
 
-        self.agent = Agent()
+        max_act = 5
+        self.agent = TD3(9, 2, max_act) 
 
     def get_action(self, state):
         target = self.local_planner(state)
         nn_state = self.get_nn_state(state, target)
 
-        obs = np.concatenate(nn_state)
-        new_target = self.agent.get_new_target(obs)
+        # obs = np.concatenate(nn_state)
+        new_target = self.agent.get_new_target(nn_state)
+        # new target needs to be clipped for relavance on map
+        # new target is relative to current position
 
-        action = self.control_system(state, new_target)
+        # get global position target
+        control_destination = state[0:2] + new_target
+        #clip the target that I am aiming for
+        control_destination = np.clip(control_destination, 0, 100) 
+        # add the theta and v from the previous wp.
+        control_destination = np.append(control_destination, target[2:4])
+
+        action = self.control_system(state, control_destination)
 
         return action
 
@@ -37,8 +47,8 @@ class Vehicle:
 
         return ret_state
 
-    def modify_target(self, target, state):
-        relative_target = target - state[0:2]
+    def modify_target(self, state, target):
+        relative_target = target[0:2] - state[0:2]
 
         # modify the length of the target to fixed size
         target_size = 1 # normalise direction

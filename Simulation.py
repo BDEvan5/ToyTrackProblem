@@ -14,8 +14,10 @@ class Simulation:
         self.track = track
 
         self.vehicle_model = SimulationCarState(5, 1)
+        self.steps = 0
 
     def step(self, action):
+        self.steps += 1
         x, v, th = self.vehicle_model.evaluate_new_position(action)
         if self.track.check_collision(x, True):
             done = True
@@ -37,11 +39,11 @@ class Simulation:
         return self.vehicle_model.get_state_obs()
 
     def _get_reward(self):
+        if self.steps > 200: #max steps
+            return 0, True # no reward but it is done
         end_dis = lib.get_distance(self.vehicle_model.x, self.track.path_end_location)
         if end_dis < 10:
-            reward = 1
-            done = True
-            return reward, done
+            return 1, True
         return 0, False
 
     def _update_ranges(self):

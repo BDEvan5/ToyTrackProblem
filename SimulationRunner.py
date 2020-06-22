@@ -11,14 +11,30 @@ from Vehicle import Vehicle
 
 from TrackMapInterface import load_map, render_ep, make_new_map
 
+def observe(vehicle, simulator):
+    for i in range(5000):
+        state, score, done = simulator.reset(), 0, False
+        while not done:
+            action = vehicle.get_action(state)
+
+            new_state, reward, done = simulator.step(action)
+            score += reward
+            state = new_state
+
+            vehicle.agent.add_data(state, new_state, reward, done)
+        print("\rObserving {}/5000".format(i), end="")
+
 
 def RunSimulationLearning():
-    name = "MyTrack1"
+    name = "ValueTrack1"
     track = load_map(name)
-    vehicle = vehicle(track)
-    vehicle.plan_path(load=False)
+    vehicle = Vehicle()
+    vehicle.plan_path(track, load=True)
     simulator = Simulation(track)
 
+    print_n = 40
+
+    observe(vehicle, simulator)
     for i in range(1000):
         state, score, done = simulator.reset(), 0, False
         while not done:
@@ -28,11 +44,12 @@ def RunSimulationLearning():
             score += reward
             state = new_state
 
-            # memory.store(new state)
+            vehicle.agent.add_data(state, new_state, reward, done)
+            vehicle.agent.train()
 
         # train agent
-        print(f"{i}:-> Score: {score}")
-
+        if i % print_n == 1:
+            print(f"{i}:-> Score: {score}")
 
 
 
@@ -64,11 +81,6 @@ def RunSimulationTest():
         ep_histories.append(memory)
         
 
-"""Helpers"""
-
-
-
-
 if __name__ == "__main__":
-
-    RunSimulationTest()
+    RunSimulationLearning()
+    # RunSimulationTest()
