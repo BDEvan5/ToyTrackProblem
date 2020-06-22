@@ -119,8 +119,8 @@ class SimulationCarState:
             pass
 
         state = []
-        state.append(d_end)
-        state.append(th_end)
+        state.append(d_end/max_range)
+        state.append(th_end/max_theta)
 
         for ran in self.ranges:
             r_val = np.around((ran[1]/max_range), 4)

@@ -7,7 +7,7 @@ import numpy as np
 from collections import deque
 from Env import MakeEnv
 from AgentTD3 import TD3
-
+import LibFunctions as lib
 from TrackMapInterface import load_map, render_ep, make_new_map
 
 def observe(vehicle, simulator):
@@ -30,12 +30,13 @@ def RunSimulationLearning2():
     track = load_map(name)
     env = MakeEnv(track)
     agent = TD3(7, 1, 1)
-
+    show_n = 10
     ep_histories = []
 
     # vehicle.agent.load_buffer()
     print(f"Running learning ")
-    for i in range(1000):
+    all_scores = []
+    for i in range(10000):
         state, score, done = env.reset(), 0, False
 
         length, memory = 0, []
@@ -52,7 +53,10 @@ def RunSimulationLearning2():
             agent.train()
 
         print(f"{i}:-> Score: {score} -> Length: {length}")
-        render_ep(track, memory, pause=True)
+        all_scores.append(score)
+        lib.plot(all_scores)
+        # if i % show_n == 1:
+        #     render_ep(track, memory, pause=True)
         ep_histories.append(memory)
 
 def RunSimulationTest():

@@ -30,9 +30,10 @@ class Actor(nn.Module):
 
     def forward(self, x):
         x = F.relu(self.l1(x))
-        x = F.relu(self.l2(x))
-        x = self.max_action * torch.tanh(self.l3(x)) 
-        return x
+        y = F.relu(self.l2(x))
+        z = self.l3(y)
+        a = self.max_action * torch.tanh(z) 
+        return a
 
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
