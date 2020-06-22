@@ -23,11 +23,13 @@ class Simulation:
             done = True
             reward = -1
             state = self.vehicle_model.get_state_obs()
+            print("Colission")
             return state, reward, done
         else:
             self.vehicle_model.update_position(x, v, th)
             self._update_ranges()
-            reward, done = self._get_reward()
+            # reward, done = self._get_reward()
+            reward, done = self._get_training_reward()
             state = self.vehicle_model.get_state_obs()
 
             return state, reward, done
@@ -35,16 +37,34 @@ class Simulation:
     def reset(self):
         self.vehicle_model.reset_location(self.track.path_start_location)
         self.track.reset_obstacles()
+        self.steps = 0
 
         return self.vehicle_model.get_state_obs()
 
     def _get_reward(self):
         if self.steps > 200: #max steps
+            print("max steps reached ")
             return 0, True # no reward but it is done
         end_dis = lib.get_distance(self.vehicle_model.x, self.track.path_end_location)
         if end_dis < 10:
+            print("Target reached ")
             return 1, True
         return 0, False
+
+    def _get_training_reward(self):
+        if self.steps > 200: #max steps
+            print("max steps reached ")
+            return 0, True # no reward but it is done
+        end_dis = lib.get_distance(self.vehicle_model.x, self.track.path_end_location)
+        if end_dis < 10: # done
+            print("Target reached ")
+            return 1, True
+        # else get proportional reward
+        done = False
+        reward = - end_dis / 100 # this normalises it.
+
+        return reward, done
+
 
     def _update_ranges(self):
         dx = 5 # search size

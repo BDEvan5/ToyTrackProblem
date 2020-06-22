@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 import gym
 import sys
+import pickle
 
 # hyper parameters
 BATCH_SIZE = 100
@@ -73,6 +74,7 @@ class ReplayBuffer(object):
         self.storage = []
         self.max_size = max_size
         self.ptr = 0
+        self.filename = "DataRecords/buffer"
 
     def add(self, data):        
         if len(self.storage) == self.max_size:
@@ -95,6 +97,8 @@ class ReplayBuffer(object):
 
         return np.array(states), np.array(actions), np.array(next_states), np.array(rewards).reshape(-1, 1), np.array(dones).reshape(-1, 1)
 
+
+
 class TD3(object):
     def __init__(self, state_dim, action_dim, max_action):
         self.actor = Actor(state_dim, action_dim, max_action)
@@ -111,6 +115,7 @@ class TD3(object):
         self.act_dim = action_dim
         self.replay_buffer = ReplayBuffer()
         self.last_action = None
+        self.filename = "DataRecords/buffer"
 
     def select_action(self, state, noise=0.1):
         state = torch.FloatTensor(state.reshape(1, -1))
@@ -199,6 +204,17 @@ class TD3(object):
         self.actor.load_state_dict(torch.load('%s/%s_actor.pth' % (directory, filename)))
         self.critic.load_state_dict(torch.load('%s/%s_critic.pth' % (directory, filename)))
 
+    def save_buffer(self):
+        f = open(self.filename, 'wb')
+        pickle.dump(self.replay_buffer, f)
+        f.close()
+        print(f"Successfully Saved: {self.filename}")
+
+    def load_buffer(self):
+        f = open(self.filename, 'rb')
+        self.replay_buffer = pickle.load(f)
+        f.close()
+        print(f"Successfully Loaded: {self.filename}")
 
 def observe(env,replay_buffer, observation_steps):
     time_steps = 0
