@@ -46,6 +46,22 @@ class MakeEnv:
         reward, done = self._get_reward()
         return obs, reward, done, None
 
+    def step_continuous(self, action):
+        self.memory.append(self.car_x)
+        self.steps += 1
+        new_x = lib.add_locations(self.car_x, action)
+        if self._check_bounds(new_x):
+            obs = self._get_state_obs()
+            r_crash = -100
+            return obs, r_crash, True, None
+        self.car_x = new_x 
+        obs = self._get_state_obs()
+        reward, done = self._get_reward()
+        return obs, reward, done, None
+
+    def random_action(self):
+        a = np.random.rand(2) * 2
+        return a
 
     def _get_state_obs(self):
         scale = 100
