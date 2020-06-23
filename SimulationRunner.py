@@ -10,17 +10,17 @@ from AgentTD3 import TD3
 import LibFunctions as lib
 from TrackMapInterface import load_map, render_ep, make_new_map
 
-def observe(vehicle, simulator):
+def observe(agent, env):
     for i in range(5000):
-        state, score, done = simulator.reset(), 0.0, False
+        state, score, done = env.reset(), 0.0, False
         while not done:
-            action = vehicle.get_action(state)
+            action = agent.get_new_target(state)
 
-            new_state, reward, done = simulator.step(action)
+            new_state, reward, done = env.step(action)
             score += reward
             state = new_state
 
-            vehicle.agent.add_data(state, new_state, reward, done)
+            agent.add_data(state, new_state, reward, done)
         print("\rObserving {}/5000".format(i), end="")
 
 
@@ -33,7 +33,9 @@ def RunSimulationLearning2():
     show_n = 10
     ep_histories = []
 
-    # vehicle.agent.load_buffer()
+    observe(agent, env)
+    agent.save_buffer()
+    agent.load_buffer()
     print(f"Running learning ")
     all_scores = []
     for i in range(10000):

@@ -17,7 +17,7 @@ class MakeEnv:
             done = True
             reward = -1
             state = self.vehicle_model.get_state_obs()
-            print("Collision")
+            # print("Collision")
             return state, reward, done
         else:
             self.vehicle_model.update_position(x)
@@ -37,11 +37,11 @@ class MakeEnv:
 
     def _get_training_reward(self):
         if self.steps > 200: #max steps
-            print("max steps reached ")
+            # print("max steps reached ")
             return 0, True # no reward but it is done
         end_dis = lib.get_distance(self.vehicle_model.x, self.track.path_end_location)
         if end_dis < 10: # done
-            print("Target reached ")
+            # print("Target reached ")
             return 1, True
         # else get proportional reward
         done = False
