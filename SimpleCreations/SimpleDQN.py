@@ -2,16 +2,22 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F 
 import torch.optim as optim
+
 import collections
 import random
 import gym
 import numpy as np 
+from matplotlib import pyplot as plt
+
+from SimpleEnv import MakeEnv
 import LibFunctions as lib 
+
+
 
 #Hyperparameters
 learning_rate = 0.005
 gamma         = 0.98
-buffer_limit  = 50000
+buffer_limit  = 10000
 batch_size    = 32
 
 class ReplayBuffer():
@@ -72,7 +78,7 @@ class AgentDQN:
         self.eps = 0.08
 
     def train(self):
-        for i in range(20):
+        for i in range(10):
             s, a, r, sp_prime, done = self.memory.sample(batch_size)
 
             q_out = self.q(s)
@@ -97,30 +103,42 @@ class AgentDQN:
     def add_mem_step(self, transition):
         self.memory.put(transition)
 
+    def update_parameters(self):
+        self.q_target.load_state_dict(self.q.state_dict())
+
 
 def test():
-    env = gym.make('CartPole-v1')
-    agent = AgentDQN(4, 2)
+    env = MakeEnv()
+    agent = AgentDQN(4, 4)
+    # env = gym.make('CartPole-v1')
+    # agent = AgentDQN(4, 2)
     print_n = 20
+    all_scores = []
 
+    print(f"Running test")
     for n_epi in range(10000):
         s, done, score = env.reset(), False, 0.0
         while not done:
-            a = agent.get_action(torch.from_numpy(s).float())
-            s_prime, r, done, info = env.step(a)
+            a = agent.get_action(s)
+            s_prime, r, done, _ = env.step(a)
             done_mask = 0.0 if done else 1.0
-            agent.add_mem_step((s,a,r/100.0,s_prime, done_mask))
+            agent.add_mem_step((s,a,r,s_prime, done_mask))
             s = s_prime
             score += r
 
+        all_scores.append(score)
         if agent.memory.size() > 1000:
             agent.train()
         if n_epi % print_n == 1:
-            print(f"n: {n_epi} -> Score: {score} -> eps: {agent.eps}")
-            agent.q_target.load_state_dict(agent.q.state_dict())
+            env.render()
+            lib.plot(all_scores)
+            print(f"n: {n_epi} -> Score: {score} -> eps: {agent.eps} -> Buffer_n: {agent.memory.size()}")
+            agent.update_parameters()
 
 
 if __name__ == "__main__":
-    # main()
     test()
+
+
+
 

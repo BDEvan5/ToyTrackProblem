@@ -13,7 +13,8 @@ class MakeEnv:
 
     def step(self, action):
         self.steps += 1
-        x = self.vehicle_model.evaluate_new_position(action)
+        # x = self.vehicle_model.evaluate_new_position(action)
+        x = self.vehicle_model.eval_dqn_position_update(action)
         if self.track.check_collision(x, True):
             done = True
             reward = -100 # r_crash
@@ -22,7 +23,7 @@ class MakeEnv:
             return state, reward, done
         else:
             self.vehicle_model.update_position(x)
-            self._update_ranges()
+            # self._update_ranges()
             reward, done = self._get_training_reward()
             state = self.vehicle_model.get_state_obs()
 
@@ -106,6 +107,20 @@ class SimulationCarState:
         # x[1] = - r * np.cos(theta) + self.x[1]
 
         x = lib.add_locations(action, self.x)
+        
+        return x
+
+    def eval_dqn_position_update(self, action):
+        # action is 0, 1, 2, 3
+        if action == 0:
+            dx = [0, 1]
+        elif action == 1:
+            dx = [0, -1]
+        elif action == 2:
+            dx = [1, 0]
+        elif action == 3:
+            dx = [-1, 0]
+        x = lib.add_locations(dx, self.x)
         
         return x
 

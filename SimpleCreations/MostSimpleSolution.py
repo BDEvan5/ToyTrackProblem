@@ -2,11 +2,102 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F 
 import torch.optim as optim
+
 import collections
 import random
 import gym
 import numpy as np 
+from matplotlib import pyplot as plt
+
 import LibFunctions as lib 
+
+class MakeEnv:
+    def __init__(self):
+        self.car_x = [0, 0]
+        self.last_distance = None
+        self.start = None
+        self.end = None
+
+        self.x_bound = [1, 99]
+        self.y_bound = [1, 99]
+        self.steps = 0
+
+    def reset(self):
+        self.steps = 0
+        rands = np.random.rand(4) * 100
+        self.start = rands[0:2]
+        self.end = rands[2:4]  
+
+        while self._check_bounds(self.start):
+            self.start = np.random.rand(2) * 100
+        while self._check_bounds(self.end) or \
+            lib.get_distance(self.start, self.end) < 15:
+            self.end = np.random.rand(2) * 100
+
+        self.last_distance = lib.get_distance(self.start, self.end)
+        self.car_x = self.start
+
+        return self._get_state_obs()
+
+    def step(self, action):
+        self.steps += 1
+        new_x = self._new_x(action)
+        if self._check_bounds(new_x):
+            obs = self._get_state_obs()
+            r_crash = -100
+            return obs, r_crash, True, None
+        self.car_x = new_x 
+        obs = self._get_state_obs()
+        reward, done = self._get_reward()
+        return obs, reward, done, None
+
+
+    def _get_state_obs(self):
+        scale = 100
+        rel_target = lib.sub_locations(self.end, self.car_x)
+        obs = np.array(rel_target) / scale
+        
+        # current obs is in terms of an x, y target
+        return obs
+
+    def _get_reward(self):
+        beta = 2
+        r_done = 100
+
+        cur_distance = lib.get_distance(self.car_x, self.end)
+        if cur_distance < 5:
+            return r_done, True
+        reward = beta * (self.last_distance - cur_distance)
+        self.last_distance = cur_distance
+        done = self._check_steps()
+        return reward, done
+
+    def _check_steps(self):
+        if self.steps > 100:
+            return True
+        return False
+
+    def _check_bounds(self, x):
+        if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
+            return True
+        if self.y_bound[0] > x[1] or x[1] > self.y_bound[1]:
+            return True 
+        return False
+
+    def _new_x(self, action):
+        # action is 0, 1, 2, 3
+        if action == 0:
+            dx = [0, 1]
+        elif action == 1:
+            dx = [0, -1]
+        elif action == 2:
+            dx = [1, 0]
+        elif action == 3:
+            dx = [-1, 0]
+        x = lib.add_locations(dx, self.car_x)
+        
+        return x
+
 
 #Hyperparameters
 learning_rate = 0.005
@@ -72,7 +163,7 @@ class AgentDQN:
         self.eps = 0.08
 
     def train(self):
-        for i in range(20):
+        for i in range(10):
             s, a, r, sp_prime, done = self.memory.sample(batch_size)
 
             q_out = self.q(s)
@@ -97,30 +188,41 @@ class AgentDQN:
     def add_mem_step(self, transition):
         self.memory.put(transition)
 
+    def update_parameters(self):
+        self.q_target.load_state_dict(self.q.state_dict())
+
 
 def test():
-    env = gym.make('CartPole-v1')
-    agent = AgentDQN(4, 2)
+    env = MakeEnv()
+    agent = AgentDQN(2, 4)
+    # env = gym.make('CartPole-v1')
+    # agent = AgentDQN(4, 2)
     print_n = 20
+    all_scores = []
 
+    print(f"Running test")
     for n_epi in range(10000):
         s, done, score = env.reset(), False, 0.0
         while not done:
-            a = agent.get_action(torch.from_numpy(s).float())
-            s_prime, r, done, info = env.step(a)
+            a = agent.get_action(s)
+            s_prime, r, done, _ = env.step(a)
             done_mask = 0.0 if done else 1.0
             agent.add_mem_step((s,a,r/100.0,s_prime, done_mask))
             s = s_prime
             score += r
 
+        print(f"n: {n_epi} -> Score: {score} -> eps: {agent.eps} -> Buffer_n: {agent.memory.size()}")
+        all_scores.append(score)
+        lib.plot(all_scores)
         if agent.memory.size() > 1000:
             agent.train()
         if n_epi % print_n == 1:
-            print(f"n: {n_epi} -> Score: {score} -> eps: {agent.eps}")
-            agent.q_target.load_state_dict(agent.q.state_dict())
+            agent.update_parameters()
 
 
 if __name__ == "__main__":
-    # main()
     test()
+
+
+
 

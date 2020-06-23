@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 
 from Env import MakeEnv
 from AgentTD3 import TD3
+from AgentDQN import AgentDQN
 import LibFunctions as lib
 from TrackMapInterface import load_map, render_ep, make_new_map
 
@@ -75,9 +76,9 @@ def RunSimulationLearning3():
     save_n = 50
     agent_name = "NoRanges"
 
-    agent.load_buffer()
-    agent.load(agent_name)
-    # observe(agent, env)
+    # agent.load_buffer()
+    # agent.load(agent_name)
+    observe(agent, env)
     print(f"Running learning ")
     all_scores = []
     state, score = env.reset(), 0
@@ -104,6 +105,45 @@ def RunSimulationLearning3():
             fig = plt.figure(3)
             fig.savefig("Training Rewards")
             agent.save(agent_name)
+
+def RunSimulationLearning_DQN():
+    # name = "TrainTrack1"
+    name = "TrainTrackEmpty"
+    # make_new_map(name)
+    track = load_map(name)
+    env = MakeEnv(track)
+    agent = AgentDQN(2, 4)
+    avg_n = 10
+    save_n = 50
+    agent_name = "NoRanges"
+
+
+    print(f"Running learning ")
+    all_scores = []
+    state, score = env.reset(), 0
+    for i in range(100000): # batches
+        for j in range(32): # batch size
+            action = agent.get_action(state)
+            new_state, reward, done = env.step(action)
+            agent.add_mem_step((state, action, reward/100, new_state, done))
+            score += reward
+            state = new_state
+
+
+            if done:
+                state = env.reset()
+                print(f"{i}.{j}:-> Score: {score}")
+                all_scores.append(score)
+                score = 0
+        agent.train()
+
+        if i % avg_n == 1:
+            lib.plot(all_scores, figure_n=3, moving_avg_period=20)
+
+        if i % save_n == 1:
+            fig = plt.figure(3)
+            fig.savefig("Training Rewards")
+            # agent.save(agent_name)
 
 
 def RunSimulationTest():
@@ -136,4 +176,5 @@ def RunSimulationTest():
 
 if __name__ == "__main__":
     # RunSimulationLearning2()
-    RunSimulationLearning3()
+    # RunSimulationLearning3()
+    RunSimulationLearning_DQN()
