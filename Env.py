@@ -9,13 +9,14 @@ class MakeEnv:
 
         self.vehicle_model = SimulationCarState(5, 1)
         self.steps = 0
+        self.previous_distance = None
 
     def step(self, action):
         self.steps += 1
         x = self.vehicle_model.evaluate_new_position(action)
         if self.track.check_collision(x, True):
             done = True
-            reward = -1
+            reward = -100 # r_crash
             state = self.vehicle_model.get_state_obs()
             # print("Collision")
             return state, reward, done
@@ -30,22 +31,28 @@ class MakeEnv:
     def reset(self):
         self.start, self.end = self.track.random_start_end()
         self.vehicle_model.reset_location(self.start, self.end)
+        self.previous_distance = lib.get_distance(self.start, self.end)
         # self.track.reset_obstacles()
         self.steps = 0
 
         return self.vehicle_model.get_state_obs()
 
     def _get_training_reward(self):
-        if self.steps > 200: #max steps
-            # print("max steps reached ")
+        r_found = 100
+        beta = 4 # scale intermediate to terminal rewards
+
+        if self.steps > 100: #max steps
             return 0, True # no reward but it is done
+
         end_dis = lib.get_distance(self.vehicle_model.x, self.track.path_end_location)
-        if end_dis < 10: # done
-            # print("Target reached ")
-            return 1, True
+        if end_dis < 5: # done
+            return r_found, True
+
         # else get proportional reward
         done = False
-        reward = - end_dis / 100 # this normalises it.
+        current_distance = lib.get_distance(self.end, self.vehicle_model.x)
+        reward = beta * (current_distance - self.previous_distance) # this normalises it.
+        self.previous_distance = current_distance
 
         return reward, done
 
@@ -90,13 +97,15 @@ class SimulationCarState:
         self.L = 1
 
     def evaluate_new_position(self, action):
-        # action range = [-1, 1]
-        theta = action * np.pi # changes range to full 2pi
+        # action range = [-1, 1] 
+        # theta = action * np.pi # changes range to full 2pi
 
-        x = [0.0, 0.0]
-        r = 2
-        x[0] = r * np.sin(theta) + self.x[0]
-        x[1] = - r * np.cos(theta) + self.x[1]
+        # x = [0.0, 0.0]
+        # r = 2
+        # x[0] = r * np.sin(theta) + self.x[0]
+        # x[1] = - r * np.cos(theta) + self.x[1]
+
+        x = lib.add_locations(action, self.x)
         
         return x
 
@@ -122,9 +131,9 @@ class SimulationCarState:
         state.append(d_end/max_range)
         state.append(th_end/max_theta)
 
-        for ran in self.ranges:
-            r_val = np.around((ran[1]/max_range), 4)
-            state.append(r_val)
+        # for ran in self.ranges:
+        #     r_val = np.around((ran[1]/max_range), 4)
+        #     state.append(r_val)
 
         state = np.array(state)
         # state = state[None, :]

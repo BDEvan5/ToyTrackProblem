@@ -5,23 +5,26 @@ It will have a funciton with the big training loop
 """
 import numpy as np 
 from collections import deque
+from matplotlib import pyplot as plt
+
 from Env import MakeEnv
 from AgentTD3 import TD3
 import LibFunctions as lib
 from TrackMapInterface import load_map, render_ep, make_new_map
 
 def observe(agent, env):
-    for i in range(5000):
-        state, score, done = env.reset(), 0.0, False
-        while not done:
-            action = agent.get_new_target(state)
+    state, score, done = env.reset(), 0.0, False
+    for i in range(10000):
+        action = agent.get_new_target(state)
 
-            new_state, reward, done = env.step(action)
-            score += reward
-            state = new_state
+        new_state, reward, done = env.step(action)
 
-            agent.add_data(state, new_state, reward, done)
-        print("\rObserving {}/5000".format(i), end="")
+        agent.add_data(state, new_state, reward, done)
+        state = new_state
+        if done:
+            state = env.reset()
+        print("\rObserving {}/10000".format(i), end="")
+    agent.save_buffer()
 
 
 def RunSimulationLearning2():
@@ -33,8 +36,8 @@ def RunSimulationLearning2():
     show_n = 10
     ep_histories = []
 
-    observe(agent, env)
-    agent.save_buffer()
+    # observe(agent, env)
+    # agent.save_buffer()
     agent.load_buffer()
     print(f"Running learning ")
     all_scores = []
@@ -60,6 +63,48 @@ def RunSimulationLearning2():
         # if i % show_n == 1:
         #     render_ep(track, memory, pause=True)
         ep_histories.append(memory)
+
+def RunSimulationLearning3():
+    # name = "TrainTrack1"
+    name = "TrainTrackEmpty"
+    # make_new_map(name)
+    track = load_map(name)
+    env = MakeEnv(track)
+    agent = TD3(2, 2, 2)
+    avg_n = 10
+    save_n = 50
+    agent_name = "NoRanges"
+
+    agent.load_buffer()
+    agent.load(agent_name)
+    # observe(agent, env)
+    print(f"Running learning ")
+    all_scores = []
+    state, score = env.reset(), 0
+    for i in range(100000): # batches
+        for j in range(32): # batch size
+            action = agent.get_new_target(state)
+            new_state, reward, done = env.step(action)
+            agent.add_data(state, new_state, reward, done)
+            score += reward
+            state = new_state
+
+            agent.train()
+
+            if done:
+                state = env.reset()
+                print(f"{i}.{j}:-> Score: {score}")
+                all_scores.append(score)
+                score = 0
+
+        if i % avg_n == 1:
+            lib.plot(all_scores, figure_n=3, moving_avg_period=20)
+
+        if i % save_n == 1:
+            fig = plt.figure(3)
+            fig.savefig("Training Rewards")
+            agent.save(agent_name)
+
 
 def RunSimulationTest():
     name = "ValueTrack1"
@@ -90,5 +135,5 @@ def RunSimulationTest():
         
 
 if __name__ == "__main__":
-    RunSimulationLearning2()
-    # RunSimulationTest()
+    # RunSimulationLearning2()
+    RunSimulationLearning3()

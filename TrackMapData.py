@@ -65,7 +65,8 @@ class TrackMapData:
 
         while self.check_hm_collision(self.path_start_location):
             self.path_start_location = np.random.rand(2) * 100
-        while self.check_hm_collision(self.path_end_location):
+        while self.check_hm_collision(self.path_end_location) or \
+            f.get_distance(self.path_end_location, self.path_start_location) < 15:
             self.path_end_location = np.random.rand(2) * 100
 
         return self.path_start_location, self.path_end_location

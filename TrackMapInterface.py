@@ -163,8 +163,9 @@ class TrackMapBase:
             color = 'spring green'
         elif [i, j] in self.map_data.way_pts:
             color = 'light sea green'
-        elif [i, j] == list(self.map_data.path_start_location) or [i, j] == list(self.map_data.path_end_location):
-            color = 'turquoise1'
+        elif self.map_data.path_start_location is not None:
+            if [i, j] == list(self.map_data.path_start_location) or [i, j] == list(self.map_data.path_end_location):
+                color = 'turquoise1'
 
         return color
 
