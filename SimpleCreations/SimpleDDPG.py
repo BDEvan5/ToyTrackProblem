@@ -231,8 +231,9 @@ def RunMyEnv(agent_name, show=True):
 
     rewards = []
     observe(env, agent.replay_buffer, 40000)
-    for i in range(1000):
+    for i in range(500):
         agent.train()
+    agent.save(agent_name)
     return
 
     for episode in range(80):
