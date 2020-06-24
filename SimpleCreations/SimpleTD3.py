@@ -8,6 +8,7 @@ import sys
 
 from SimpleEnv import MakeEnv
 import LibFunctions as lib
+import timeit
 
 # hyper parameters
 BATCH_SIZE = 100
@@ -168,7 +169,7 @@ class TD3(object):
                 for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
                     target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
-    def save(self, filename, directory):
+    def save(self, filename="best_avg", directory="./saves"):
         torch.save(self.actor.state_dict(), '%s/%s_actor.pth' % (directory, filename))
         torch.save(self.critic.state_dict(), '%s/%s_critic.pth' % (directory, filename))
 
@@ -248,13 +249,10 @@ def test():
         rewards.append(score)
         print(f"Ep: {episode} -> score: {score}")
 
-def test2():
+def RunMyEnv():
     env = MakeEnv()
-    state_dim = 4
-    action_dim = 2
-    max_action = 2
 
-    agent = TD3(state_dim, action_dim, max_action)
+    agent = TD3(env.state_dim, env.action_dim, env.max_action)
     replay_buffer = ReplayBuffer()
 
     show_n = 5
@@ -281,9 +279,58 @@ def test2():
         if episode % show_n == 1:
             lib.plot(rewards)
             env.render()
+            # agent.save("NewReward1")
+
+def eval2():
+    env = MakeEnv()
+    state_dim = 2
+    action_dim = 2
+    max_action = 2
+
+    agent = TD3(state_dim, action_dim, max_action)
+    replay_buffer = ReplayBuffer()
+
+    show_n = 1
+
+    rewards = []
+    # agent.load("LongTraining10000")
+    for episode in range(100):
+        score, done, obs, ep_steps = 0, False, env.reset(), 0
+        while not done:
+            action = agent.select_action(np.array(obs))
+
+            new_obs, reward, done, _ = env.step_continuous(action) 
+            done_bool = 0 if ep_steps + 1 == 200 else float(done)
+        
+            replay_buffer.add((obs, new_obs, action, reward, done_bool))          
+            obs = new_obs
+            score += reward
+            ep_steps += 1
+
+        rewards.append(score)
+        # print(f"Ep: {episode} -> score: {score}")
+        # if episode % show_n == 1:
+        #     lib.plot(rewards)
+        #     env.render()
+
+    print(f"Avg reward: {np.mean(rewards)}")
+
+# def eval_time():
+#     agent = TD3(2, 2, 2)
+#     # agent.select_action(np.array([25, 23]))
+#     env = MakeEnv()
+#     replay_buffer = ReplayBuffer()
+#     observe(env, replay_buffer, 10000)
+#     agent.train(replay_buffer, 2)
+
+
+# def timing():
+#     print(timeit.timeit(eval_time, number=1))
 
 
 if __name__ == "__main__":
-    test2()
+    # timing()
+    # eval2()
+    RunMyEnv()
  
     
