@@ -28,6 +28,10 @@ class Actor(nn.Module):
         self.l2 = nn.Linear(400, 300)
         self.l3 = nn.Linear(300, action_dim)
 
+        # nn.init.uniform_(self.l1.weight, -1/np.sqrt(400), 1/np.sqrt(400) )
+        # nn.init.uniform_(self.l2.weight, -1/np.sqrt(300), 1/np.sqrt(300) )
+        # nn.init.uniform_(self.l3.weight, -1/np.sqrt(2), 1/np.sqrt(2) )
+
         self.max_action = max_action
 
 
@@ -50,6 +54,13 @@ class Critic(nn.Module):
         self.l4 = nn.Linear(state_dim + action_dim, 400)
         self.l5 = nn.Linear(400, 300)
         self.l6 = nn.Linear(300, 1)
+
+        # nn.init.uniform_(self.l1.weight, -1/np.sqrt(400), 1/np.sqrt(400) )
+        # nn.init.uniform_(self.l2.weight, -1/np.sqrt(300), 1/np.sqrt(300) )
+        # nn.init.uniform_(self.l3.weight, -1/np.sqrt(1), 1/np.sqrt(1) )
+        # nn.init.uniform_(self.l4.weight, -1/np.sqrt(400), 1/np.sqrt(400) )
+        # nn.init.uniform_(self.l5.weight, -1/np.sqrt(300), 1/np.sqrt(300) )
+        # nn.init.uniform_(self.l6.weight, -1/np.sqrt(1), 1/np.sqrt(1) )
 
 
     def forward(self, x, u):
@@ -249,13 +260,13 @@ def test():
         rewards.append(score)
         print(f"Ep: {episode} -> score: {score}")
 
-def RunMyEnv():
+def RunMyEnv(agent_name):
     env = MakeEnv()
 
     agent = TD3(env.state_dim, env.action_dim, env.max_action)
     replay_buffer = ReplayBuffer()
 
-    show_n = 5
+    show_n = 2
 
     rewards = []
     observe(env, replay_buffer, 10000)
@@ -279,9 +290,9 @@ def RunMyEnv():
         if episode % show_n == 1:
             lib.plot(rewards)
             env.render()
-            # agent.save("NewReward1")
+            agent.save(agent_name)
 
-def eval2():
+def eval2(agent_name, show=True):
     env = MakeEnv()
     state_dim = 2
     action_dim = 2
@@ -293,7 +304,7 @@ def eval2():
     show_n = 1
 
     rewards = []
-    # agent.load("LongTraining10000")
+    agent.load(agent_name)
     for episode in range(100):
         score, done, obs, ep_steps = 0, False, env.reset(), 0
         while not done:
@@ -308,29 +319,20 @@ def eval2():
             ep_steps += 1
 
         rewards.append(score)
-        # print(f"Ep: {episode} -> score: {score}")
-        # if episode % show_n == 1:
-        #     lib.plot(rewards)
-        #     env.render()
+        if show:
+            print(f"Ep: {episode} -> score: {score}")
+            if episode % show_n == 1:
+                lib.plot(rewards)
+                env.render()
 
     print(f"Avg reward: {np.mean(rewards)}")
 
-# def eval_time():
-#     agent = TD3(2, 2, 2)
-#     # agent.select_action(np.array([25, 23]))
-#     env = MakeEnv()
-#     replay_buffer = ReplayBuffer()
-#     observe(env, replay_buffer, 10000)
-#     agent.train(replay_buffer, 2)
-
-
-# def timing():
-#     print(timeit.timeit(eval_time, number=1))
 
 
 if __name__ == "__main__":
-    # timing()
-    # eval2()
-    RunMyEnv()
+    agent_name = "Baseline"
+
+    # eval2(agent_name)
+    RunMyEnv(agent_name)
  
     

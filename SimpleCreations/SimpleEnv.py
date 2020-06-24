@@ -13,14 +13,17 @@ class MakeEnv:
         self.x_bound = [1, 99]
         self.y_bound = [1, 99]
         self.steps = 0
+        self.eps = 0
         self.memory = []
         
         #parameters
-        self.max_action = 1
+        self.max_action = 1 # what the net gives
         self.state_dim = 2
         self.action_dim = 2
+        self.action_scale = 5 # internal implementation
 
     def reset(self):
+        self.eps += 1
         self.steps = 0
         self.memory = []
         rands = np.random.rand(4) * 100
@@ -66,20 +69,20 @@ class MakeEnv:
         return obs, reward, done, None
 
     def take_x_step(self, action):
-        # action comes in rand [-1, 1] for two dimensions
-        # I want to normalise the action so r == 1 and then take step in that direction
-        # doing this, the action becomes purely a position vector
         norm = 1
         r = action[0] / action[1]
         y = np.sqrt(norm**2/(1+r**2)) * action[1] / abs(action[1]) # for the sign
         x = r * y 
 
-        new_x = lib.add_locations(self.car_x, [x*5, y*5])
+        scaled_action = [x*self.action_scale, y*self.action_scale]
+        new_x = lib.add_locations(self.car_x, scaled_action)
         return new_x
 
     def random_action(self):
-        a = np.random.rand(2) * self.max_action
-        return a
+        rand = np.random.rand(2)
+        a = (rand * 2 - [1, 1]) # this shifts the interval [0, 1) to
+        act = a * self.max_action * 2 # [-1, 1]
+        return act
 
     def _get_state_obs(self):
         # scale = 100
@@ -98,9 +101,10 @@ class MakeEnv:
         r_done = 100
 
         cur_distance = lib.get_distance(self.car_x, self.end)
-        if cur_distance < 5:
+        if cur_distance < 1 + self.action_scale:
             return r_done, True
-        reward = beta * (self.last_distance - cur_distance)
+        d_dis = self.last_distance - cur_distance
+        reward = beta * (d_dis**2 * d_dis/abs(d_dis)) - 5
         self.last_distance = cur_distance
         done = self._check_steps()
         return reward, done
@@ -147,3 +151,4 @@ class MakeEnv:
         plt.plot(self.end[0], self.end[1], '*')
         plt.pause(0.001)
         
+        fig.savefig(f"Renders/Rendering_{self.eps}")
