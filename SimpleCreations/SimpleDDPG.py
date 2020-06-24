@@ -224,12 +224,17 @@ def observe(env,replay_buffer, observation_steps):
 
 def RunMyEnv(agent_name, show=True):
     env = MakeEnv()
+    # env.add_obstacles(3)
     agent = DDPGAgent(env.state_dim, env.action_dim, env.max_action)
 
     show_n = 2
 
     rewards = []
-    observe(env, agent.replay_buffer, 10000)
+    observe(env, agent.replay_buffer, 40000)
+    for i in range(1000):
+        agent.train()
+    return
+
     for episode in range(80):
         score, done, obs, ep_steps = 0, False, env.reset(), 0
         while not done:
@@ -299,5 +304,5 @@ if __name__ == "__main__":
     # test_gym()
     agent_name = "TestingDDPG"
     RunMyEnv(agent_name)
-    eval2(agent_name)
+    eval2(agent_name, False)
 

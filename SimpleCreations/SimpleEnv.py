@@ -9,6 +9,7 @@ class MakeEnv:
         self.last_distance = None
         self.start = None
         self.end = None
+        self.obstacles = []
 
         self.x_bound = [1, 99]
         self.y_bound = [1, 99]
@@ -26,6 +27,7 @@ class MakeEnv:
         self.eps += 1
         self.steps = 0
         self.memory = []
+        self.reset_obstacles()
         rands = np.random.rand(4) * 100
         self.start = rands[0:2]
         self.end = rands[2:4]  
@@ -115,6 +117,8 @@ class MakeEnv:
         return False
 
     def _check_bounds(self, x):
+        if self._check_obstacles(x):
+            return True
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
             return True
         if self.y_bound[0] > x[1] or x[1] > self.y_bound[1]:
@@ -147,8 +151,49 @@ class MakeEnv:
         plt.xlim(0, 100)
         plt.ylim(0, 100)
         plt.plot(x, y)
-        plt.plot(self.start[0], self.start[1], '*')
-        plt.plot(self.end[0], self.end[1], '*')
-        plt.pause(0.001)
+        plt.plot(self.start[0], self.start[1], '*', markersize=20)
+        plt.plot(self.end[0], self.end[1], '*', markersize=20)
+
+        ax = fig.gca()
+        for o in self.obstacles:
+            circle = plt.Circle(o.location, o.size, color='r')
+            ax.add_artist(circle)
         
+        plt.pause(0.001)
         fig.savefig(f"Renders/Rendering_{self.eps}")
+
+    def add_obstacles(self, n=1):
+        for i in range(n):
+            o = Obstacle(10)
+            self.obstacles.append(o)
+
+    def _check_obstacles(self, x):
+        for o in self.obstacles:
+            if o.check_collision(x):
+                return True
+
+        return False
+
+    def reset_obstacles(self):
+        for o in self.obstacles:
+            o.set_random_location()
+
+
+
+class Obstacle:
+    def __init__(self, size):
+        self.size = size
+        self.location = None
+
+    def set_random_location(self):
+        # range_bound = [10, 90]
+        rands = np.random.rand(2) * 80 
+        location = lib.add_locations(rands, [10, 10])
+        self.location = location
+
+    def check_collision(self, x):
+        dis = lib.get_distance(self.location, x)
+        if dis < self.size:
+            return True
+        return False
+
