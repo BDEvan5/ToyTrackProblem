@@ -228,9 +228,8 @@ def observe(env,replay_buffer, observation_steps):
         sys.stdout.flush()
 
 
-def RunMyEnv(agent_name):
+def RunMyEnv(agent_name, show=True):
     env = MakeEnv()
-
     agent = TD3(env.state_dim, env.action_dim, env.max_action)
     replay_buffer = ReplayBuffer()
 
@@ -238,7 +237,7 @@ def RunMyEnv(agent_name):
 
     rewards = []
     observe(env, replay_buffer, 10000)
-    for episode in range(100):
+    for episode in range(200):
         score, done, obs, ep_steps = 0, False, env.reset(), 0
         while not done:
             action = agent.select_action(np.array(obs), noise=0.1)
@@ -254,12 +253,17 @@ def RunMyEnv(agent_name):
             agent.train(replay_buffer, 2) # number is of itterations
 
         rewards.append(score)
-        print(f"Ep: {episode} -> score: {score}")
-        if episode % show_n == 1:
-            lib.plot(rewards, figure_n=2)
-            plt.figure(2).savefig("Training_" + agent_name)
-            env.render()
-            agent.save(agent_name)
+        if show:
+            print(f"Ep: {episode} -> score: {score}")
+            if episode % show_n == 1:
+                lib.plot(rewards, figure_n=2)
+                plt.figure(2).savefig("Training_" + agent_name)
+                env.render()
+                agent.save(agent_name)
+
+    agent.save(agent_name)
+    lib.plot(rewards, figure_n=2)
+    plt.figure(2).savefig("Training_" + agent_name)
 
 def eval2(agent_name, show=True):
     env = MakeEnv()
@@ -304,10 +308,10 @@ def eval2(agent_name, show=True):
 
 
 if __name__ == "__main__":
-    agent_name = "NewNoise100"
+    agent_name = "OldNoise200"
 
-    eval2(agent_name)
+    eval2(agent_name, False)
     RunMyEnv(agent_name)
-    eval2(agent_name)
+    eval2(agent_name, False)
  
     

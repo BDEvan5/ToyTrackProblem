@@ -7,6 +7,14 @@ import torch
 import torch.nn as nn 
 import torch.nn.functional as F 
 
+from SimpleEnv import MakeEnv
+import sys
+import LibFunctions as lib
+from matplotlib import  pyplot as plt
+
+tau = 0.01
+gamma = 0.99
+
 class BasicBuffer_a:
     def __init__(self, size, obs_dim, act_dim):
         self.obs1_buf = np.zeros([size, obs_dim], dtype=np.float32)
@@ -35,10 +43,10 @@ class BasicBuffer_a:
         return (temp_dict['s'],temp_dict['a'],temp_dict['r'].reshape(-1,1),temp_dict['s2'],temp_dict['d'])
 
 class Critic_gen(nn.Module):
-    def __init__(self):
+    def __init__(self, state_dim, act_dim):
         super(Critic_gen, self).__init__()
 
-        self.fc1 = nn.Linear(4, 1204)
+        self.fc1 = nn.Linear(state_dim + act_dim, 1204)
         self.fc2 = nn.Linear(1204, 512)
         self.fc3 = nn.Linear(512, 300)
         self.fc4 = nn.Linear(300, 1)
@@ -54,13 +62,13 @@ class Critic_gen(nn.Module):
         return v
 
 class Actor_gen(nn.Module):
-    def __init__(self, max_act):
+    def __init__(self, state_dim, act_dim, max_act=1):
         super(Actor_gen, self).__init__()
 
-        self.fc1 = nn.Linear(3, 512)
+        self.fc1 = nn.Linear(state_dim, 512)
         self.fc2 = nn.Linear(512, 200)
         self.fc3 = nn.Linear(200, 128)
-        self.fc4 = nn.Linear(128, 1)
+        self.fc4 = nn.Linear(128, act_dim)
 
         self.max_act = max_act
 
@@ -76,22 +84,18 @@ class Actor_gen(nn.Module):
 
 
 class DDPGAgent:
-    def __init__(self):
-        self.obs_dim = 3
-        self.action_dim = 1 # x and y for target
-        self.action_max = 2 # will be scaled later
+    def __init__(self, state_dim, action_dim, max_act):
+        self.obs_dim = state_dim
+        self.action_dim = action_dim # x and y for target
+        self.action_max = max_act # will be scaled later
         
-        # hyperparameters
-        self.gamma = 0.99
-        self.tau = 1e-2
-
         # Main network outputs
-        self.mu = Actor_gen(2)
-        self.q_mu = Critic_gen()
+        self.mu = Actor_gen(state_dim, action_dim, max_act)
+        self.q_mu = Critic_gen(state_dim, action_dim)
 
         # Target networks
-        self.mu_target = Actor_gen(2)
-        self.q_mu_target = Critic_gen()
+        self.mu_target = Actor_gen(state_dim, action_dim, max_act)
+        self.q_mu_target = Critic_gen(state_dim, action_dim)
       
         # Copying weights in,
         self.mu.load_state_dict(self.mu_target.state_dict())
@@ -101,12 +105,12 @@ class DDPGAgent:
         self.mu_optimizer = torch.optim.Adam(self.mu.parameters(), lr=1e-3)
         self.q_mu_optimizer = torch.optim.Adam(self.q_mu.parameters(), lr=1e-3)
 
-        self.replay_buffer = BasicBuffer_a(100000, obs_dim=3, act_dim=1)
+        self.replay_buffer = BasicBuffer_a(100000, obs_dim=state_dim, act_dim=action_dim)
         
         self.q_losses = []
         self.mu_losses = []
         
-    def get_action(self, s, noise_scale):
+    def act(self, s, noise_scale):
         s = torch.tensor(s, dtype=torch.float)
         a =  self.mu(s).detach().numpy()
         a += noise_scale * np.random.randn(self.action_dim)
@@ -116,6 +120,8 @@ class DDPGAgent:
 
     def train(self):
         batch_size = 32
+        if self.replay_buffer.size < batch_size:
+            return 
         X,A,R,X2,D = self.replay_buffer.sample(batch_size)
         X = np.asarray(X,dtype=np.float32)
         A = np.asarray(A,dtype=np.float32)
@@ -129,7 +135,7 @@ class DDPGAgent:
 
         # Updating Ze Critic
         A2 =  self.mu_target(X2)
-        q_target = R + self.gamma * self.q_mu_target([X2,A2]).detach()
+        q_target = R + gamma * self.q_mu_target([X2,A2]).detach()
         qvals = self.q_mu([X,A]) 
         q_loss = ((qvals - q_target)**2).mean()
         self.q_mu_optimizer.zero_grad()
@@ -145,16 +151,19 @@ class DDPGAgent:
         mu_loss.backward()
         self.mu_optimizer.step()
 
-        soft_update(self.mu, self.mu_target, self.tau)
-        soft_update(self.q_mu, self.q_mu_target, self.tau)
+        soft_update(self.mu, self.mu_target)
+        soft_update(self.q_mu, self.q_mu_target)
 
 
-def soft_update(net, net_target, tau):
+def soft_update(net, net_target):
     for param_target, param in zip(net_target.parameters(), net.parameters()):
         param_target.data.copy_(param_target.data * (1.0 - tau) + param.data * tau)
 
 
-def test(env, agent):
+def test_gym():
+    env = gym.make("Pendulum-v0")
+    agent = DDPGAgent(env.observation_space.shape[0], 1, 2)
+
     episode_rewards = []
 
     noise = 0.1
@@ -163,15 +172,14 @@ def test(env, agent):
         episode_reward = 0
 
         for step in range(500):
-            action = agent.get_action(state, noise)
-            # print(action)
+            action = agent.act(state, noise)
+
             next_state, reward, done, _ = env.step(action)
             d_store = False if step == 499 else done
             agent.replay_buffer.push(state, action, reward, next_state, d_store)
             episode_reward += reward
 
-            if agent.replay_buffer.size > 32:
-                agent.train()   
+            agent.train()   
 
             if done or step == 499:
                 episode_rewards.append(episode_reward)
@@ -183,9 +191,105 @@ def test(env, agent):
     return episode_rewards
 
 
+def observe(env,replay_buffer, observation_steps):
+    time_steps = 0
+    obs = env.reset()
+    done = False
+
+    while time_steps < observation_steps:
+        # action = env.action_space.sample()
+        action = env.random_action()
+        new_obs, reward, done, _ = env.step_continuous(action)
+
+        replay_buffer.push(obs, action, reward, new_obs, done)
+
+        obs = new_obs
+        time_steps += 1
+
+        if done:
+            obs = env.reset()
+            done = False
+
+        print("\rPopulating Buffer {}/{}.".format(time_steps, observation_steps), end="")
+        sys.stdout.flush()
+
+
+def RunMyEnv(agent_name, show=True):
+    env = MakeEnv()
+    agent = DDPGAgent(env.state_dim, env.action_dim, env.max_action)
+
+    show_n = 2
+
+    rewards = []
+    observe(env, agent.replay_buffer, 10000)
+    for episode in range(200):
+        score, done, obs, ep_steps = 0, False, env.reset(), 0
+        while not done:
+            action = agent.act(np.array(obs), 0.1)
+
+            new_obs, reward, done, _ = env.step_continuous(action) 
+            done_bool = 0 if ep_steps + 1 == 200 else float(done)
+        
+            agent.replay_buffer.push(obs, action, reward, new_obs, done_bool)          
+            obs = new_obs
+            score += reward
+            ep_steps += 1
+
+            agent.train() # number is of itterations
+
+        rewards.append(score)
+        if show:
+            print(f"Ep: {episode} -> score: {score}")
+            if episode % show_n == 1:
+                lib.plot(rewards, figure_n=2)
+                plt.figure(2).savefig("Training_" + agent_name)
+                env.render()
+                # agent.save(agent_name)
+
+    agent.save(agent_name)
+    lib.plot(rewards, figure_n=2)
+    plt.figure(2).savefig("Training_" + agent_name)
+
+def eval2(agent_name, show=True):
+    env = MakeEnv()
+    agent = DDPGAgent(env.state_dim, env.action_dim, env.max_action)
+
+    show_n = 1
+
+    rewards = []
+    try:
+        agent.load(agent_name)
+        print(f"Agent loaded: {agent_name}")
+    except:
+        print("Cannot load agent")
+
+    for episode in range(100):
+        score, done, obs, ep_steps = 0, False, env.reset(), 0
+        while not done:
+            action = agent.act(np.array(obs), 0)
+
+            new_obs, reward, done, _ = env.step_continuous(action) 
+            done_bool = 0 if ep_steps + 1 == 200 else float(done)
+        
+            agent.replay_buffer.push(obs, action, reward, new_obs, done_bool)       
+            obs = new_obs
+            score += reward
+            ep_steps += 1
+
+        rewards.append(score)
+        if show:
+            print(f"Ep: {episode} -> score: {score}")
+            if episode % show_n == 1:
+                lib.plot(rewards)
+                env.render()
+
+    print(f"Avg reward: {np.mean(rewards)}")
+
+
+
 if __name__ == "__main__":
-    env = gym.make("Pendulum-v0")
-    
-    agent = DDPGAgent()
-    episode_rewards = test(env, agent)
+    # test_gym()
+    agent_name = "Testing"
+    RunMyEnv(agent_name)
+    eval2(agent_name)
 
