@@ -154,6 +154,14 @@ class DDPGAgent:
         soft_update(self.mu, self.mu_target)
         soft_update(self.q_mu, self.q_mu_target)
 
+    def save(self, filename="best_avg", directory="./saves"):
+        torch.save(self.mu.state_dict(), '%s/%s_actor.pth' % (directory, filename))
+        torch.save(self.q_mu.state_dict(), '%s/%s_critic.pth' % (directory, filename))
+
+    def load(self, filename="best_avg", directory="./saves"):
+        self.mu.load_state_dict(torch.load('%s/%s_actor.pth' % (directory, filename)))
+        self.q_mu.load_state_dict(torch.load('%s/%s_critic.pth' % (directory, filename)))
+
 
 def soft_update(net, net_target):
     for param_target, param in zip(net_target.parameters(), net.parameters()):
@@ -222,7 +230,7 @@ def RunMyEnv(agent_name, show=True):
 
     rewards = []
     observe(env, agent.replay_buffer, 10000)
-    for episode in range(200):
+    for episode in range(80):
         score, done, obs, ep_steps = 0, False, env.reset(), 0
         while not done:
             action = agent.act(np.array(obs), 0.1)
@@ -289,7 +297,7 @@ def eval2(agent_name, show=True):
 
 if __name__ == "__main__":
     # test_gym()
-    agent_name = "Testing"
+    agent_name = "TestingDDPG"
     RunMyEnv(agent_name)
     eval2(agent_name)
 
