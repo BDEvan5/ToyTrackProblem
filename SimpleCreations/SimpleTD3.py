@@ -9,6 +9,7 @@ import sys
 from SimpleEnv import MakeEnv
 import LibFunctions as lib
 import timeit
+from matplotlib import pyplot as plt
 
 # hyper parameters
 BATCH_SIZE = 100
@@ -110,6 +111,18 @@ class ReplayBuffer(object):
 
         return np.array(states), np.array(actions), np.array(next_states), np.array(rewards).reshape(-1, 1), np.array(dones).reshape(-1, 1)
 
+class OrnsteinUhlenbeckNoise:
+    def __init__(self, mu):
+        self.theta, self.dt, self.sigma = 0.1, 0.01, 0.1
+        self.mu = mu
+        self.x_prev = np.zeros_like(self.mu)
+
+    def __call__(self):
+        x = self.x_prev + self.theta * (self.mu - self.x_prev) * self.dt + \
+                self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.mu.shape)
+        self.x_prev = x
+        return x
+
 class TD3(object):
     def __init__(self, state_dim, action_dim, max_action):
         self.actor = Actor(state_dim, action_dim, max_action)
@@ -125,12 +138,15 @@ class TD3(object):
         self.max_action = max_action
         self.act_dim = action_dim
 
+        self.noise = OrnsteinUhlenbeckNoise(mu=np.zeros(action_dim)) 
+
     def select_action(self, state, noise=0.1):
         state = torch.FloatTensor(state.reshape(1, -1))
 
         action = self.actor(state).data.numpy().flatten()
         if noise != 0: 
-            action = (action + np.random.normal(0, noise, size=self.act_dim))
+            action = action + self.noise()
+            # action = (action + np.random.normal(0, noise, size=self.act_dim))
             
         return action.clip(-self.max_action, self.max_action)
 
@@ -211,54 +227,6 @@ def observe(env,replay_buffer, observation_steps):
         print("\rPopulating Buffer {}/{}.".format(time_steps, observation_steps), end="")
         sys.stdout.flush()
 
-def evaluate_policy(policy, env, eval_episodes=100,render=False):
-    avg_reward = 0.
-    for i in range(eval_episodes):
-        obs = env.reset()
-        done = False
-        while not done:
-            if render:
-                env.render()
-            action = policy.select_action(np.array(obs), noise=0)
-            obs, reward, done, _ = env.step(action)
-            avg_reward += reward
-
-    avg_reward /= eval_episodes
-
-    print("\n---------------------------------------")
-    print("Evaluation over {:d} episodes: {:f}" .format(eval_episodes, avg_reward))
-    print("---------------------------------------")
-    return avg_reward
-
-
-def test():
-    env = gym.make("Pendulum-v0")
-    state_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0] 
-    max_action = env.action_space.high[0]
-
-    agent = TD3(state_dim, action_dim, max_action)
-    replay_buffer = ReplayBuffer()
-
-    rewards = []
-    observe(env, replay_buffer, 10000)
-    for episode in range(500):
-        score, done, obs, ep_steps = 0, False, env.reset(), 0
-        while not done:
-            action = agent.select_action(np.array(obs), noise=0.1)
-
-            new_obs, reward, done, _ = env.step(action) 
-            done_bool = 0 if ep_steps + 1 == 200 else float(done)
-        
-            replay_buffer.add((obs, new_obs, action, reward, done_bool))          
-            obs = new_obs
-            score += reward
-            ep_steps += 1
-
-            agent.train(replay_buffer, 2) # number is of itterations
-
-        rewards.append(score)
-        print(f"Ep: {episode} -> score: {score}")
 
 def RunMyEnv(agent_name):
     env = MakeEnv()
@@ -270,7 +238,7 @@ def RunMyEnv(agent_name):
 
     rewards = []
     observe(env, replay_buffer, 10000)
-    for episode in range(500):
+    for episode in range(100):
         score, done, obs, ep_steps = 0, False, env.reset(), 0
         while not done:
             action = agent.select_action(np.array(obs), noise=0.1)
@@ -288,7 +256,8 @@ def RunMyEnv(agent_name):
         rewards.append(score)
         print(f"Ep: {episode} -> score: {score}")
         if episode % show_n == 1:
-            lib.plot(rewards)
+            lib.plot(rewards, figure_n=2)
+            plt.figure(2).savefig("Training_" + agent_name)
             env.render()
             agent.save(agent_name)
 
@@ -304,7 +273,12 @@ def eval2(agent_name, show=True):
     show_n = 1
 
     rewards = []
-    agent.load(agent_name)
+    try:
+        agent.load(agent_name)
+        print(f"Agent loaded: {agent_name}")
+    except:
+        print("Cannot load agent")
+
     for episode in range(100):
         score, done, obs, ep_steps = 0, False, env.reset(), 0
         while not done:
@@ -330,9 +304,10 @@ def eval2(agent_name, show=True):
 
 
 if __name__ == "__main__":
-    agent_name = "Baseline"
+    agent_name = "NewNoise100"
 
-    # eval2(agent_name)
+    eval2(agent_name)
     RunMyEnv(agent_name)
+    eval2(agent_name)
  
     
