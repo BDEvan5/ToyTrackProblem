@@ -4,6 +4,8 @@ import random
 import sys
 import numpy as np 
 from matplotlib import pyplot as plt
+import timeit
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -53,7 +55,7 @@ class ReplayBuffer():
 class Qnet(nn.Module):
     def __init__(self, obs_space, action_space):
         super(Qnet, self).__init__()
-        h_size = 128
+        h_size = 512
         self.fc1 = nn.Linear(obs_space, h_size)
         self.fc2 = nn.Linear(h_size, h_size)
         self.fc3 = nn.Linear(h_size, action_space)
@@ -180,14 +182,15 @@ def observe_myenv(env, memory, n_itterations=10000):
 
 def RunMyEnv(agent_name, show=True):
     env = MakeEnv()
+    env.add_obstacles(6)
     agent = DQN(env.state_dim, env.action_space)
 
     print_n = 20
     show_n = 2
 
     rewards = []
-    observe_myenv(env, agent.memory, 1000)
-    for n in range(500):
+    # observe_myenv(env, agent.memory, 10000)
+    for n in range(5000):
         score, done, state = 0, False, env.reset()
         while not done:
             a = agent.sample_action(state)
@@ -205,8 +208,7 @@ def RunMyEnv(agent_name, show=True):
                 exp = agent.exploration_rate
                 mean = np.mean(rewards[-20:])
                 print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp}")
-            # print(f"Ep: {episode} -> score: {score}")
-            # if n % show_n == 1:
+
                 lib.plot(rewards, figure_n=2)
                 plt.figure(2).savefig("Training_" + agent_name)
                 env.render()
@@ -217,7 +219,12 @@ def RunMyEnv(agent_name, show=True):
     lib.plot(rewards, figure_n=2)
     plt.figure(2).savefig("Training_" + agent_name)
 
+def timing():
+    env = MakeEnv()
+    env.add_obstacles(6)
+    agent = DQN(env.state_dim, env.action_space)
 
+    observe_myenv(env, agent.memory, 5000)
 
 
 if __name__ == '__main__':
@@ -225,4 +232,5 @@ if __name__ == '__main__':
     agent_name = "TestingDQN"
     RunMyEnv(agent_name)
 
-
+    # t = timeit.timeit(stmt=timing, number=1)
+    # print(f"Time: {t}")

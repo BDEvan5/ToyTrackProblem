@@ -119,6 +119,7 @@ class MakeEnv:
         return new_x, new_theta
 
     def _get_state_obs(self):
+        self._update_ranges()
         rel_target = lib.sub_locations(self.end, self.car_x)
         transformed_target = lib.transform_coords(rel_target, self.theta)
         obs = np.concatenate([transformed_target, self.ranges])
@@ -170,12 +171,13 @@ class MakeEnv:
         return new_x, new_theta
 
     def _update_ranges(self):
-        step_size = 5
-        n_searches = 10
+        step_size = 8
+        n_searches = 6
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
             for j in range(n_searches): # number of search points
-                dx = step_size * j * [np.sin(angle), np.cos(angle)]
+                fs = step_size * j
+                dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
                 search_val = lib.add_locations(self.car_x, dx)
                 if self._check_obstacles(search_val):
                     break             
