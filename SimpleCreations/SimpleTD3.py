@@ -31,7 +31,6 @@ class Actor(nn.Module):
 
         self.max_action = max_action
 
-
     def forward(self, x):
         x = F.relu(self.l1(x))
         x = F.relu(self.l2(x))
@@ -51,7 +50,6 @@ class Critic(nn.Module):
         self.l4 = nn.Linear(state_dim + action_dim, 400)
         self.l5 = nn.Linear(400, 300)
         self.l6 = nn.Linear(300, 1)
-
 
     def forward(self, x, u):
         xu = torch.cat([x, u], 1)
@@ -230,6 +228,7 @@ def TrainRandom(agent_name):
 
 def RunMyEnv(agent_name, show=True):
     env = MakeEnv()
+    env.add_obstacles(5)
     agent = TD3(env.state_dim, env.action_dim, env.max_action)
     replay_buffer = ReplayBuffer()
 
@@ -238,6 +237,7 @@ def RunMyEnv(agent_name, show=True):
     rewards = []
     observe(env, replay_buffer, 10000)
     for episode in range(200):
+        episode_rewards = []
         score, done, obs, ep_steps = 0, False, env.reset(), 0
         while not done:
             action = agent.select_action(np.array(obs), noise=0.1)
@@ -248,18 +248,23 @@ def RunMyEnv(agent_name, show=True):
             replay_buffer.add((obs, new_obs, action, reward, done_bool))          
             obs = new_obs
             score += reward
+            episode_rewards.append(reward)
             ep_steps += 1
 
             agent.train(replay_buffer, 2) # number is of itterations
 
         rewards.append(score)
+        plt.figure(6)
+        plt.clf()
+        plt.plot(episode_rewards)
+        plt.pause(0.001)
         if show:
             print(f"Ep: {episode} -> score: {score}")
             if episode % show_n == 1:
                 lib.plot(rewards, figure_n=2)
                 plt.figure(2).savefig("Training_" + agent_name)
                 env.render()
-                env.render_actions()
+                # env.render_actions()
                 agent.save(agent_name)
 
     agent.save(agent_name)
@@ -268,11 +273,8 @@ def RunMyEnv(agent_name, show=True):
 
 def eval2(agent_name, show=True):
     env = MakeEnv()
-    state_dim = 2
-    action_dim = 2
-    max_action = 2
 
-    agent = TD3(state_dim, action_dim, max_action)
+    agent = TD3(env.state_dim, env.action_dim, env.max_action)
     replay_buffer = ReplayBuffer()
 
     show_n = 1

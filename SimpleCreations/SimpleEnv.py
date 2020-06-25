@@ -7,10 +7,16 @@ class MakeEnv:
     def __init__(self):
         self.car_x = [0, 0]
         self.theta = 0
+        self.n_ranges = 5
+        self.ranges = np.zeros(self.n_ranges)
+        self.range_angles = np.zeros(self.n_ranges)
         self.last_distance = None
         self.start = None
         self.end = None
         self.obstacles = []
+        for i in range(self.n_ranges):
+            angle = np.pi/(self.n_ranges - 1) * i - np.pi/2
+            self.range_angles[i] = angle
 
         self.x_bound = [1, 99]
         self.y_bound = [1, 99]
@@ -21,10 +27,11 @@ class MakeEnv:
         
         #parameters
         self.max_action = 1 # what the net gives
-        self.state_dim = 2
+        self.state_dim = 2 + self.n_ranges
         self.action_dim = 2
         self.action_scale = 5 # internal implementation
 
+#setup
     def reset(self):
         self.eps += 1
         self.steps = 0
@@ -51,6 +58,13 @@ class MakeEnv:
 
         return self._get_state_obs()
 
+    def random_action(self):
+        rand = np.random.rand(2)
+        a = (rand * 2 - [1, 1]) # this shifts the interval [0, 1) to
+        act = a * self.max_action * 2 # [-1, 1]
+        return act
+
+#step
     def step(self, action):
         self.memory.append(self.car_x)
         self.steps += 1
@@ -80,6 +94,7 @@ class MakeEnv:
         reward, done = self._get_reward()
         return obs, reward, done, None
 
+# implement step
     def take_x_step(self, action):
         norm = 1
         transformed_action = lib.transform_coords(action, -self.theta)
@@ -96,28 +111,23 @@ class MakeEnv:
 
         return new_x, new_theta
 
-    def random_action(self):
-        rand = np.random.rand(2)
-        a = (rand * 2 - [1, 1]) # this shifts the interval [0, 1) to
-        act = a * self.max_action * 2 # [-1, 1]
-        return act
-
     def _get_state_obs(self):
         rel_target = lib.sub_locations(self.end, self.car_x)
         transformed_target = lib.transform_coords(rel_target, self.theta)
-        # obs = np.array(transformed_target) 
+        obs = np.concatenate([transformed_target, self.ranges])
 
-        return transformed_target
+        return obs
 
     def _get_reward(self):
-        beta = 2
+        beta = 0.6
         r_done = 100
+        step_penalty = 5
 
         cur_distance = lib.get_distance(self.car_x, self.end)
         if cur_distance < 1 + self.action_scale:
             return r_done, True
         d_dis = self.last_distance - cur_distance
-        reward = beta * (d_dis**2 * d_dis/abs(d_dis)) - 5
+        reward = beta * (d_dis**2 * d_dis/abs(d_dis)) - step_penalty
         self.last_distance = cur_distance
         done = self._check_steps()
         return reward, done
@@ -151,6 +161,19 @@ class MakeEnv:
         
         return x
 
+    def _update_ranges(self):
+        step_size = 5
+        n_searches = 10
+        for i in range(self.n_ranges):
+            angle = self.range_angles[i] + self.theta
+            for j in range(n_searches): # number of search points
+                dx = step_size * j * [np.sin(angle), np.cos(angle)]
+                search_val = lib.add_locations(self.car_x, dx)
+                if self._check_obstacles(search_val):
+                    break             
+            self.ranges[i] = (j-1) / n_searches # gives a scaled val to 1 
+
+# rendering
     def render(self):
         x, y = [], []
         for step in self.memory:
@@ -186,9 +209,10 @@ class MakeEnv:
         plt.plot(ys)
         plt.pause(0.001)
 
+#obstacles
     def add_obstacles(self, n=1):
         for i in range(n):
-            o = Obstacle(10)
+            o = Obstacle(8)
             self.obstacles.append(o)
 
     def _check_obstacles(self, x):
