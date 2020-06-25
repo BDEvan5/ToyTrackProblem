@@ -31,6 +31,8 @@ class MakeEnv:
         self.action_dim = 2
         self.action_scale = 5 # internal implementation
 
+        self.action_space = 5
+
 #setup
     def reset(self):
         self.eps += 1
@@ -64,16 +66,21 @@ class MakeEnv:
         act = a * self.max_action * 2 # [-1, 1]
         return act
 
+    def random_discrete_action(self):
+        rand_act = np.random.randint(0, self.action_space)
+        return rand_act
+
 #step
     def step(self, action):
         self.memory.append(self.car_x)
         self.steps += 1
-        new_x = self._new_x(action)
+        new_x, new_theta = self._x_step_discrete(action)
         if self._check_bounds(new_x):
             obs = self._get_state_obs()
             r_crash = -100
             return obs, r_crash, True, None
         self.car_x = new_x 
+        self.theta = new_theta
         obs = self._get_state_obs()
         reward, done = self._get_reward()
         return obs, reward, done, None
@@ -83,7 +90,7 @@ class MakeEnv:
         self.action_memory.append(action)
         self.steps += 1
         # new_x = lib.add_locations(self.car_x, action)
-        new_x, new_theta = self.take_x_step(action)
+        new_x, new_theta = self._x_step_continuous(action)
         if self._check_bounds(new_x):
             obs = self._get_state_obs()
             r_crash = -100
@@ -95,7 +102,7 @@ class MakeEnv:
         return obs, reward, done, None
 
 # implement step
-    def take_x_step(self, action):
+    def _x_step_continuous(self, action):
         norm = 1
         transformed_action = lib.transform_coords(action, -self.theta)
         r = transformed_action[0] / transformed_action[1]
@@ -146,20 +153,21 @@ class MakeEnv:
             return True 
         return False
 
-    def _new_x(self, action):
-        # action is 0, 1, 2, 3
-        scale = 2
-        if action == 0:
-            dx = [0, 1] * scale
-        elif action == 1:
-            dx = [0, -1] * scale
-        elif action == 2:
-            dx = [1, 0] * scale
-        elif action == 3:
-            dx = [-1, 0] * scale
-        x = lib.add_locations(dx, self.car_x)
+    def _x_step_discrete(self, action):
+        # actions in range [0, n_acts) are a fan in front of vehicle
+        # no backwards
+        fs = self.action_scale
+        dth = np.pi / (self.action_space-1)
+        angle = -np.pi/2 + action * dth 
+        angle += self.theta # for the vehicle offset
+        dx = [np.sin(angle)*fs, np.cos(angle)*fs] 
         
-        return x
+        new_x = lib.add_locations(dx, self.car_x)
+        
+        new_grad = lib.get_gradient(new_x, self.car_x)
+        new_theta = np.pi / 2 - np.arctan(new_grad)
+
+        return new_x, new_theta
 
     def _update_ranges(self):
         step_size = 5

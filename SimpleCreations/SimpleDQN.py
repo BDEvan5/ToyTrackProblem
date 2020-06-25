@@ -3,13 +3,14 @@ import collections
 import random
 import sys
 import numpy as np 
-
+from matplotlib import pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
 from SimpleEnv import MakeEnv
+import LibFunctions as lib
 
 #Hyperparameters
 GAMMA = 0.95
@@ -113,6 +114,16 @@ class DQN:
             self.exploration_rate *= EXPLORATION_DECAY 
             self.exploration_rate = max(EXPLORATION_MIN, self.exploration_rate)
 
+    def save(self, filename="best_avg", directory="./dqn_saves"):
+        torch.save(self.model.state_dict(), '%s/%s_model.pth' % (directory, filename))
+        torch.save(self.target.state_dict(), '%s/%s_target.pth' % (directory, filename))
+
+    def load(self, filename="best_avg", directory="./dqn_saves"):
+        self.model.load_state_dict(torch.load('%s/%s_model.pth' % (directory, filename)))
+        self.target.load_state_dict(torch.load('%s/%s_target.pth' % (directory, filename)))
+
+
+
 def observe(env, memory, n_itterations=10000):
     s = env.reset()
     done = False
@@ -151,11 +162,11 @@ def test_cartpole():
         if n % print_n == 1:
             print(f"Run: {n} --> Score: {score} --> Mean: {np.mean(rewards[-20:])} --> exp: {dqn.exploration_rate}")
 
-def observe(env, memory, n_itterations=10000):
+def observe_myenv(env, memory, n_itterations=10000):
     s = env.reset()
     done = False
     for i in range(n_itterations):
-        action = env.action_space.sample()
+        action = env.random_discrete_action()
         s_p, r, done, _ = env.step(action)
         done_mask = 0.0 if done else 1.0
         memory.put((s, action, r/100, s_p, done_mask))
@@ -165,35 +176,53 @@ def observe(env, memory, n_itterations=10000):
 
         print("\rPopulating Buffer {}/{}.".format(i, n_itterations), end="")
         sys.stdout.flush()
+    print(" ")
 
 def RunMyEnv(agent_name, show=True):
-    env = gym.make('CartPole-v1')
-    dqn = DQN(env.observation_space.shape[0], env.action_space.n)
+    env = MakeEnv()
+    agent = DQN(env.state_dim, env.action_space)
 
     print_n = 20
+    show_n = 2
 
     rewards = []
-    observe(env, dqn.memory)
+    observe_myenv(env, agent.memory, 1000)
     for n in range(500):
         score, done, state = 0, False, env.reset()
         while not done:
-            a = dqn.sample_action(state)
+            a = agent.sample_action(state)
             s_prime, r, done, _ = env.step(a)
             done_mask = 0.0 if done else 1.0
-            dqn.memory.put((state, a, r/100, s_prime, done_mask))
+            agent.memory.put((state, a, r/100, s_prime, done_mask))
             state = s_prime
             score += r
-            dqn.experience_replay()
+            agent.experience_replay()
             
         rewards.append(score)
-        if n % print_n == 1:
-            print(f"Run: {n} --> Score: {score} --> Mean: {np.mean(rewards[-20:])} --> exp: {dqn.exploration_rate}")
 
+        if show:
+            if n % print_n == 1:
+                exp = agent.exploration_rate
+                mean = np.mean(rewards[-20:])
+                print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp}")
+            # print(f"Ep: {episode} -> score: {score}")
+            # if n % show_n == 1:
+                lib.plot(rewards, figure_n=2)
+                plt.figure(2).savefig("Training_" + agent_name)
+                env.render()
+                # env.render_actions()
+                agent.save(agent_name)
 
+    agent.save(agent_name)
+    lib.plot(rewards, figure_n=2)
+    plt.figure(2).savefig("Training_" + agent_name)
 
 
 
 
 if __name__ == '__main__':
-    test_cartpole()
+    # test_cartpole()
+    agent_name = "TestingDQN"
+    RunMyEnv(agent_name)
+
 
