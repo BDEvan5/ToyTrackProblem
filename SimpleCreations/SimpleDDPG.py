@@ -168,37 +168,6 @@ def soft_update(net, net_target):
         param_target.data.copy_(param_target.data * (1.0 - tau) + param.data * tau)
 
 
-def test_gym():
-    env = gym.make("Pendulum-v0")
-    agent = DDPGAgent(env.observation_space.shape[0], 1, 2)
-
-    episode_rewards = []
-
-    noise = 0.1
-    for episode in range(20):
-        state = env.reset()
-        episode_reward = 0
-
-        for step in range(500):
-            action = agent.act(state, noise)
-
-            next_state, reward, done, _ = env.step(action)
-            d_store = False if step == 499 else done
-            agent.replay_buffer.push(state, action, reward, next_state, d_store)
-            episode_reward += reward
-
-            agent.train()   
-
-            if done or step == 499:
-                episode_rewards.append(episode_reward)
-                print("Episode " + str(episode) + ": " + str(episode_reward))
-                break
-
-            state = next_state
-
-    return episode_rewards
-
-
 def observe(env,replay_buffer, observation_steps):
     time_steps = 0
     obs = env.reset()
@@ -310,7 +279,7 @@ if __name__ == "__main__":
     # test_gym()
     agent_name = "TestingDDPG"
 
-    # RunMyEnv(agent_name)
-    TrainRandom(agent_name)
+    RunMyEnv(agent_name)
+    # TrainRandom(agent_name)
     eval2(agent_name, False)
 

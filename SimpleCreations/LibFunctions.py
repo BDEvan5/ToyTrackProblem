@@ -36,6 +36,13 @@ def get_angle(x1, x2, x3):
     angle = abs(np.arctan(m1) - np.arctan(m2))
     return angle
 
+def transform_coords(x=[0, 0], theta=np.pi):
+    # i want this function to transform coords from one coord system to another
+    new_x = x[0] * np.cos(theta) - x[1] * np.sin(theta)
+    new_y = x[0] * np.sin(theta) + x[1] * np.cos(theta)
+
+    return np.array([new_x, new_y])
+
 
 def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     plt.figure(figure_n)

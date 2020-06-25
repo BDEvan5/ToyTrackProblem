@@ -29,10 +29,6 @@ class Actor(nn.Module):
         self.l2 = nn.Linear(400, 300)
         self.l3 = nn.Linear(300, action_dim)
 
-        # nn.init.uniform_(self.l1.weight, -1/np.sqrt(400), 1/np.sqrt(400) )
-        # nn.init.uniform_(self.l2.weight, -1/np.sqrt(300), 1/np.sqrt(300) )
-        # nn.init.uniform_(self.l3.weight, -1/np.sqrt(2), 1/np.sqrt(2) )
-
         self.max_action = max_action
 
 
@@ -55,13 +51,6 @@ class Critic(nn.Module):
         self.l4 = nn.Linear(state_dim + action_dim, 400)
         self.l5 = nn.Linear(400, 300)
         self.l6 = nn.Linear(300, 1)
-
-        # nn.init.uniform_(self.l1.weight, -1/np.sqrt(400), 1/np.sqrt(400) )
-        # nn.init.uniform_(self.l2.weight, -1/np.sqrt(300), 1/np.sqrt(300) )
-        # nn.init.uniform_(self.l3.weight, -1/np.sqrt(1), 1/np.sqrt(1) )
-        # nn.init.uniform_(self.l4.weight, -1/np.sqrt(400), 1/np.sqrt(400) )
-        # nn.init.uniform_(self.l5.weight, -1/np.sqrt(300), 1/np.sqrt(300) )
-        # nn.init.uniform_(self.l6.weight, -1/np.sqrt(1), 1/np.sqrt(1) )
 
 
     def forward(self, x, u):
@@ -228,6 +217,17 @@ def observe(env,replay_buffer, observation_steps):
         sys.stdout.flush()
 
 
+def TrainRandom(agent_name):
+    env = MakeEnv()
+    # env.add_obstacles(3)
+    agent = TD3(env.state_dim, env.action_dim, env.max_action)
+
+    replay_buffer = ReplayBuffer()
+    observe(env, replay_buffer, 40000)
+    agent.train(replay_buffer, 500)
+    agent.save(agent_name)
+
+
 def RunMyEnv(agent_name, show=True):
     env = MakeEnv()
     agent = TD3(env.state_dim, env.action_dim, env.max_action)
@@ -259,6 +259,7 @@ def RunMyEnv(agent_name, show=True):
                 lib.plot(rewards, figure_n=2)
                 plt.figure(2).savefig("Training_" + agent_name)
                 env.render()
+                env.render_actions()
                 agent.save(agent_name)
 
     agent.save(agent_name)
@@ -305,13 +306,27 @@ def eval2(agent_name, show=True):
 
     print(f"Avg reward: {np.mean(rewards)}")
 
+    return np.mean(rewards)
+
+def test_consistency():
+    avgs = []
+    agent_name = "TrainRandomTD3"
+    TrainRandom(agent_name)
+    for i in range(50):
+        avg = eval2(agent_name, False)
+        avgs.append(avg)
+
+        lib.plot(avgs)
 
 
 if __name__ == "__main__":
-    agent_name = "OldNoise200"
+    agent_name = "AgentTheta"
 
-    eval2(agent_name, False)
+    # TrainRandom(agent_name)
+    # eval2(agent_name, False)
     RunMyEnv(agent_name)
     eval2(agent_name, False)
+
+    # test_consistency()
  
     
