@@ -41,16 +41,6 @@ class Simulation:
 
         return self.vehicle_model.get_state_obs()
 
-    def _get_reward(self):
-        if self.steps > 200: #max steps
-            print("max steps reached ")
-            return 0, True # no reward but it is done
-        end_dis = lib.get_distance(self.vehicle_model.x, self.track.path_end_location)
-        if end_dis < 10:
-            print("Target reached ")
-            return 1, True
-        return 0, False
-
     def _get_training_reward(self):
         if self.steps > 200: #max steps
             print("max steps reached ")

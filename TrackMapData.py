@@ -58,6 +58,20 @@ class TrackMapData:
 
         self.obs_map = obs_map
 
+    def random_start_end(self):
+        rands = np.random.rand(4) * 100
+        self.path_start_location = rands[0:2]
+        self.path_end_location = rands[2:4]  
+
+        while self.check_hm_collision(self.path_start_location):
+            self.path_start_location = np.random.rand(2) * 100
+        while self.check_hm_collision(self.path_end_location) or \
+            f.get_distance(self.path_end_location, self.path_start_location) < 15:
+            self.path_end_location = np.random.rand(2) * 100
+
+        return self.path_start_location, self.path_end_location
+
+
     def set_start_line(self):
         if self.start_x1 == None or self.start_x2 == None:
             self.start_line.clear()

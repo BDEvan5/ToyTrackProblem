@@ -5,88 +5,146 @@ It will have a funciton with the big training loop
 """
 import numpy as np 
 from collections import deque
+from matplotlib import pyplot as plt
 
-from Simulation import Simulation
-from Vehicle import Vehicle
-
+from Env import MakeEnv
+from AgentTD3 import TD3
+from AgentDQN import AgentDQN
+import LibFunctions as lib
 from TrackMapInterface import load_map, render_ep, make_new_map
 
-def observe(vehicle, simulator):
-    for i in range(5000):
-        state, score, done = simulator.reset(), 0.0, False
-        while not done:
-            action = vehicle.get_action(state)
+def observe(agent, env):
+    state, score, done = env.reset(), 0.0, False
+    for i in range(10000):
+        action = agent.get_new_target(state)
 
-            new_state, reward, done = simulator.step(action)
-            score += reward
-            state = new_state
+        new_state, reward, done = env.step(action)
 
-            vehicle.agent.add_data(state, new_state, reward, done)
-        print("\rObserving {}/5000".format(i), end="")
+        agent.add_data(state, new_state, reward, done)
+        state = new_state
+        if done:
+            state = env.reset()
+        print("\rObserving {}/10000".format(i), end="")
+    agent.save_buffer()
 
-
-def RunSimulationLearning():
-    name = "ValueTrack1"
-    track = load_map(name)
-    vehicle = Vehicle()
-    vehicle.plan_path(track, load=True)
-    simulator = Simulation(track)
-
-    print_n = 1
-
-    # observe(vehicle, simulator)
-    # vehicle.agent.replay_buffer.save_buffer()
-    vehicle.agent.load_buffer()
-    print(f"Running learning ")
-    for i in range(1000):
-        state, score, done = simulator.reset(), 0.0, False
-        vehicle.reset()
-        while not done:
-            action = vehicle.get_action(state)
-
-            new_state, reward, done = simulator.step(action)
-            score += reward
-            state = new_state
-
-            vehicle.agent.add_data(state, new_state, reward, done)
-            vehicle.agent.train()
-            # print(f"{simulator.steps} ")
-
-        # train agent
-        # if i % print_n == 1:
-        print(f"{i}:-> Score: {score}")
 
 def RunSimulationLearning2():
-    name = "ValueTrack1"
+    name = "TrainTrack1"
     # make_new_map(name)
     track = load_map(name)
-    vehicle = Vehicle()
-    full_path = vehicle.plan_path(track, load=True)
-    simulator = Simulation(track)
-
+    env = MakeEnv(track)
+    agent = TD3(7, 1, 1)
+    show_n = 10
     ep_histories = []
 
-    # vehicle.agent.load_buffer()
+    # observe(agent, env)
+    # agent.save_buffer()
+    agent.load_buffer()
     print(f"Running learning ")
-    for i in range(1000):
-        state, score, done = simulator.reset(), 0, False
-        vehicle.reset()
+    all_scores = []
+    for i in range(10000):
+        state, score, done = env.reset(), 0, False
+
         length, memory = 0, []
         while not done:
-            action = vehicle.get_action(state)
-
-            new_state, reward, done = simulator.step(action)
-            memory.append((state, action, reward, new_state, done))
+            action = agent.get_new_target(state)
+            old_ss = env.ss()
+            new_state, reward, done = env.step(action)
+            memory.append((old_ss, action, reward, env.ss(), done))
             score += reward
             length += 1
             state = new_state
 
-            vehicle.agent.add_data(state, new_state, reward, done)
-            vehicle.agent.train()
+            agent.add_data(state, new_state, reward, done)
+            agent.train()
 
         print(f"{i}:-> Score: {score} -> Length: {length}")
-        render_ep(track, full_path, memory, True)
+        all_scores.append(score)
+        lib.plot(all_scores)
+        # if i % show_n == 1:
+        #     render_ep(track, memory, pause=True)
         ep_histories.append(memory)
+
+def RunSimulationLearning3():
+    # name = "TrainTrack1"
+    name = "TrainTrackEmpty"
+    # make_new_map(name)
+    track = load_map(name)
+    env = MakeEnv(track)
+    agent = TD3(2, 2, 2)
+    avg_n = 10
+    save_n = 50
+    agent_name = "NoRanges"
+
+    # agent.load_buffer()
+    # agent.load(agent_name)
+    observe(agent, env)
+    print(f"Running learning ")
+    all_scores = []
+    state, score = env.reset(), 0
+    for i in range(100000): # batches
+        for j in range(32): # batch size
+            action = agent.get_new_target(state)
+            new_state, reward, done = env.step(action)
+            agent.add_data(state, new_state, reward, done)
+            score += reward
+            state = new_state
+
+            agent.train()
+
+            if done:
+                state = env.reset()
+                print(f"{i}.{j}:-> Score: {score}")
+                all_scores.append(score)
+                score = 0
+
+        if i % avg_n == 1:
+            lib.plot(all_scores, figure_n=3, moving_avg_period=20)
+
+        if i % save_n == 1:
+            fig = plt.figure(3)
+            fig.savefig("Training Rewards")
+            agent.save(agent_name)
+
+def RunSimulationLearning_DQN():
+    # name = "TrainTrack1"
+    name = "TrainTrackEmpty"
+    # make_new_map(name)
+    track = load_map(name)
+    env = MakeEnv(track)
+    agent = AgentDQN(2, 4)
+    avg_n = 10
+    save_n = 50
+    agent_name = "NoRanges"
+
+
+    print(f"Running learning ")
+    all_scores = []
+    state, score = env.reset(), 0
+    for i in range(100000): # batches
+        for j in range(32): # batch size
+            action = agent.get_action(state)
+            new_state, reward, done = env.step(action)
+            agent.add_mem_step((state, action, reward/100, new_state, done))
+            score += reward
+            state = new_state
+
+
+            if done:
+                state = env.reset()
+                print(f"{i}.{j}:-> Score: {score}")
+                all_scores.append(score)
+                score = 0
+        agent.train()
+
+        if i % avg_n == 1:
+            lib.plot(all_scores, figure_n=3, moving_avg_period=20)
+
+        if i % save_n == 1:
+            fig = plt.figure(3)
+            fig.savefig("Training Rewards")
+            # agent.save(agent_name)
+
 
 def RunSimulationTest():
     name = "ValueTrack1"
@@ -117,5 +175,6 @@ def RunSimulationTest():
         
 
 if __name__ == "__main__":
-    RunSimulationLearning2()
-    # RunSimulationTest()
+    # RunSimulationLearning2()
+    # RunSimulationLearning3()
+    RunSimulationLearning_DQN()

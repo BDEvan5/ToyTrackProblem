@@ -27,12 +27,12 @@ class Actor(nn.Module):
 
         self.max_action = max_action
 
-
     def forward(self, x):
         x = F.relu(self.l1(x))
-        x = F.relu(self.l2(x))
-        x = self.max_action * torch.tanh(self.l3(x)) 
-        return x
+        y = F.relu(self.l2(x))
+        z = self.l3(y)
+        a = self.max_action * torch.tanh(z) 
+        return a
 
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -196,7 +196,7 @@ class TD3(object):
         for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
             target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
-    def save(self, filename, directory):
+    def save(self, filename="best_avg", directory="./saves"):
         torch.save(self.actor.state_dict(), '%s/%s_actor.pth' % (directory, filename))
         torch.save(self.critic.state_dict(), '%s/%s_critic.pth' % (directory, filename))
 
@@ -223,7 +223,7 @@ def observe(env,replay_buffer, observation_steps):
 
     while time_steps < observation_steps:
         action = env.action_space.sample()
-        new_obs, reward, done, _ = env.step(action)
+        new_obs, reward, done = env.step(action)
 
         replay_buffer.add((obs, new_obs, action, reward, done))
 
