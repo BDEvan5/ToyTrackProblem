@@ -14,6 +14,8 @@ class MakeEnv:
         self.start = None
         self.end = None
         self.obstacles = []
+        self.o_grid = np.zeros((101, 101))
+
         for i in range(self.n_ranges):
             angle = np.pi/(self.n_ranges - 1) * i - np.pi/2
             self.range_angles[i] = angle
@@ -33,13 +35,15 @@ class MakeEnv:
 
         self.action_space = 5
 
+        self.set_obstacle_train_map()
+
 #setup
     def reset(self):
         self.eps += 1
         self.steps = 0
         self.memory = []
         self.action_memory = []
-        self.reset_obstacles()
+        # self.reset_obstacles()
         rands = np.random.rand(4) * 100
         self.start = rands[0:2]
         self.end = rands[2:4]  
@@ -146,12 +150,12 @@ class MakeEnv:
         return False
 
     def _check_bounds(self, x):
-        if self._check_obstacles(x):
-            return True
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
             return True
         if self.y_bound[0] > x[1] or x[1] > self.y_bound[1]:
             return True 
+        if self.check_o_grid(x):
+            return True
         return False
 
     def _x_step_discrete(self, action):
@@ -236,12 +240,32 @@ class MakeEnv:
         for o in self.obstacles:
             o.set_random_location()
 
+    def set_obstacle_train_map(self):
+        self.obstacles.append(Obstacle(8, [25, 25]))
+        self.obstacles.append(Obstacle(8, [25, 50]))
+        self.obstacles.append(Obstacle(8, [25, 75]))
+        self.obstacles.append(Obstacle(8, [75, 25]))
+        self.obstacles.append(Obstacle(8, [75, 50]))
+        self.obstacles.append(Obstacle(8, [75, 75]))
+
+        for i in range(100):
+            for j in range(100):
+                for o in self.obstacles:
+                    if o.check_collision([i, j]):
+                        self.o_grid[i, j] = 1
+
+        print(f"O Grid Complete")
+
+    def check_o_grid(self, x=[0, 0]):
+        if self.o_grid[int(x[0]), int(x[1])]:
+            return True
+        return False
 
 
 class Obstacle:
-    def __init__(self, size):
+    def __init__(self, size, location=[0, 0]):
         self.size = size
-        self.location = None
+        self.location = location
 
     def set_random_location(self):
         # range_bound = [10, 90]
