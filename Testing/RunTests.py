@@ -12,6 +12,7 @@ from ReplacementDQN import TestDQN, TrainDQN
 name00 = 'DataRecords/TrainTrack1000.npy'
 name10 = 'DataRecords/TrainTrack1010.npy'
 name20 = 'DataRecords/TrainTrack1020.npy'
+name30 = 'DataRecords/TrainTrack1030.npy'
 
 
 import sys
@@ -133,7 +134,8 @@ def RunDQNTraining():
 
 # testing algorithms
 def RunDQNTest():
-    env = TestEnv(name00)
+    env = TestEnv(name30)
+    env.run_path_finder()
     agent = TestDQN(env.state_space, env.action_space, "TestDQN")
 
     evaluate_agent(env, agent)

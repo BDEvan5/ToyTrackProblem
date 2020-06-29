@@ -2,7 +2,7 @@ import numpy as np
 import LibFunctions as lib 
 from matplotlib import pyplot as plt
 
-
+from PathFinder import PathFinder
 
 
 class CarModel:
@@ -38,8 +38,6 @@ class CarModel:
 
         return new_x, new_theta
     
-
-
 
 
 class TestMap:
@@ -79,17 +77,29 @@ class TestMap:
 
         return False
 
-    def show_map(self):
+    def show_map(self, path=None):
         plt.imshow(self.race_map.T, origin='lower')
         plt.plot(self.start[0], self.start[1], '*', markersize=20)
         plt.plot(self.end[0], self.end[1], '*', markersize=20)
-        # plt.show()
-        plt.pause(0.001)
+
+
+        if path is not None:
+            xs, ys = [], []
+            for pt in path:
+                xs.append(pt[0])
+                ys.append(pt[1])
+            
+            plt.plot(xs, ys)
+
+        plt.show()
+        # plt.pause(0.001)
 
     def set_start_end(self):
-        self.start = [36, 80]
-        self.end = [948, 700] 
+        # self.start = [36, 80]
+        # self.end = [948, 700] 
 
+        self.start = [180, 970]
+        self.end = [680, 30]
 
 class TestEnv(TestMap, CarModel):
     def __init__(self, name):
@@ -102,13 +112,21 @@ class TestEnv(TestMap, CarModel):
 
         TestMap.__init__(self, name)
         CarModel.__init__(self, self.n_ranges)
+        self.set_start_end()
+
+        wpts = None
+
+    def run_path_finder(self):
+        path_finder = PathFinder(self._check_location, self.start, self.end)
+        path = path_finder.run_search(5)
+        self.wpts = path
+
+        self.show_map(path)
       
     def reset(self):
         self.eps += 1
         self.steps = 0
         self.memory = []
-
-        self.set_start_end()
 
         self.theta = np.pi / 2 - np.arctan(lib.get_gradient(self.start, self.end))
         if self.end[0] < self.start[0]:
@@ -223,6 +241,8 @@ class TestEnv(TestMap, CarModel):
         
         plt.pause(0.01)
         # plt.show()
+
+
 
 
 if __name__ == "__main__":
