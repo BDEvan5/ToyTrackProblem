@@ -11,14 +11,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from SimpleEnv import MakeEnv
+from EnvBase import TrainEnv
 import LibFunctions as lib
 
 #Hyperparameters
 GAMMA = 0.95
 LEARNING_RATE = 0.001
 
-MEMORY_SIZE = 1000000
+MEMORY_SIZE = 100000
 BATCH_SIZE = 32
 
 EXPLORATION_MAX = 1.0
@@ -181,15 +181,15 @@ def observe_myenv(env, memory, n_itterations=10000):
     print(" ")
 
 def RunMyEnv(agent_name, show=True):
-    env = MakeEnv()
-    env.add_obstacles(6)
+    env = TrainEnv()
+    # env.add_obstacles(6)
     agent = DQN(env.state_dim, env.action_space)
 
     print_n = 20
-    show_n = 2
+    show_n = 100
 
     rewards = []
-    # observe_myenv(env, agent.memory, 10000)
+    observe_myenv(env, agent.memory, 10000)
     for n in range(5000):
         score, done, state = 0, False, env.reset()
         while not done:
@@ -207,11 +207,12 @@ def RunMyEnv(agent_name, show=True):
             if n % print_n == 1:
                 exp = agent.exploration_rate
                 mean = np.mean(rewards[-20:])
-                print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp}")
-
+                b = agent.memory.size()
+                print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
                 lib.plot(rewards, figure_n=2)
                 plt.figure(2).savefig("Training_" + agent_name)
-                env.render()
+            if n % show_n == 1:
+                # env.render()
                 # env.render_actions()
                 agent.save(agent_name)
 
@@ -223,8 +224,8 @@ def RunMyEnv(agent_name, show=True):
 
 if __name__ == '__main__':
     # test_cartpole()
-    agent_name = "TestingDQN"
-    RunMyEnv(agent_name)
+    agent_name = "TestingDQN10"
+    RunMyEnv(agent_name, False)
 
     # t = timeit.timeit(stmt=timing, number=1)
     # print(f"Time: {t}")

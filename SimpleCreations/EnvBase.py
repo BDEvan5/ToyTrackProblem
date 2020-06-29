@@ -5,8 +5,8 @@ from matplotlib import pyplot as plt
 class BaseEnv:
     def __init__(self):
         # parameters
-        self.n_ranges = 5
-        self.action_space = 5
+        self.n_ranges = 10
+        self.action_space = 10
         self.state_dim = 2 + self.n_ranges
         self.max_action = 1 # what the net gives
         self.action_dim = 2
@@ -34,7 +34,7 @@ class BaseEnv:
         self.memory.append(self.car_x)
         self.steps += 1
         new_x, new_theta = self._x_step_discrete(action)
-        if self._check_bounds(new_x):
+        if self._check_location(new_x):
             obs = self._get_state_obs()
             r_crash = -100
             return obs, r_crash, True, None
@@ -92,7 +92,7 @@ class BaseEnv:
                 fs = step_size * j
                 dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
                 search_val = lib.add_locations(self.car_x, dx)
-                if self.o_grid[int(search_val[0]), int(search_val[1])]:
+                if self._check_location(search_val):
                     break             
             self.ranges[i] = (j-1) / n_searches # gives a scaled val to 1 
         
@@ -116,14 +116,24 @@ class BaseEnv:
             ax.add_artist(circle)
         
         plt.pause(0.001)
-        fig.savefig(f"Renders/Rendering_{self.eps}")
+        # fig.savefig(f"Renders/Rendering_{self.eps}")
+
+    def _check_location(self, x):
+        if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
+            return True
+        if self.y_bound[0] > x[1] or x[1] > self.y_bound[1]:
+            return True 
+
+        if self.o_grid[int(x[0]), int(x[1])]:
+            return True
+        return False
     
 
 class TrainEnv(BaseEnv):
     def __init__(self):
         super().__init__()
-        self.set_o_map()
         self.obstacles = []
+        self.set_o_map()
 
     def reset(self):
         self.eps += 1
@@ -145,9 +155,9 @@ class TrainEnv(BaseEnv):
         self.start = rands[0:2]
         self.end = rands[2:4]  
 
-        while self.o_grid(self.start):
+        while self.o_grid[int(self.start[0]), int(self.start[1])]:
             self.start = np.random.rand(2) * 100
-        while self.o_grid(self.end) or \
+        while self.o_grid[int(self.end[0]), int(self.end[1])] or \
             lib.get_distance(self.start, self.end) < 15:
             self.end = np.random.rand(2) * 100
 

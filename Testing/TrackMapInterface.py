@@ -76,7 +76,7 @@ class TrackMapBase:
         db_file = open(filename, 'wb')
         
         dump(self.map_data, db_file)
-        # np.save(filename, self.map)
+        np.save(filename, self.map_data.track_map)
         print(f"File saved: {filename}")
 
     def load_map(self, info=None):
