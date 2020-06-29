@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from EnvBase import TrainEnv
+from TrainEnv import TrainEnv
 import LibFunctions as lib
 
 #Hyperparameters
@@ -25,7 +25,6 @@ BATCH_SIZE = 32
 EXPLORATION_MAX = 1.0
 EXPLORATION_MIN = 0.01
 EXPLORATION_DECAY = 0.995
-
 
 
 class Qnet(nn.Module):
@@ -42,8 +41,9 @@ class Qnet(nn.Module):
         x = self.fc3(x)
         return x
       
-class DQN:
-    def __init__(self, obs_space, action_space):
+
+class TrainDQN:
+    def __init__(self, obs_space, action_space, name="best_avg"):
         self.model = Qnet(obs_space, action_space)
         self.target = Qnet(obs_space, action_space)
         self.buffer = collections.deque(maxlen=MEMORY_SIZE)
@@ -51,6 +51,7 @@ class DQN:
         self.exploration_rate = EXPLORATION_MAX
         self.optimizer = optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
         self.update_steps = 0
+        self.name = name
 
     def memory_sample(self, n):
         mini_batch = random.sample(self.buffer, n)
@@ -68,13 +69,13 @@ class DQN:
                torch.tensor(r_lst), torch.tensor(s_prime_lst, dtype=torch.float), \
                torch.tensor(done_mask_lst)
 
-    def sample_action(self, obs):
+    def learning_act(self, obs):
         if random.random() < self.exploration_rate:
             return random.randint(0, self.action_space-1)
         else: 
-            return self.greedy_action(obs)
+            return self.act(obs)
 
-    def greedy_action(self, obs):
+    def act(self, obs):
         obs_t = torch.from_numpy(obs).float()
         out = self.model.forward(obs_t)
         return out.argmax().item()
@@ -108,48 +109,44 @@ class DQN:
             self.exploration_rate *= EXPLORATION_DECAY 
             self.exploration_rate = max(EXPLORATION_MIN, self.exploration_rate)
 
-    def save(self, filename="best_avg", directory="./dqn_saves"):
+    def save(self, directory="./dqn_saves"):
+        filename = self.name
         torch.save(self.model.state_dict(), '%s/%s_model.pth' % (directory, filename))
         torch.save(self.target.state_dict(), '%s/%s_target.pth' % (directory, filename))
 
-    def load(self, filename="best_avg", directory="./dqn_saves"):
+    def load(self, directory="./dqn_saves"):
+        filename = self.name
         self.model.load_state_dict(torch.load('%s/%s_model.pth' % (directory, filename)))
         self.target.load_state_dict(torch.load('%s/%s_target.pth' % (directory, filename)))
 
 
-def observe_myenv(env, agent, n_itterations=10000):
-    s = env.reset()
-    done = False
-    for i in range(n_itterations):
-        action = env.random_discrete_action()
-        s_p, r, done, _ = env.step(action)
-        done_mask = 0.0 if done else 1.0
-        agent.buffer.append((s, action, r/100, s_p, done_mask))
-        s = s_p
-        if done:
-            s = env.reset()
+class TestDQN:
+    def __init(self, obs_space, act_space, name="best_avg"):
+        self.model = Qnet(obs_space, action_space)
+        self.name = name
 
-        print("\rPopulating Buffer {}/{}.".format(i, n_itterations), end="")
-        sys.stdout.flush()
-    print(" ")
+    def load(self, directory="./dqn_saves"):
+        filename = self.name
+        self.model.load_state_dict(torch.load('%s/%s_model.pth' % (directory, filename)))
 
-def RunMyEnv(agent_name, show=True):
-    env = TrainEnv()
-    # env.add_obstacles(6)
-    agent = DQN(env.state_dim, env.action_space)
+    def act(self, obs):
+        obs_t = torch.from_numpy(obs).float()
+        out = self.model.forward(obs_t)
+        a = out.argmax().item()
+        return a
 
-    print_n = 20
-    show_n = 10
 
+
+def DebugAgentTraining(agent, env):
     rewards = []
-    observe_myenv(env, agent, 5000)
+    # observe_myenv(env, agent, 5000)
     for n in range(5000):
         score, done, state = 0, False, env.reset()
         while not done:
-            a = agent.sample_action(state)
+            a = agent.learning_act(state)
             s_prime, r, done, _ = env.step(a)
             done_mask = 0.0 if done else 1.0
-            agent.buffer.append((state, a, r/100, s_prime, done_mask))
+            agent.buffer.append((state, a, r, s_prime, done_mask))
             state = s_prime
             score += r
             agent.experience_replay()
@@ -157,29 +154,20 @@ def RunMyEnv(agent_name, show=True):
             
         rewards.append(score)
 
-        if show:
-            if n % print_n == 1:
-                exp = agent.exploration_rate
-                mean = np.mean(rewards[-20:])
-                b = len(agent.buffer)
-                print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
-                # lib.plot(rewards, figure_n=2)
-                # plt.figure(2).savefig("Training_" + agent_name)
-            if n % show_n == 1:
-                env.render()
-                # env.render_actions()
-                # agent.save(agent_name)
+        exp = agent.exploration_rate
+        mean = np.mean(rewards[-20:])
+        b = len(agent.buffer)
+        print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
+        env.render()
+        agent.save()
 
-    agent.save(agent_name)
-    lib.plot(rewards, figure_n=2)
-    plt.figure(2).savefig("Training_" + agent_name)
+if __name__ == "__main__":
+    name00 = 'DataRecords/TrainTrack1000.npy'
+    name10 = 'DataRecords/TrainTrack1010.npy'
+    name20 = 'DataRecords/TrainTrack1020.npy'
 
+    env = TrainEnv(name20)
+    agent = TrainDQN(env.state_space, env.action_space, "DebugDQN")
 
+    DebugAgentTraining(agent, env)
 
-if __name__ == '__main__':
-    # test_cartpole()
-    agent_name = "TestingDQN10"
-    RunMyEnv(agent_name, True)
-
-    # t = timeit.timeit(stmt=timing, number=1)
-    # print(f"Time: {t}")

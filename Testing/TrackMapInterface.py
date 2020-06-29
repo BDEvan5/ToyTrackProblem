@@ -229,7 +229,7 @@ class TrackGenerator(TrackMapBase):
             for y in range(3):
                 new_i = i + x - 1
                 new_j = j + y - 1
-                self.map_data.track_map[new_i, new_j] = False
+                self.map_data.track_map[new_i, new_j] = True
 
                 color = self.get_map_color(new_i, new_j)
                 idx = self.rect_map[new_i, new_j]    

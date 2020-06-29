@@ -57,8 +57,7 @@ def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     moving_avg = get_moving_average(moving_avg_period * 5, values)
     plt.plot(moving_avg)    
     plt.pause(0.001)
-    # print("Episode", (len(values)), "\n", \
-    #     moving_avg_period, "episode moving avg:", moving_avg)
+
 
 def plot_comp(values1, values2,  moving_avg_period=10, title="Results", figure_n=2):
     plt.figure(figure_n)

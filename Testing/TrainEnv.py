@@ -18,7 +18,7 @@ class CarModel:
 
         # parameters
         self.action_space = 10
-        self.action_scale = 20
+        self.action_scale = 8
 
     def _x_step_discrete(self, action):
         # actions in range [0, n_acts) are a fan in front of vehicle
@@ -35,37 +35,32 @@ class CarModel:
         new_theta = np.pi / 2 - np.arctan(new_grad)
         if dx[0] < 0:
             new_theta += np.pi
+        if new_theta >= 2*np.pi:
+            new_theta = new_theta - 2*np.pi
 
         return new_x, new_theta
     
+    def random_action(self):
+        return np.random.randint(0, self.action_space-1)
 
-
-
-
-class TestMap:
-    def __init__(self, name='DataRecords/TrainTrack1000.npy'):
+class TrainMap:
+    def __init__(self, name='DataRecords/TrainTrack1020.npy'):
         self.name = name
-        self.map_dim = 1000
+        self.map_dim = 100
 
         self.race_map = None
         self.start = None
         self.end = None
 
-        self.x_bound = [1, 999]
-        self.y_bound = [1, 999]
+        self.x_bound = [1, 99]
+        self.y_bound = [1, 99]
 
         self.create_race_map()
-        # self.race_map = np.flip(self.race_map)
 
     def create_race_map(self):
-        array = np.load(self.name)
-        new_map = np.zeros((self.map_dim, self.map_dim))
-        block_range = self.map_dim / array.shape[0]
-        for i in range(self.map_dim):
-            for j in range(self.map_dim):
-                new_map[i, j] = array[int(i/block_range), int(j/block_range)]
-
-        self.race_map = new_map.T
+        new_map = np.load(self.name)
+        t_map = new_map
+        self.race_map = t_map
 
     def _check_location(self, x):
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
@@ -74,24 +69,30 @@ class TestMap:
             return True 
 
         if self.race_map[int(x[0]), int(x[1])]:
-        # if self.race_map[int(x[1]), int(x[0])]:
             return True
 
         return False
 
     def show_map(self):
-        plt.imshow(self.race_map.T, origin='lower')
+        plt.imshow(self.race_map, origin='lower')
         plt.plot(self.start[0], self.start[1], '*', markersize=20)
         plt.plot(self.end[0], self.end[1], '*', markersize=20)
-        # plt.show()
-        plt.pause(0.001)
+        plt.show()
+        # plt.pause(0.001)
 
     def set_start_end(self):
-        self.start = [36, 80]
-        self.end = [948, 700] 
+        rands = np.random.rand(4) * 100
+        self.start = rands[0:2]
+        self.end = rands[2:4]  
+
+        while self.race_map[int(self.start[0]), int(self.start[1])]:
+            self.start = np.random.rand(2) * 100
+        while self.race_map[int(self.end[0]), int(self.end[1])] or \
+            lib.get_distance(self.start, self.end) < 15:
+            self.end = np.random.rand(2) * 100
 
 
-class TestEnv(TestMap, CarModel):
+class TrainEnv(TrainMap, CarModel):
     def __init__(self, name):
         self.steps = 0
         self.memory = []
@@ -100,8 +101,9 @@ class TestEnv(TestMap, CarModel):
         self.n_ranges = 10 
         self.state_space = 2 + self.n_ranges
 
-        TestMap.__init__(self, name)
+        TrainMap.__init__(self, name)
         CarModel.__init__(self, self.n_ranges)
+        self.set_start_end()
       
     def reset(self):
         self.eps += 1
@@ -159,8 +161,8 @@ class TestEnv(TestMap, CarModel):
         fig = plt.figure(4)
         plt.clf()  
         plt.imshow(self.race_map.T, origin='lower')
-        plt.xlim(0, 1000)
-        plt.ylim(0, 1000)
+        plt.xlim(0, 100)
+        plt.ylim(0, 100)
         plt.plot(x, y)
         plt.plot(self.start[0], self.start[1], '*', markersize=20)
         plt.plot(self.end[0], self.end[1], '*', markersize=20)
@@ -177,7 +179,7 @@ class TestEnv(TestMap, CarModel):
         return obs
 
     def _update_ranges(self):
-        step_size = 20
+        step_size = 6
         n_searches = 8
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
@@ -190,49 +192,42 @@ class TestEnv(TestMap, CarModel):
             self.ranges[i] = (j-1) / n_searches # gives a scaled val to 1 
 
     def box_render(self):
-        box = 100
         car_x = int(self.car_x[0])
         car_y = int(self.car_x[1])
-        x_min = max(0, car_x-box)
-        y_min = max(0, car_y-box)
-        x_max = min(1000, x_min+2*box)
-        y_max = min(1000, y_min+2*box)
-        # plot_map = self.race_map[x_min:x_max, y_min:y_max]
-        plot_map = self.race_map[y_min:y_max, x_min:x_max]
-        x_mid = (x_min + x_max) / 2
-        y_mid = (y_min + y_max) / 2
-        car_pos = [car_x - x_mid + box, car_y - y_mid + box]
 
         fig = plt.figure(5)
         plt.clf()  
-        plt.imshow(plot_map, origin='lower')
-        plt.xlim(0, 200)
-        plt.ylim(0, 200)
+        plt.imshow(self.race_map.T, origin='lower')
+        plt.xlim(0, 100)
+        plt.ylim(0, 100)
 
-        plt.plot(car_pos[0], car_pos[1], '+', markersize=16)
+        plt.plot(car_x, car_y, '+', markersize=16)
+
+        plt.plot(self.start[0], self.start[1], '*', markersize=12)
+        plt.plot(self.end[0], self.end[1], '*', markersize=12)
 
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
-            fs = self.ranges[i] * 8 * 20
+            fs = self.ranges[i] * 8 * 6
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
-            range_val = lib.add_locations(car_pos, dx)
-            x = [car_pos[0], range_val[0]]
-            y = [car_pos[1], range_val[1]]
+            range_val = lib.add_locations(self.car_x, dx)
+            x = [car_x, range_val[0]]
+            y = [car_y, range_val[1]]
             plt.plot(x, y)
 
         
-        plt.pause(0.01)
-        # plt.show()
+        plt.pause(0.2)
 
 
 if __name__ == "__main__":
     name00 = 'DataRecords/TrainTrack1000.npy'
     name10 = 'DataRecords/TrainTrack1010.npy'
+    name20 = 'DataRecords/TrainTrack1020.npy'
 
-    # test_map = TestMap(name00)
-    # test_map.show_map()
+    test_map = TrainEnv(name20)
+    test_map.show_map()
 
-    env = TestEnv(name10)
+    env = TrainEnv(name20)
     env.reset()
     env.step(1)
     env.show_map()

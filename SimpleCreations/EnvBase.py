@@ -30,19 +30,23 @@ class BaseEnv:
         self.eps = 0
         self.memory = []
 
+        dth = np.pi/(self.n_ranges-1)
+        for i in range(self.n_ranges):
+            self.range_angles[i] = i * dth - np.pi/2
+
     def step(self, action):
         self.memory.append(self.car_x)
         self.steps += 1
         new_x, new_theta = self._x_step_discrete(action)
         if self._check_location(new_x):
             obs = self._get_state_obs()
-            r_crash = -100
+            r_crash = -1 # worst reward possible.
             return obs, r_crash, True, None
         self.car_x = new_x 
         self.theta = new_theta
         obs = self._get_state_obs()
         reward, done = self._get_reward()
-        return obs, reward, done, None
+        return obs, reward/100, done, None
 
     def _x_step_discrete(self, action):
         # actions in range [0, n_acts) are a fan in front of vehicle
@@ -57,6 +61,8 @@ class BaseEnv:
         
         new_grad = lib.get_gradient(new_x, self.car_x)
         new_theta = np.pi / 2 - np.arctan(new_grad)
+        if dx[0] < 0:
+            new_theta += np.pi
 
         return new_x, new_theta
 
@@ -179,17 +185,35 @@ class TrainEnv(BaseEnv):
                     if o.check_collision([i, j]):
                         self.o_grid[i, j] = 1
 
+        self.o_grid = self.o_grid.T
+
         print(f"O Grid Complete")
 
+    def box_render(self):
+        car_x = int(self.car_x[0])
+        car_y = int(self.car_x[1])
 
-class TestEnv(BaseEnv):
-    def __init__(self):
-        super().__init__()
+        fig = plt.figure(5)
+        plt.clf()  
+        plt.imshow(self.o_grid, origin='lower')
+        plt.xlim(0, 100)
+        plt.ylim(0, 100)
 
-    def reset(self):
-        self.eps += 1
-        self.steps = 0
-        self.memory = []
+        plt.plot(car_x, car_y, '+', markersize=20)
+        plt.plot(self.start[0], self.start[1], '*', markersize=16)
+        plt.plot(self.end[0], self.end[1], '*', markersize=16)
+
+        for i in range(self.n_ranges):
+            angle = self.range_angles[i] + self.theta
+            fs = self.ranges[i] * 8 * 6
+            dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
+            range_val = lib.add_locations(self.car_x, dx)
+            x = [car_x, range_val[0]]
+            y = [car_y, range_val[1]]
+            plt.plot(x, y)
+
+        
+        plt.pause(0.2)
 
 
 
