@@ -121,8 +121,8 @@ class TrainDQN:
 
 
 class TestDQN:
-    def __init(self, obs_space, act_space, name="best_avg"):
-        self.model = Qnet(obs_space, action_space)
+    def __init__(self, obs_space, act_space, name="best_avg"):
+        self.model = Qnet(obs_space, act_space)
         self.name = name
 
     def load(self, directory="./dqn_saves"):

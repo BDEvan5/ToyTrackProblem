@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt 
+import sys
+import psutil as ps
 
 import LibFunctions as lib
 from TestEnv import TestEnv
@@ -10,6 +12,34 @@ from ReplacementDQN import TestDQN, TrainDQN
 name00 = 'DataRecords/TrainTrack1000.npy'
 name10 = 'DataRecords/TrainTrack1010.npy'
 name20 = 'DataRecords/TrainTrack1020.npy'
+
+
+import sys
+from types import ModuleType, FunctionType
+from gc import get_referents
+
+# Custom objects know their class.
+# Function objects seem to know way too much, including modules.
+# Exclude modules as well.
+BLACKLIST = type, ModuleType, FunctionType
+
+
+def getsize(obj):
+    """sum size of object & members."""
+    if isinstance(obj, BLACKLIST):
+        raise TypeError('getsize() does not take argument of type: '+ str(type(obj)))
+    seen_ids = set()
+    size = 0
+    objects = [obj]
+    while objects:
+        need_referents = []
+        for obj in objects:
+            if not isinstance(obj, BLACKLIST) and id(obj) not in seen_ids:
+                seen_ids.add(id(obj))
+                size += sys.getsizeof(obj)
+                need_referents.append(obj)
+        objects = get_referents(*need_referents)
+    return size
 
 def evaluate_agent(env, agent, show=True):
     agent.load()
@@ -57,7 +87,7 @@ def collect_observations(env, agent, n_itterations=10000):
 def TrainAgent(agent, env):
     print_n = 20
     rewards = []
-    observe_myenv(env, agent, 5000)
+    collect_observations(env, agent, 5000)
     for n in range(5000):
         score, done, state = 0, False, env.reset()
         while not done:
@@ -70,12 +100,21 @@ def TrainAgent(agent, env):
             agent.experience_replay()
         rewards.append(score)
 
+        if ps.virtual_memory().free < 5e8:
+            print("Memory Error: Breaking")
+            break
+
         if n % print_n == 1:
             exp = agent.exploration_rate
             mean = np.mean(rewards[-20:])
             b = len(agent.buffer)
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
             agent.save()
+
+            agent_size = getsize(agent) / 1e6
+            env_size = getsize(env) / 1e6
+            print(f"Sizes --> Agent: {agent_size} -- > Env: {env_size}")
+
             # lib.plot(rewards, figure_n=2)
             # plt.figure(2).savefig("Training_" + agent_name)
 
@@ -84,14 +123,11 @@ def TrainAgent(agent, env):
     plt.figure(2).savefig("Training_DQN")
 
 
-
-
 # run training
 def RunDQNTraining():
     env = TrainEnv(name20)
     agent = TrainDQN(env.state_space, env.action_space, "TestDQN")
 
-    DebugAgentTraining(agent, env)
     TrainAgent(agent, env)
 
 
@@ -111,5 +147,6 @@ def RunCorridorTest():
 
 
 if __name__ == "__main__":
-    RunCorridorTest()
+    # RunCorridorTest()
     # RunDQNTraining()
+    RunDQNTest()
