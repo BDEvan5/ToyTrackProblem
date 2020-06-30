@@ -2,7 +2,7 @@ import numpy as np
 import LibFunctions as lib 
 from matplotlib import pyplot as plt
 
-from PathFinder import PathFinder
+from PathFinder import PathFinder, modify_path
 
 
 class CarModel:
@@ -119,6 +119,7 @@ class TestEnv(TestMap, CarModel):
     def run_path_finder(self):
         path_finder = PathFinder(self._check_location, self.start, self.end)
         path = path_finder.run_search(5)
+        path = modify_path(path)
         self.wpts = path
 
         self.show_map(path)
