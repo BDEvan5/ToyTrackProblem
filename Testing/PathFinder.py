@@ -53,7 +53,7 @@ class PathFinder:
             i += 1
 
         assert i < max_steps, "Max Iterations reached: problem with search"
-        # assert len(self.open_list) > 0, "Search broke: no open nodes"
+        assert len(self.open_list) > 0, "Search broke: no open nodes"
         path = self.get_path_list()
 
         return path
@@ -77,7 +77,7 @@ class PathFinder:
         # self.logger.debug(self.current_node.log_msg())
 
     def check_done(self):
-        dx_max = self.ds
+        dx_max = self.ds * 3
         dis = f.get_distance(self.current_node.position, self.end_n.position)
         if dis < dx_max:
             print("Found")
