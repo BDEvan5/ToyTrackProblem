@@ -46,11 +46,13 @@ class TestMap:
         self.map_dim = 1000
 
         self.race_map = None
+        self.heat_map = None
         self.start = None
         self.end = None
 
         self.x_bound = [1, 999]
         self.y_bound = [1, 999]
+        self.hm_name = 'DataRecords/heatmap.npy'
 
         self.create_race_map()
         # self.race_map = np.flip(self.race_map)
@@ -64,6 +66,13 @@ class TestMap:
                 new_map[i, j] = array[int(i/block_range), int(j/block_range)]
 
         self.race_map = new_map.T
+        try:
+            self.heat_map = np.load(self.hm_name)
+            print(f"Heatmap loaded")
+        except:
+            self._set_up_heat_map()
+            np.save(self.hm_name, self.heat_map)
+            print(f"Heatmap saved")
 
     def _check_location(self, x):
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
@@ -101,6 +110,50 @@ class TestMap:
         self.start = [180, 970]
         self.end = [680, 30]
 
+    def _set_up_heat_map(self):
+        track_map = self.race_map
+        for _ in range(15): # blocks up to 5 away will start to have a gradient
+            new_map = np.zeros_like(track_map)
+            for i in range(1, 998):
+                for j in range(1, 998):
+                    left = track_map[i-1, j]
+                    right = track_map[i+1, j]
+                    up = track_map[i, j+1]
+                    down = track_map[i, j-1]
+
+                    # logical directions, not according to actual map orientation
+                    left_up = track_map[i-1, j+1] *3
+                    left_down = track_map[i-1, j-1]*3
+                    right_up = track_map[i+1, j+1]*3
+                    right_down = track_map[i+1, j-1]*3
+
+                    centre = track_map[i, j]
+
+                    obs_sum = sum((centre, left, right, up, down, left_up, left_down, right_up, right_down))
+                    if obs_sum > 0:
+                        new_map[i, j] = 1
+                    # new_map[i, j] = max(obs_sum / 16, track_map[i, j])
+            track_map = new_map
+        self.heat_map = new_map
+
+        # fig = plt.figure(1)
+        # plt.imshow(self.heat_map.T, origin='lower')
+        # fig = plt.figure(2)
+        # plt.imshow(self.race_map.T, origin='lower')
+        # plt.show()
+
+    def _path_finder_collision(self, x):
+        if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
+            return True
+        if self.y_bound[0] > x[1] or x[1] > self.y_bound[1]:
+            return True 
+
+        if self.heat_map[int(x[0]), int(x[1])]:
+            return True
+
+        return False
+
+
 class TestEnv(TestMap, CarModel):
     def __init__(self, name):
         self.steps = 0
@@ -115,14 +168,24 @@ class TestEnv(TestMap, CarModel):
         self.set_start_end()
 
         wpts = None
+        self.pind = None
+        self.path_name = "DataRecords/path.npy"
+        self.target = None
 
     def run_path_finder(self):
-        path_finder = PathFinder(self._check_location, self.start, self.end)
-        path = path_finder.run_search(5)
-        path = modify_path(path)
-        self.wpts = path
+        try:
+            # raise Exception
+            self.wpts = np.load(self.path_name)
+            print(f"Path Loaded")
+        except:
+            path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
+            path = path_finder.run_search(5)
+            path = modify_path(path)
+            self.wpts = path
+            np.save(self.path_name, self.wpts)
+            print("Path Generated")
 
-        self.show_map(path)
+        # self.show_map(self.wpts)
       
     def reset(self):
         self.eps += 1
@@ -136,6 +199,7 @@ class TestEnv(TestMap, CarModel):
         self.last_distance = lib.get_distance(self.start, self.end)
         self.car_x = self.start
         self._update_ranges()
+        self.pind = 1 # first wpt
 
         return self._get_state_obs()
 
@@ -189,11 +253,35 @@ class TestEnv(TestMap, CarModel):
 
     def _get_state_obs(self):
         self._update_ranges()
-        rel_target = lib.sub_locations(self.end, self.car_x)
+
+        target = self._get_target()
+
+        rel_target = lib.sub_locations(target, self.car_x)
+        self.target = rel_target
         transformed_target = lib.transform_coords(rel_target, self.theta)
         obs = np.concatenate([transformed_target, self.ranges])
 
         return obs
+
+    def _get_target(self):
+        # update pind
+        dis_wpts = lib.get_distance(self.wpts[self.pind], self.wpts[self.pind+1]) 
+        dis_next_pt = lib.get_distance(self.car_x, self.wpts[self.pind+1])
+        while dis_next_pt < dis_wpts and self.pind < len(self.wpts)-2:
+            self.pind += 1
+            dis_wpts = lib.get_distance(self.wpts[self.pind], self.wpts[self.pind+1]) 
+            dis_next_pt = lib.get_distance(self.car_x, self.wpts[self.pind+1])
+        # use pind and pind +1 to get a 5 unit distance vector 
+        next_pt = self.wpts[self.pind]
+        next_next_pt = self.wpts[self.pind+1]
+
+        dis_pind_pt = lib.get_distance(self.car_x, next_pt)
+        fraction = dis_pind_pt / dis_wpts
+        dx = (next_next_pt[0] - next_pt[0]) * (1-fraction)
+        dy = (next_next_pt[1] - next_pt[1]) * (1-fraction)
+        target = lib.add_locations([dx, dy], next_pt) # add a bit from the following pt. 
+
+        return target
 
     def _update_ranges(self):
         step_size = 20
@@ -216,19 +304,21 @@ class TestEnv(TestMap, CarModel):
         y_min = max(0, car_y-box)
         x_max = min(1000, x_min+2*box)
         y_max = min(1000, y_min+2*box)
-        # plot_map = self.race_map[x_min:x_max, y_min:y_max]
-        plot_map = self.race_map[y_min:y_max, x_min:x_max]
+        plot_map = self.race_map[x_min:x_max, y_min:y_max]
+        # plot_map = self.race_map[y_min:y_max, x_min:x_max]
         x_mid = (x_min + x_max) / 2
         y_mid = (y_min + y_max) / 2
         car_pos = [car_x - x_mid + box, car_y - y_mid + box]
 
         fig = plt.figure(5)
         plt.clf()  
-        plt.imshow(plot_map, origin='lower')
+        plt.imshow(plot_map.T, origin='lower')
         plt.xlim(0, 200)
         plt.ylim(0, 200)
 
-        plt.plot(car_pos[0], car_pos[1], '+', markersize=16)
+        plt.plot(car_pos[0], car_pos[1], '+', markersize=20)
+        targ = lib.add_locations(self.target, car_pos)
+        plt.plot(targ[0], targ[1], 'x', markersize=14)
 
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta

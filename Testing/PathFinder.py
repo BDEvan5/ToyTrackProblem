@@ -256,7 +256,7 @@ def modify_path(path):
     path = new_path
 
     new_path = []
-    ds = 5
+    ds = 20
     new_path.append(path[0])
     for pt in path:
         dis = f.get_distance(new_path[-1], pt)

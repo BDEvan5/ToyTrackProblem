@@ -6,7 +6,7 @@ import psutil as ps
 import LibFunctions as lib
 from TestEnv import TestEnv
 from TrainEnv import TrainEnv
-from Corridor import CorridorAgent 
+from Corridor import CorridorAgent, PurePursuit
 from ReplacementDQN import TestDQN, TrainDQN
 
 name00 = 'DataRecords/TrainTrack1000.npy'
@@ -56,7 +56,7 @@ def evaluate_agent(env, agent, show=True):
             state = s_prime
             score += 1 # counts number of steps
             if show:
-                # env.box_render()
+                env.box_render()
                 pass
             
         rewards.append(score)
@@ -147,8 +147,16 @@ def RunCorridorTest():
 
     evaluate_agent(env, corridor_agent, True)
 
+def RunPurePursuitTest():
+    env = TestEnv(name30)
+    env.run_path_finder()
+    agent = PurePursuit(env.state_space ,env.action_space)
+
+    evaluate_agent(env, agent, True)
+
 
 if __name__ == "__main__":
     # RunCorridorTest()
     # RunDQNTraining()
-    RunDQNTest()
+    # RunDQNTest()
+    RunPurePursuitTest()
