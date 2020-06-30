@@ -108,7 +108,7 @@ class TestMap:
         # self.end = [948, 700] 
 
         self.start = [180, 970]
-        self.end = [680, 30]
+        self.end = [680, 100]
 
     def _set_up_heat_map(self):
         track_map = self.race_map
@@ -259,27 +259,25 @@ class TestEnv(TestMap, CarModel):
         rel_target = lib.sub_locations(target, self.car_x)
         self.target = rel_target
         transformed_target = lib.transform_coords(rel_target, self.theta)
-        obs = np.concatenate([transformed_target, self.ranges])
+        normalised_target = lib.normalise_coords(transformed_target)
+        obs = np.concatenate([normalised_target, self.ranges])
 
         return obs
 
     def _get_target(self):
-        # update pind
-        dis_wpts = lib.get_distance(self.wpts[self.pind], self.wpts[self.pind+1]) 
+        dis_last_pt = lib.get_distance(self.wpts[self.pind-1], self.car_x)
         dis_next_pt = lib.get_distance(self.car_x, self.wpts[self.pind+1])
-        while dis_next_pt < dis_wpts and self.pind < len(self.wpts)-2:
+        while dis_next_pt < dis_last_pt and self.pind < len(self.wpts)-2:
             self.pind += 1
-            dis_wpts = lib.get_distance(self.wpts[self.pind], self.wpts[self.pind+1]) 
+
+            dis_last_pt = lib.get_distance(self.wpts[self.pind-1], self.car_x)
             dis_next_pt = lib.get_distance(self.car_x, self.wpts[self.pind+1])
         # use pind and pind +1 to get a 5 unit distance vector 
         next_pt = self.wpts[self.pind]
         next_next_pt = self.wpts[self.pind+1]
 
-        dis_pind_pt = lib.get_distance(self.car_x, next_pt)
-        fraction = dis_pind_pt / dis_wpts
-        dx = (next_next_pt[0] - next_pt[0]) * (1-fraction)
-        dy = (next_next_pt[1] - next_pt[1]) * (1-fraction)
-        target = lib.add_locations([dx, dy], next_pt) # add a bit from the following pt. 
+        target = lib.add_locations(next_pt, next_next_pt)
+        target = [target[0]/2, target[1]/2]
 
         return target
 
@@ -332,6 +330,35 @@ class TestEnv(TestMap, CarModel):
         
         plt.pause(0.01)
         # plt.show()
+
+    def full_render(self):
+        car_pos = self.car_x
+
+        fig = plt.figure(5)
+        plt.clf()  
+        plt.imshow(self.race_map.T, origin='lower')
+        plt.xlim(0, 1000)
+        plt.ylim(0, 1000)
+
+        plt.plot(car_pos[0], car_pos[1], '+', markersize=20)
+        targ = lib.add_locations(car_pos, self.target)
+        plt.plot(targ[0], targ[1], 'x', markersize=14)
+
+        for i in range(self.n_ranges):
+            angle = self.range_angles[i] + self.theta
+            fs = self.ranges[i] * 8 * 20
+            dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
+            range_val = lib.add_locations(car_pos, dx)
+            x = [car_pos[0], range_val[0]]
+            y = [car_pos[1], range_val[1]]
+            plt.plot(x, y)
+
+        
+        plt.pause(0.01)
+        # plt.show()
+
+
+
 
 
 

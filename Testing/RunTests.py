@@ -42,6 +42,7 @@ def getsize(obj):
         objects = get_referents(*need_referents)
     return size
 
+
 def evaluate_agent(env, agent, show=True):
     agent.load()
     print_n = 10
@@ -56,7 +57,8 @@ def evaluate_agent(env, agent, show=True):
             state = s_prime
             score += 1 # counts number of steps
             if show:
-                env.box_render()
+                # env.box_render()
+                env.full_render()
                 pass
             
         rewards.append(score)
@@ -158,5 +160,5 @@ def RunPurePursuitTest():
 if __name__ == "__main__":
     # RunCorridorTest()
     # RunDQNTraining()
-    # RunDQNTest()
-    RunPurePursuitTest()
+    RunDQNTest()
+    # RunPurePursuitTest()
