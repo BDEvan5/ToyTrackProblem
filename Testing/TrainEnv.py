@@ -174,7 +174,8 @@ class TrainEnv(TrainMap, CarModel):
         self._update_ranges()
         rel_target = lib.sub_locations(self.end, self.car_x)
         transformed_target = lib.transform_coords(rel_target, self.theta)
-        obs = np.concatenate([transformed_target, self.ranges])
+        normalised_target = lib.normalise_coords(transformed_target)
+        obs = np.concatenate([normalised_target, self.ranges])
 
         return obs
 

@@ -6,6 +6,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import timeit
 import memory_profiler
+import psutil as ps
 
 import torch
 import torch.nn as nn
@@ -26,6 +27,9 @@ EXPLORATION_MAX = 1.0
 EXPLORATION_MIN = 0.01
 EXPLORATION_DECAY = 0.995
 
+name00 = 'DataRecords/TrainTrack1000.npy'
+name10 = 'DataRecords/TrainTrack1010.npy'
+name20 = 'DataRecords/TrainTrack1020.npy'
 
 class Qnet(nn.Module):
     def __init__(self, obs_space, action_space):
@@ -161,13 +165,78 @@ def DebugAgentTraining(agent, env):
         env.render()
         agent.save()
 
-if __name__ == "__main__":
-    name00 = 'DataRecords/TrainTrack1000.npy'
-    name10 = 'DataRecords/TrainTrack1010.npy'
-    name20 = 'DataRecords/TrainTrack1020.npy'
 
+def collect_observations(env, agent, n_itterations=10000):
+    s, done = env.reset(), False
+    for i in range(n_itterations):
+        action = env.random_action()
+        s_p, r, done, _ = env.step(action)
+        done_mask = 0.0 if done else 1.0
+        agent.buffer.append((s, action, r, s_p, done_mask))
+        s = s_p
+        if done:
+            s = env.reset()
+
+        print("\rPopulating Buffer {}/{}.".format(i, n_itterations), end="")
+        sys.stdout.flush()
+    print(" ")
+
+
+
+def TrainAgent(agent, env):
+    print_n = 20
+    rewards = []
+    collect_observations(env, agent, 5000)
+    for n in range(2000):
+        score, done, state = 0, False, env.reset()
+        while not done:
+            a = agent.learning_act(state)
+            s_prime, r, done, _ = env.step(a)
+            done_mask = 0.0 if done else 1.0
+            agent.buffer.append((state, a, r, s_prime, done_mask))
+            state = s_prime
+            score += r
+            agent.experience_replay()
+        rewards.append(score)
+
+        if ps.virtual_memory().free < 5e3:
+            print(f"Memory Error: Breaking --> {ps.virtual_memory().free}")
+            break
+
+        if n % print_n == 1:
+            env.render()
+            exp = agent.exploration_rate
+            mean = np.mean(rewards[-20:])
+            b = len(agent.buffer)
+            print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
+            # agent.save()
+
+            lib.plot(rewards, figure_n=2)
+            # plt.figure(2).savefig("Training_" + agent.name)
+
+    agent.save()
+    lib.plot(rewards, figure_n=2)
+    plt.figure(2).savefig("Training_DQN")
+
+
+# run training
+def RunDQNTraining():
     env = TrainEnv(name20)
-    agent = TrainDQN(env.state_space, env.action_space, "DebugDQN")
+    agent = TrainDQN(env.state_space, env.action_space, "TestDQN1")
 
-    DebugAgentTraining(agent, env)
+    # env = gym.make('CartPole-v1')
+    # agent = TrainDQN(4, 2, "TestDQN-CartPole")
 
+    TrainAgent(agent, env)
+
+
+    # agent = TrainDQN(env.state_space, env.action_space, "DebugDQN")
+
+    # DebugAgentTraining(agent, env)
+
+
+  
+
+if __name__ == "__main__":
+    RunDQNTraining()
+    

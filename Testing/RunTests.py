@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import sys
 import psutil as ps
+import gym
+import timeit
 
 import LibFunctions as lib
 from TestEnv import TestEnv
@@ -41,6 +43,7 @@ def getsize(obj):
                 need_referents.append(obj)
         objects = get_referents(*need_referents)
     return size
+
 
 
 def evaluate_agent(env, agent, show=True):
@@ -91,7 +94,7 @@ def TrainAgent(agent, env):
     print_n = 20
     rewards = []
     collect_observations(env, agent, 5000)
-    for n in range(5000):
+    for n in range(2000):
         score, done, state = 0, False, env.reset()
         while not done:
             a = agent.learning_act(state)
@@ -103,23 +106,19 @@ def TrainAgent(agent, env):
             agent.experience_replay()
         rewards.append(score)
 
-        if ps.virtual_memory().free < 5e8:
-            print("Memory Error: Breaking")
-            break
+        # if ps.virtual_memory().free < 5e8:
+        #     print(f"Memory Error: Breaking --> {ps.virtual_memory().free}")
+        #     break
 
         if n % print_n == 1:
             exp = agent.exploration_rate
             mean = np.mean(rewards[-20:])
             b = len(agent.buffer)
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
-            agent.save()
+            # agent.save()
 
-            agent_size = getsize(agent) / 1e6
-            env_size = getsize(env) / 1e6
-            print(f"Sizes --> Agent: {agent_size} -- > Env: {env_size}")
-
-            # lib.plot(rewards, figure_n=2)
-            # plt.figure(2).savefig("Training_" + agent_name)
+            lib.plot(rewards, figure_n=2)
+            # plt.figure(2).savefig("Training_" + agent.name)
 
     agent.save()
     lib.plot(rewards, figure_n=2)
@@ -129,7 +128,11 @@ def TrainAgent(agent, env):
 # run training
 def RunDQNTraining():
     env = TrainEnv(name20)
-    agent = TrainDQN(env.state_space, env.action_space, "TestDQN")
+    agent = TrainDQN(env.state_space, env.action_space, "TestDQN1")
+
+    # env = gym.make('CartPole-v1')
+    # agent = TrainDQN(4, 2, "TestDQN-CartPole")
+
 
     TrainAgent(agent, env)
 
@@ -138,7 +141,8 @@ def RunDQNTraining():
 def RunDQNTest():
     env = TestEnv(name30)
     env.run_path_finder()
-    agent = TestDQN(env.state_space, env.action_space, "TestDQN")
+    # env = gym.make('CartPole-v1')
+    agent = TestDQN(env.state_space, env.action_space, "TestDQN-CartPole")
 
     evaluate_agent(env, agent)
 
@@ -159,6 +163,6 @@ def RunPurePursuitTest():
 
 if __name__ == "__main__":
     # RunCorridorTest()
-    # RunDQNTraining()
-    RunDQNTest()
+    RunDQNTraining()
+    # RunDQNTest()
     # RunPurePursuitTest()
