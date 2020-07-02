@@ -152,18 +152,13 @@ class TrainModEnv(TrainMap, CarModel):
         CarModel.__init__(self, self.n_ranges)
         self.set_start_end()
         self.wpts = []
+        self.pind = 1
 
     def run_path_finder(self):
-        # try:
-        #     # raise Exception
-        #     self.wpts = np.load(self.path_name)
-        #     print(f"Path Loaded")
-        # except:
         path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
-        path = path_finder.run_search(5)
+        path = path_finder.run_search(10)
         self.wpts = path
-        # np.save(self.path_name, self.wpts)
-        # print("Path Generated")
+        self.target = None
 
         # self.show_map(self.wpts)
         
@@ -175,6 +170,7 @@ class TrainModEnv(TrainMap, CarModel):
         self.set_start_end()
         self._set_up_heat_map()
         self.run_path_finder()
+        self.pind = 1
 
         self.theta = np.pi / 2 - np.arctan(lib.get_gradient(self.start, self.end))
         if self.end[0] < self.start[0]:
@@ -241,12 +237,32 @@ class TrainModEnv(TrainMap, CarModel):
 
     def _get_state_obs(self):
         self._update_ranges()
-        rel_target = lib.sub_locations(self.end, self.car_x)
+        target = self._get_target()
+
+        rel_target = lib.sub_locations(target, self.car_x)
+        self.target = rel_target
         transformed_target = lib.transform_coords(rel_target, self.theta)
         normalised_target = lib.normalise_coords(transformed_target)
         obs = np.concatenate([normalised_target, self.ranges])
 
         return obs
+
+    def _get_target(self):
+        dis_last_pt = lib.get_distance(self.wpts[self.pind-1], self.car_x)
+        dis_next_pt = lib.get_distance(self.car_x, self.wpts[self.pind+1])
+        while dis_next_pt < dis_last_pt and self.pind < len(self.wpts)-2:
+            self.pind += 1
+
+            dis_last_pt = lib.get_distance(self.wpts[self.pind-1], self.car_x)
+            dis_next_pt = lib.get_distance(self.car_x, self.wpts[self.pind+1])
+        # use pind and pind +1 to get a 5 unit distance vector 
+        next_pt = self.wpts[self.pind]
+        next_next_pt = self.wpts[self.pind+1]
+
+        target = lib.add_locations(next_pt, next_next_pt)
+        target = [target[0]/2, target[1]/2]
+
+        return target
 
     def _update_ranges(self):
         step_size = 3
@@ -285,6 +301,8 @@ class TrainModEnv(TrainMap, CarModel):
             y = [car_y, range_val[1]]
             plt.plot(x, y)
 
+        for pt in self.wpts:
+            plt.plot(pt[0], pt[1], 'x', markersize=10)
         
         plt.pause(0.2)
 
@@ -310,7 +328,9 @@ class TrainModEnv(TrainMap, CarModel):
             y = [car_pos[1], range_val[1]]
             plt.plot(x, y)
 
-        
+        for pt in self.wpts:
+            plt.plot(pt[0], pt[1], 'x', markersize=10)
+
         plt.pause(0.01)
         # plt.show()
 

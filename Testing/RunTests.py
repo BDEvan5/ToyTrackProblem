@@ -173,6 +173,7 @@ def TrainModAgent(track_name, agent_name, buffer, i=0, load=True):
             state = s_prime
             score += r
             agent.experience_replay(buffer)
+            env.box_render()
         rewards.append(score)
 
         env.render()    
@@ -210,7 +211,7 @@ def RunModDQNTraining():
 
 
     # collect_observations(buffer, track_name, 5000)
-    TrainModAgent(track_name, agent_name, buffer, 0, False)
+    # TrainModAgent(track_name, agent_name, buffer, 0, False)
     for i in range(1, 100):
         print(f"Running batch: {i}")
         rewards = TrainModAgent(track_name, agent_name, buffer, i, True)

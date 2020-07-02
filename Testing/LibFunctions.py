@@ -45,7 +45,7 @@ def transform_coords(x=[0, 0], theta=np.pi):
 
 def normalise_coords(x=[0, 0]):
     r = x[0]/x[1]
-    y = np.sqrt(1/(1+r**2))
+    y = np.sqrt(1/(1+r**2)) * abs(x[1]) / x[1] # carries the sign
     x = y * r
     return [x, y]
 
