@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 class TrackMapData:
-    def __init__(self, resolution=1, scaling_factor=10):
+    def __init__(self, name, resolution=1, scaling_factor=10):
         # replacing the old trackdata
         self.fs = int(scaling_factor) # scaling factor from map size to display dize
         self.res = int(resolution) # how many map blocks to drawn blocks
@@ -14,7 +14,8 @@ class TrackMapData:
         self.display_size = self.map_size * self.fs # tkinter pxls
         self.n_blocks = int(self.map_size[0]/self.res) # how many blocks per dimension
 
-        self.track_map = np.zeros((self.n_blocks, self.n_blocks), dtype=np.bool)
+        #zeros to ones
+        self.track_map = np.ones((self.n_blocks, self.n_blocks), dtype=np.bool)
         self.track_hm = None
         self.obs_map = np.zeros_like(self.track_map) # stores heatmap of obstacles
         
@@ -25,6 +26,8 @@ class TrackMapData:
         self.way_pts = []
         self.path_end_location = None
         self.path_start_location = None
+
+        self.name = name
 
 
         # boundariy?? not needed
@@ -55,6 +58,20 @@ class TrackMapData:
             obs_map = obs.get_new_map(obs_map, rands[i]) # possibly move fcn to self
 
         self.obs_map = obs_map
+
+    def random_start_end(self):
+        rands = np.random.rand(4) * 100
+        self.path_start_location = rands[0:2]
+        self.path_end_location = rands[2:4]  
+
+        while self.check_hm_collision(self.path_start_location):
+            self.path_start_location = np.random.rand(2) * 100
+        while self.check_hm_collision(self.path_end_location) or \
+            f.get_distance(self.path_end_location, self.path_start_location) < 15:
+            self.path_end_location = np.random.rand(2) * 100
+
+        return self.path_start_location, self.path_end_location
+
 
     def set_start_line(self):
         if self.start_x1 == None or self.start_x2 == None:

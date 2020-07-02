@@ -36,6 +36,13 @@ def get_angle(x1, x2, x3):
     angle = abs(np.arctan(m1) - np.arctan(m2))
     return angle
 
+def transform_coords(x=[0, 0], theta=np.pi):
+    # i want this function to transform coords from one coord system to another
+    new_x = x[0] * np.cos(theta) - x[1] * np.sin(theta)
+    new_y = x[0] * np.sin(theta) + x[1] * np.cos(theta)
+
+    return np.array([new_x, new_y])
+
 
 def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     plt.figure(figure_n)
@@ -53,23 +60,49 @@ def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     # print("Episode", (len(values)), "\n", \
     #     moving_avg_period, "episode moving avg:", moving_avg)
 
-def plot_comp(values1, values2, moving_avg_period, title, figure_n):
+def plot_comp(values1, values2,  moving_avg_period=10, title="Results", figure_n=2):
     plt.figure(figure_n)
     plt.clf()        
     plt.title(title)
     plt.xlabel('Episode')
     plt.ylabel('Duration')
-    # plt.plot(values1)
+    plt.plot(values1)
 
     moving_avg = get_moving_average(moving_avg_period, values1)
-    plt.plot(moving_avg)    
+    # plt.plot(moving_avg)    
 
-    # plt.plot(values2)
+    plt.plot(values2)
     moving_avg = get_moving_average(moving_avg_period, values2)
-    plt.plot(moving_avg)    
+    # plt.plot(moving_avg)    
  
     plt.legend(['RL Moving Avg', "Classical Moving Avg"])
     # plt.legend(['RL Agent', 'RL Moving Avg', 'Classical Agent', "Classical Moving Avg"])
+    plt.pause(0.001)
+
+def plot_three(values1, values2, values3, moving_avg_period=10, title="Results", figure_n=2):
+    plt.figure(figure_n)
+    plt.clf()        
+    plt.title(title)
+    plt.xlabel('Episode')
+    plt.ylabel('Duration')
+
+    plt.ylim(-2, 2)
+
+    plt.plot(values1)
+    # moving_avg = get_moving_average(moving_avg_period, values1)
+    # plt.plot(moving_avg)    
+
+    plt.plot(values2)
+    # moving_avg = get_moving_average(moving_avg_period, values2)
+    # plt.plot(moving_avg)    
+
+    plt.plot(values3)
+    # moving_avg = get_moving_average(moving_avg_period, values2)
+    # plt.plot(moving_avg)    
+ 
+    # plt.legend(['RL Moving Avg', "Classical Moving Avg"])
+    # plt.legend(['RL Agent', 'RL Moving Avg', 'Classical Agent', "Classical Moving Avg"])
+    plt.legend(['Values', 'Q_vals', 'Loss'])
     plt.pause(0.001)
 
 def get_moving_average(period, values):
