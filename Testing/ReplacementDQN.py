@@ -186,7 +186,7 @@ def collect_observations(env, agent, n_itterations=10000):
 def TrainAgent(agent, env):
     print_n = 20
     rewards = []
-    collect_observations(env, agent, 5000)
+    # collect_observations(env, agent, 5000)
     for n in range(2000):
         score, done, state = 0, False, env.reset()
         while not done:
@@ -204,14 +204,14 @@ def TrainAgent(agent, env):
             break
 
         if n % print_n == 1:
-            env.render()
+            # env.render()
             exp = agent.exploration_rate
             mean = np.mean(rewards[-20:])
             b = len(agent.buffer)
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
             # agent.save()
 
-            lib.plot(rewards, figure_n=2)
+            # lib.plot(rewards, figure_n=2)
             # plt.figure(2).savefig("Training_" + agent.name)
 
     agent.save()
@@ -221,11 +221,11 @@ def TrainAgent(agent, env):
 
 # run training
 def RunDQNTraining():
-    env = TrainEnv(name20)
-    agent = TrainDQN(env.state_space, env.action_space, "TestDQN1")
+    # env = TrainEnv(name20)
+    # agent = TrainDQN(env.state_space, env.action_space, "TestDQN1")
 
-    # env = gym.make('CartPole-v1')
-    # agent = TrainDQN(4, 2, "TestDQN-CartPole")
+    env = gym.make('CartPole-v1')
+    agent = TrainDQN(4, 2, "TestDQN-CartPole")
 
     TrainAgent(agent, env)
 

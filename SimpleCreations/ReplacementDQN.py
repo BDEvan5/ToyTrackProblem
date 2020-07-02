@@ -153,7 +153,7 @@ def RunMyEnv(agent_name, show=True):
             state = s_prime
             score += r
             agent.experience_replay()
-            env.box_render()
+            # env.box_render()
             
         rewards.append(score)
 
