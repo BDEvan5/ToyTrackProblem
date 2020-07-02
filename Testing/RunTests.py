@@ -44,6 +44,7 @@ class ReplayBuffer():
             s_prime_lst.append(s_prime)
             done_mask_lst.append([done_mask])
 
+        # todo: move the tensor bit to the agent file, just return lists for the moment.
         return torch.tensor(s_lst, dtype=torch.float), torch.tensor(a_lst), \
                torch.tensor(r_lst), torch.tensor(s_prime_lst, dtype=torch.float), \
                torch.tensor(done_mask_lst)
@@ -123,7 +124,39 @@ def DebugAgentTraining(agent, env):
         agent.save()
 
 
-def TrainAgent(track_name, agent_name, buffer, i=0, load=True):
+def TrainRepAgent(track_name, agent_name, buffer, i=0, load=True):
+    env = TrainRepEnv(track_name)
+    agent = TrainRepDQN(env.state_space, env.action_space, agent_name)
+    agent.try_load(load)
+
+    print_n = 20
+    rewards = []
+    for n in range(201):
+        score, done, state = 0, False, env.reset()
+        while not done:
+            a = agent.learning_act(state)
+            s_prime, r, done, _ = env.step(a)
+            done_mask = 0.0 if done else 1.0
+            buffer.put((state, a, r, s_prime, done_mask))
+            state = s_prime
+            score += r
+            agent.experience_replay(buffer)
+        rewards.append(score)
+
+        if n % print_n == 1:
+            env.render()    
+            exp = agent.exploration_rate
+            mean = np.mean(rewards[-20:])
+            b = buffer.size()
+            print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
+
+    agent.save()
+    lib.plot(rewards, figure_n=2)
+    plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
+
+    return rewards
+
+def TrainModAgent(track_name, agent_name, buffer, i=0, load=True):
     env = TrainRepEnv(track_name)
     # env = TrainModEnv(track_name)
     agent = TrainRepDQN(env.state_space, env.action_space, agent_name)
@@ -157,9 +190,8 @@ def TrainAgent(track_name, agent_name, buffer, i=0, load=True):
 
     return rewards
 
-
 # run training
-def RunDQNTraining():
+def RunRepDQNTraining():
     track_name = name50
     agent_name = "DQNtrain2"
     buffer = ReplayBuffer()
@@ -169,7 +201,7 @@ def RunDQNTraining():
     # TrainAgent(track_name, agent_name, buffer, 0, False)
     for i in range(1, 100):
         print(f"Running batch: {i}")
-        rewards = TrainAgent(track_name, agent_name, buffer, i, True)
+        rewards = TrainRepAgent(track_name, agent_name, buffer, i, True)
         total_rewards += rewards
 
 def RunDQN_ModificationTraining():
@@ -210,7 +242,9 @@ def RunPurePursuitTest():
 
 
 if __name__ == "__main__":
+    RunRepDQNTraining()
+
+    
     # RunCorridorTest()
-    RunDQNTraining()
     # RunDQNTest()
     # RunPurePursuitTest()
