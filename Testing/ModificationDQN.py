@@ -66,6 +66,7 @@ class TrainModDQN:
         self.target = Qnet(obs_space, action_space)
         self.value_model = ValueNet(obs_space, action_space)
         self.value_target = ValueNet(obs_space, action_space)
+
         self.action_space = action_space
         self.exploration_rate = EXPLORATION_MAX
         self.optimizer = optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
@@ -77,6 +78,9 @@ class TrainModDQN:
             return random.randint(0, self.action_space-1)
         else: 
             return self.act(obs)
+
+    # def learning_act(self, obs):
+
 
     def act(self, obs):
         obs_t = torch.from_numpy(obs).float()

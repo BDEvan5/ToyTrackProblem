@@ -141,6 +141,7 @@ def TrainRepAgent(track_name, agent_name, buffer, i=0, load=True):
             state = s_prime
             score += r
             agent.experience_replay(buffer)
+            env.box_render()
         rewards.append(score)
 
         if n % print_n == 1:
@@ -191,7 +192,7 @@ def TrainModAgent(track_name, agent_name, buffer, i=0, load=True):
 
 # run training
 def RunRepDQNTraining():
-    track_name = name50
+    track_name = name20
     agent_name = "DQNtrain2"
     buffer = ReplayBuffer()
     total_rewards = []
@@ -243,8 +244,8 @@ def RunPurePursuitTest():
 
 
 if __name__ == "__main__":
-    # RunRepDQNTraining()
-    RunModDQNTraining()
+    RunRepDQNTraining()
+    # RunModDQNTraining()
 
     # RunCorridorTest()
     # RunDQNTest()
