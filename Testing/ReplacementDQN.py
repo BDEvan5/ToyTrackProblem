@@ -11,7 +11,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from TrainEnv import TrainEnv
 import LibFunctions as lib
 
 #Hyperparameters
@@ -45,7 +44,7 @@ class Qnet(nn.Module):
         return x
       
 
-class TrainDQN_Replacement:
+class TrainRepDQN:
     def __init__(self, obs_space, action_space, name="best_avg"):
         self.model = Qnet(obs_space, action_space)
         self.target = Qnet(obs_space, action_space)
@@ -116,7 +115,7 @@ class TrainDQN_Replacement:
         else:
             print(f"Not loading - restarting training")
 
-class TestDQN_Replacement:
+class TestRepDQN:
     def __init__(self, obs_space, act_space, name="best_avg"):
         self.model = Qnet(obs_space, act_space)
         self.name = name

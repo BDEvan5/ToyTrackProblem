@@ -93,7 +93,7 @@ class TrainMap:
             lib.get_distance(self.start, self.end) < 15:
             self.end = np.random.rand(2) * 100
 
-class TrainEnv(TrainMap, CarModel):
+class TrainRepEnv(TrainMap, CarModel):
     def __init__(self, name):
         self.steps = 0
         self.memory = []

@@ -18,9 +18,9 @@ import LibFunctions as lib
 #Hyperparameters
 GAMMA = 0.95
 LEARNING_RATE = 0.001
-
-
+h_size = 512
 BATCH_SIZE = 64
+
 
 EXPLORATION_MAX = 1.0
 EXPLORATION_MIN = 0.01
@@ -34,7 +34,7 @@ name20 = 'DataRecords/TrainTrack1020.npy'
 class Qnet(nn.Module):
     def __init__(self, obs_space, action_space):
         super(Qnet, self).__init__()
-        h_size = 512
+        
         self.fc1 = nn.Linear(obs_space, h_size)
         self.fc2 = nn.Linear(h_size, h_size)
         self.fc3 = nn.Linear(h_size, action_space)
@@ -45,11 +45,26 @@ class Qnet(nn.Module):
         x = self.fc3(x)
         return x
       
+class ValueNet(nn.Module):
+    def __init__(self, obs_space, action_space):
+        super(ValueNet, self).__init__()
 
-class TrainDQN_Modification:
+        self.fc1 = nn.Linear(obs_space + action_space, h_size)
+        self.fc2 = nn.Linear(h_size, h_size)
+        self.fc3 = nn.Linear(h_size, 1)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+class TrainModDQN:
     def __init__(self, obs_space, action_space, name="best_avg"):
         self.model = Qnet(obs_space, action_space)
         self.target = Qnet(obs_space, action_space)
+        self.value_model = ValueNet(obs_space, action_space)
+        self.value_target = ValueNet(obs_space, action_space)
         self.action_space = action_space
         self.exploration_rate = EXPLORATION_MAX
         self.optimizer = optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
@@ -117,7 +132,7 @@ class TrainDQN_Modification:
         else:
             print(f"Not loading - restarting training")
 
-class TestDQN_Modification:
+class TestModDQN:
     def __init__(self, obs_space, act_space, name="best_avg"):
         self.model = Qnet(obs_space, act_space)
         self.name = name

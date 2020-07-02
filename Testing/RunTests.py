@@ -1,16 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt 
 import sys
-import psutil as ps
+import collections
 import gym
 import timeit
+import random
+import torch
 
 import LibFunctions as lib
 from TestEnv import TestEnv
-from TrainEnv import TrainEnv
+from TrainReplacementEnv import TrainRepEnv
+from TrainModEnv import TrainModEnv
 from Corridor import CorridorAgent, PurePursuit
-from ReplacementDQN import TestDQN_Replacement, TrainDQN_Replacement
-from ModificationDQN import TestDQN_Modification, TrainDQN_Modification
+from ReplacementDQN import TestRepDQN, TrainRepDQN
+from ModificationDQN import TestModDQN, TrainModDQN
 
 name00 = 'DataRecords/TrainTrack1000.npy'
 name10 = 'DataRecords/TrainTrack1010.npy'
@@ -79,7 +82,7 @@ def evaluate_agent(env, agent, show=True):
 
 
 def collect_observations(buffer, env_track_name, n_itterations=10000):
-    env = TrainEnv(env_track_name)
+    env = TrainRepEnv(env_track_name)
     s, done = env.reset(), False
     for i in range(n_itterations):
         action = env.random_action()
@@ -121,8 +124,10 @@ def DebugAgentTraining(agent, env):
 
 
 def TrainAgent(track_name, agent_name, buffer, i=0, load=True):
-    env = TrainEnv(track_name)
-    agent = TrainDQN(env.state_space, env.action_space, agent_name)
+    env = TrainRepEnv(track_name)
+    # env = TrainModEnv(track_name)
+    agent = TrainRepDQN(env.state_space, env.action_space, agent_name)
+    # agent = TrainModeDQN(env.state_space, env.action_space, agent_name)
     agent.try_load(load)
 
     print_n = 20
@@ -168,7 +173,17 @@ def RunDQNTraining():
         total_rewards += rewards
 
 def RunDQN_ModificationTraining():
+    track_name = name50
+    agent_name = "DQNtrainModification"
+    buffer = ReplayBuffer()
+    total_rewards = []
 
+    collect_observations(buffer, track_name, 5000)
+    TrainAgent(track_name, agent_name, buffer, 0, False)
+    for i in range(1, 100):
+        print(f"Running batch: {i}")
+        rewards = TrainAgent(track_name, agent_name, buffer, i, True)
+        total_rewards += rewards
 
 # testing algorithms
 def RunDQNTest():
