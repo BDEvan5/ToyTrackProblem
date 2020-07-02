@@ -2,6 +2,8 @@ import numpy as np
 import LibFunctions as lib 
 from matplotlib import pyplot as plt
 
+from PathFinder import PathFinder
+
 name00 = 'DataRecords/TrainTrack1000.npy'
 name10 = 'DataRecords/TrainTrack1010.npy'
 name20 = 'DataRecords/TrainTrack1020.npy'
@@ -97,8 +99,8 @@ class TrainMap:
         track_map = self.race_map
         for _ in range(15): # blocks up to 5 away will start to have a gradient
             new_map = np.zeros_like(track_map)
-            for i in range(1, 998):
-                for j in range(1, 998):
+            for i in range(1, 98):
+                for j in range(1, 98):
                     left = track_map[i-1, j]
                     right = track_map[i+1, j]
                     up = track_map[i, j+1]
@@ -158,7 +160,7 @@ class TrainModEnv(TrainMap, CarModel):
         #     print(f"Path Loaded")
         # except:
         path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
-        path = path_finder.run_search(10)
+        path = path_finder.run_search(5)
         self.wpts = path
         # np.save(self.path_name, self.wpts)
         # print("Path Generated")
@@ -171,6 +173,7 @@ class TrainModEnv(TrainMap, CarModel):
         self.memory.clear()
 
         self.set_start_end()
+        self._set_up_heat_map()
         self.run_path_finder()
 
         self.theta = np.pi / 2 - np.arctan(lib.get_gradient(self.start, self.end))
@@ -230,6 +233,8 @@ class TrainModEnv(TrainMap, CarModel):
         plt.plot(x, y)
         plt.plot(self.start[0], self.start[1], '*', markersize=20)
         plt.plot(self.end[0], self.end[1], '*', markersize=20)
+        for pt in self.wpts:
+            plt.plot(pt[0], pt[1], 'x', markersize=10)
         
         plt.pause(0.001)
         # fig.savefig(f"Renders/Rendering_{self.eps}")

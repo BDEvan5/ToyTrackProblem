@@ -35,8 +35,8 @@ class PathFinder:
         # this makes it not go diagonal
         # self.position_list = [[1, 0], [0, -1], [-1, 0], [0, 1]]
         for pos in self.position_list:
-            pos[0] = pos[0] * self.ds
-            pos[1] = pos[1] * self.ds
+            pos[0] = pos[0] #* self.ds
+            pos[1] = pos[1] #* self.ds
         # print(self.position_list)
 
     def run_search(self, ds, max_steps=4000):
@@ -48,20 +48,20 @@ class PathFinder:
             self.find_current_node()
 
             if self.check_done():
-                print("The shortest path has been found")
+                # print("The shortest path has been found")
                 break
             self.generate_children()
             i += 1
 
         assert i < max_steps, "Max Iterations reached: problem with search"
-        assert len(self.open_list) > 0, "Search broke: no open nodes"
+        assert len(self.open_list) > 0 or i ==1, "Search broke: no open nodes"
         path = self.get_path_list()
 
         return path
 
     def set_up_start_node(self):
-        self.start_n = Node(None, self.start)
-        self.end_n = Node(None, self.end)
+        self.start_n = Node(None, np.array(self.start))
+        self.end_n = Node(None, np.array(self.end))
 
         self.open_list.append(self.start_n)
 
@@ -78,22 +78,22 @@ class PathFinder:
         # self.logger.debug(self.current_node.log_msg())
 
     def check_done(self):
-        dx_max = self.ds * 3
+        dx_max = self.ds * 1.2
         dis = f.get_distance(self.current_node.position, self.end_n.position)
         if dis < dx_max:
-            print("Found")
+            # print("Found")
             return True
         return False
 
     def _check_closed_list(self, new_node):
         for closed_child in self.closed_list:
-            if new_node.position == closed_child.position:
+            if (new_node == closed_child).all():
                 return True
         return False
 
     def _check_open_list(self, new_node):
         for open_node in self.open_list:
-            if new_node == open_node: # if in open set return true
+            if (new_node == open_node).all(): # if in open set return true
                 if new_node.g < open_node.g: # if also beats g score - update g
                     open_node.g = new_node.g
                     open_node.parent = new_node.parent
@@ -108,7 +108,7 @@ class PathFinder:
 
             if self.obstacle_function(new_position): 
                 continue 
-            new_node = Node(self.current_node, new_position)
+            new_node = Node(self.current_node, np.array(new_position))
 
             if self._check_closed_list(new_node): 
                 continue

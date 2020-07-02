@@ -157,10 +157,8 @@ def TrainRepAgent(track_name, agent_name, buffer, i=0, load=True):
     return rewards
 
 def TrainModAgent(track_name, agent_name, buffer, i=0, load=True):
-    env = TrainRepEnv(track_name)
-    # env = TrainModEnv(track_name)
-    agent = TrainRepDQN(env.state_space, env.action_space, agent_name)
-    # agent = TrainModeDQN(env.state_space, env.action_space, agent_name)
+    env = TrainModEnv(track_name)
+    agent = TrainModDQN(env.state_space, env.action_space, agent_name)
     agent.try_load(load)
 
     print_n = 20
@@ -177,8 +175,8 @@ def TrainModAgent(track_name, agent_name, buffer, i=0, load=True):
             agent.experience_replay(buffer)
         rewards.append(score)
 
+        env.render()    
         if n % print_n == 1:
-            env.render()    
             exp = agent.exploration_rate
             mean = np.mean(rewards[-20:])
             b = buffer.size()
@@ -204,18 +202,20 @@ def RunRepDQNTraining():
         rewards = TrainRepAgent(track_name, agent_name, buffer, i, True)
         total_rewards += rewards
 
-def RunDQN_ModificationTraining():
+def RunModDQNTraining():
     track_name = name50
     agent_name = "DQNtrainModification"
     buffer = ReplayBuffer()
     total_rewards = []
 
-    collect_observations(buffer, track_name, 5000)
-    TrainAgent(track_name, agent_name, buffer, 0, False)
+
+    # collect_observations(buffer, track_name, 5000)
+    TrainModAgent(track_name, agent_name, buffer, 0, False)
     for i in range(1, 100):
         print(f"Running batch: {i}")
-        rewards = TrainAgent(track_name, agent_name, buffer, i, True)
+        rewards = TrainModAgent(track_name, agent_name, buffer, i, True)
         total_rewards += rewards
+
 
 # testing algorithms
 def RunDQNTest():
@@ -242,9 +242,9 @@ def RunPurePursuitTest():
 
 
 if __name__ == "__main__":
-    RunRepDQNTraining()
+    # RunRepDQNTraining()
+    RunModDQNTraining()
 
-    
     # RunCorridorTest()
     # RunDQNTest()
     # RunPurePursuitTest()
