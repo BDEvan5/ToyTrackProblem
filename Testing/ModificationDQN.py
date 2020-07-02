@@ -11,14 +11,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from TrainEnv import TrainEnv
+from TestEnv import TestEnv
 import LibFunctions as lib
+
 
 #Hyperparameters
 GAMMA = 0.95
 LEARNING_RATE = 0.001
 
-MEMORY_SIZE = 100000
+
 BATCH_SIZE = 64
 
 EXPLORATION_MAX = 1.0
@@ -45,7 +46,7 @@ class Qnet(nn.Module):
         return x
       
 
-class TrainDQN_Replacement:
+class TrainDQN_Modification:
     def __init__(self, obs_space, action_space, name="best_avg"):
         self.model = Qnet(obs_space, action_space)
         self.target = Qnet(obs_space, action_space)
@@ -116,7 +117,7 @@ class TrainDQN_Replacement:
         else:
             print(f"Not loading - restarting training")
 
-class TestDQN_Replacement:
+class TestDQN_Modification:
     def __init__(self, obs_space, act_space, name="best_avg"):
         self.model = Qnet(obs_space, act_space)
         self.name = name
@@ -178,113 +179,53 @@ def collect_observations(env, agent, n_itterations=10000):
 
 
 
-def TrainAgent(agent, env):
+def TrainAgent(track_name, agent_name, buffer, i=0, load=True):
+    env = TestEnv(track_name)
+    agent = TrainDQN(env.state_space, env.action_space, agent_name)
+    agent.try_load(load)
+
     print_n = 20
     rewards = []
-    # collect_observations(env, agent, 5000)
-    for n in range(2000):
+    for n in range(201):
         score, done, state = 0, False, env.reset()
         while not done:
             a = agent.learning_act(state)
             s_prime, r, done, _ = env.step(a)
             done_mask = 0.0 if done else 1.0
-            agent.buffer.append((state, a, r, s_prime, done_mask))
+            buffer.put((state, a, r, s_prime, done_mask))
             state = s_prime
             score += r
-            agent.experience_replay()
+            agent.experience_replay(buffer)
         rewards.append(score)
 
-        if ps.virtual_memory().free < 5e3:
-            print(f"Memory Error: Breaking --> {ps.virtual_memory().free}")
-            break
-
         if n % print_n == 1:
-            # env.render()
+            env.render()    
             exp = agent.exploration_rate
             mean = np.mean(rewards[-20:])
-            b = len(agent.buffer)
+            b = buffer.size()
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
-            # agent.save()
-
-            # lib.plot(rewards, figure_n=2)
-            # plt.figure(2).savefig("Training_" + agent.name)
 
     agent.save()
     lib.plot(rewards, figure_n=2)
-    plt.figure(2).savefig("Training_DQN")
+    plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
 
-def noFrillsAgentTraining(agent, env):
-    print_n = 20
-    h = guppy.hpy()
-    rewards = []
-    collect_observations(env, agent, 5000)
-    trainings_steps = 0
-    for n in range(2000):
-        score, done, state = 0, False, env.reset()
-        while not done:
-            a = agent.learning_act(state)
-            s_prime, r, done, _ = env.step(a)
-            done_mask = 0.0 if done else 1.0
-            agent.buffer.append((state, a, r, s_prime, done_mask))
-            state = s_prime
-            score += r
-            trainings_steps += 1
-            agent.experience_replay()
-        rewards.append(score)
-
-        if n % print_n == 1:
-            # env.render()
-            exp = agent.exploration_rate
-            mean = np.mean(rewards[-20:])
-            b = len(agent.buffer)
-            print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
-            print(f"Training steps: {trainings_steps}")
-            trainings_steps = 0
-            print(f"{h.heap()}")
-
-    # agent.save()
-    # lib.plot(rewards, figure_n=2)
-    # plt.figure(2).savefig("Training_DQN")
+    return rewards
 
 # run training
 def RunDQNTraining():
-    # env = TrainEnv(name20)
-    # agent = TrainDQN_Replacement(env.state_space, env.action_space, "TestDQN1")
+    track_name = name50
+    agent_name = "DQNtrain2"
+    buffer = ReplayBuffer()
+    total_rewards = []
 
-    env = gym.make('CartPole-v1')
-    agent = TrainDQN_Replacement(4, 2, "TestDQN-CartPole")
-
-    TrainAgent(agent, env)
-
-
-    # agent = TrainDQN_Replacement(env.state_space, env.action_space, "DebugDQN")
-
-    # DebugAgentTraining(agent, env)
-
-def experience_replay(n_itterations=1000):
-    env = gym.make('CartPole-v1')
-    agent = TrainDQN_Replacement(4, 2, "TestDQN-CartPole")
-    collect_observations(env, agent, 1000)
-    for i in range(n_itterations):
-        agent.experience_replay()
-        print("\rExperiencing Replay {}/{}.".format(i, n_itterations), end="")
-        sys.stdout.flush()
-    print("")
-
-
-def run_CartPoleTest():
-    env = gym.make('CartPole-v1')
-    agent = TrainDQN_Replacement(4, 2, "TestDQN-CartPole")
-    # collect_observations(env, agent, 50000)
-
-    # for i in range(100):
-    #     print(timeit.timeit(experience_replay, number=1))
-
-    noFrillsAgentTraining(agent, env)
-    TrainAgent(agent, env)
-  
+    collect_observations(buffer, track_name, 5000)
+    # TrainAgent(track_name, agent_name, buffer, 0, False)
+    for i in range(1, 100):
+        print(f"Running batch: {i}")
+        rewards = TrainAgent(track_name, agent_name, buffer, i, True)
+        total_rewards += rewards
 
 if __name__ == "__main__":
-    run_CartPoleTest()
-    # RunDQNTraining()
+    RunDQNTraining()
     
+

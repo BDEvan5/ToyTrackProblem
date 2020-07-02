@@ -9,7 +9,8 @@ import LibFunctions as lib
 from TestEnv import TestEnv
 from TrainEnv import TrainEnv
 from Corridor import CorridorAgent, PurePursuit
-from ReplacementDQN import TestDQN, TrainDQN, ReplayBuffer
+from ReplacementDQN import TestDQN_Replacement, TrainDQN_Replacement
+from ModificationDQN import TestDQN_Modification, TrainDQN_Modification
 
 name00 = 'DataRecords/TrainTrack1000.npy'
 name10 = 'DataRecords/TrainTrack1010.npy'
@@ -18,6 +19,34 @@ name30 = 'DataRecords/TrainTrack1030.npy'
 name40 = 'DataRecords/TrainTrack1040.npy'
 name50 = 'DataRecords/TrainTrack1050.npy'
 name60 = 'DataRecords/TrainTrack1060.npy'
+
+MEMORY_SIZE = 100000
+
+class ReplayBuffer():
+    def __init__(self):
+        self.buffer = collections.deque(maxlen=MEMORY_SIZE)
+    
+    def put(self, transition):
+        self.buffer.append(transition)
+    
+    def memory_sample(self, n):
+        mini_batch = random.sample(self.buffer, n)
+        s_lst, a_lst, r_lst, s_prime_lst, done_mask_lst = [], [], [], [], []
+        
+        for transition in mini_batch:
+            s, a, r, s_prime, done_mask = transition
+            s_lst.append(s)
+            a_lst.append([a])
+            r_lst.append([r])
+            s_prime_lst.append(s_prime)
+            done_mask_lst.append([done_mask])
+
+        return torch.tensor(s_lst, dtype=torch.float), torch.tensor(a_lst), \
+               torch.tensor(r_lst), torch.tensor(s_prime_lst, dtype=torch.float), \
+               torch.tensor(done_mask_lst)
+    
+    def size(self):
+        return len(self.buffer)
 
 
 def evaluate_agent(env, agent, show=True):
@@ -64,6 +93,31 @@ def collect_observations(buffer, env_track_name, n_itterations=10000):
         print("\rPopulating Buffer {}/{}.".format(i, n_itterations), end="")
         sys.stdout.flush()
     print(" ")
+
+def DebugAgentTraining(agent, env):
+    rewards = []
+    
+    # observe_myenv(env, agent, 5000)
+    for n in range(5000):
+        score, done, state = 0, False, env.reset()
+        while not done:
+            a = agent.learning_act(state)
+            s_prime, r, done, _ = env.step(a)
+            done_mask = 0.0 if done else 1.0
+            agent.buffer.append((state, a, r, s_prime, done_mask))
+            state = s_prime
+            score += r
+            agent.experience_replay()
+            env.box_render()
+            
+        rewards.append(score)
+
+        exp = agent.exploration_rate
+        mean = np.mean(rewards[-20:])
+        b = len(agent.buffer)
+        print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
+        env.render()
+        agent.save()
 
 
 def TrainAgent(track_name, agent_name, buffer, i=0, load=True):
@@ -112,6 +166,8 @@ def RunDQNTraining():
         print(f"Running batch: {i}")
         rewards = TrainAgent(track_name, agent_name, buffer, i, True)
         total_rewards += rewards
+
+def RunDQN_ModificationTraining():
 
 
 # testing algorithms
