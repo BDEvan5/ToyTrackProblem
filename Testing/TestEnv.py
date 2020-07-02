@@ -4,6 +4,10 @@ from matplotlib import pyplot as plt
 
 from PathFinder import PathFinder, modify_path
 
+name00 = 'DataRecords/TrainTrack1000.npy'
+name10 = 'DataRecords/TrainTrack1010.npy'
+name20 = 'DataRecords/TrainTrack1020.npy'
+name30 = 'DataRecords/TrainTrack1030.npy'
 
 class CarModel:
     def __init__(self, n_ranges=10):
@@ -38,7 +42,6 @@ class CarModel:
 
         return new_x, new_theta
     
-
 
 class TestMap:
     def __init__(self, name='DataRecords/TrainTrack1000.npy'):
@@ -328,7 +331,7 @@ class TestEnv(TestMap, CarModel):
             plt.plot(x, y)
 
         
-        plt.pause(0.01)
+        plt.pause(0.1)
         # plt.show()
 
     def full_render(self):
@@ -362,15 +365,21 @@ class TestEnv(TestMap, CarModel):
 
 
 
+def test_TrainEnv():
+    env = TestEnv(name30)
+    env.run_path_finder()
+    env.show_map()
+
+    env.reset()
+    print_n = 1000
+    for i in range(100000):
+        s, d, r, _ = env.step(np.random.randint(0, env.action_space-1))
+        if d:
+            env.reset()
+        if i % print_n == 1:
+            print(f"Running test: {i}")
 
 if __name__ == "__main__":
-    name00 = 'DataRecords/TrainTrack1000.npy'
-    name10 = 'DataRecords/TrainTrack1010.npy'
 
-    # test_map = TestMap(name00)
-    # test_map.show_map()
 
-    env = TestEnv(name10)
-    env.reset()
-    env.step(1)
-    env.show_map()
+    test_TrainEnv()

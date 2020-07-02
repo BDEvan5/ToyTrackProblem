@@ -2,7 +2,9 @@ import numpy as np
 import LibFunctions as lib 
 from matplotlib import pyplot as plt
 
-
+name00 = 'DataRecords/TrainTrack1000.npy'
+name10 = 'DataRecords/TrainTrack1010.npy'
+name20 = 'DataRecords/TrainTrack1020.npy'
 
 
 class CarModel:
@@ -91,7 +93,6 @@ class TrainMap:
             lib.get_distance(self.start, self.end) < 15:
             self.end = np.random.rand(2) * 100
 
-
 class TrainEnv(TrainMap, CarModel):
     def __init__(self, name):
         self.steps = 0
@@ -108,7 +109,7 @@ class TrainEnv(TrainMap, CarModel):
     def reset(self):
         self.eps += 1
         self.steps = 0
-        self.memory = []
+        self.memory.clear()
 
         self.set_start_end()
 
@@ -127,18 +128,21 @@ class TrainEnv(TrainMap, CarModel):
         self.steps += 1
 
         new_x, new_theta = self._x_step_discrete(action)
-        if self._check_location(new_x):
-            obs = self._get_state_obs()
-            r_crash = -100
-            return obs, r_crash, True, None
-        self.car_x = new_x 
-        self.theta = new_theta
+        crash = self._check_location(new_x) 
+        if not crash:
+            self.car_x = new_x
+            self.theta = new_theta
+        reward, done = self._get_reward(crash)
         obs = self._get_state_obs()
-        reward, done = self._get_reward()
+
         return obs, reward, done, None
 
-    def _get_reward(self):
-        beta = 0.6
+    def _get_reward(self, crash):
+        if crash:
+            r_crash = -100
+            return r_crash, True
+
+        beta = 0.5 # scale to 
         r_done = 100
         step_penalty = 5
         max_steps = 1000
@@ -147,7 +151,7 @@ class TrainEnv(TrainMap, CarModel):
         if cur_distance < 1 + self.action_scale:
             return r_done, True
         d_dis = self.last_distance - cur_distance
-        reward = beta * (d_dis**2 * d_dis/abs(d_dis)) - step_penalty
+        reward = beta * (d_dis**2 * d_dis/abs(d_dis)) # - step_penalty
         self.last_distance = cur_distance
         done = True if self.steps > max_steps else False
         return reward, done
@@ -180,8 +184,8 @@ class TrainEnv(TrainMap, CarModel):
         return obs
 
     def _update_ranges(self):
-        step_size = 6
-        n_searches = 8
+        step_size = 3
+        n_searches = 15
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
             for j in range(n_searches): # number of search points
@@ -209,7 +213,7 @@ class TrainEnv(TrainMap, CarModel):
 
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
-            fs = self.ranges[i] * 8 * 6
+            fs = self.ranges[i] * 15 * 3
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations(self.car_x, dx)
             x = [car_x, range_val[0]]
@@ -220,15 +224,20 @@ class TrainEnv(TrainMap, CarModel):
         plt.pause(0.2)
 
 
-if __name__ == "__main__":
-    name00 = 'DataRecords/TrainTrack1000.npy'
-    name10 = 'DataRecords/TrainTrack1010.npy'
-    name20 = 'DataRecords/TrainTrack1020.npy'
-
-    test_map = TrainEnv(name20)
-    test_map.show_map()
-
+def test_TrainEnv():
     env = TrainEnv(name20)
-    env.reset()
-    env.step(1)
     env.show_map()
+
+    env.reset()
+    print_n = 1000
+    for i in range(100000):
+        s, d, r, _ = env.step(np.random.randint(0, env.action_space-1))
+        if d:
+            env.reset()
+        if i % print_n == 1:
+            print(f"Running test: {i}")
+
+if __name__ == "__main__":
+
+
+    test_TrainEnv()

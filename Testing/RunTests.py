@@ -9,41 +9,15 @@ import LibFunctions as lib
 from TestEnv import TestEnv
 from TrainEnv import TrainEnv
 from Corridor import CorridorAgent, PurePursuit
-from ReplacementDQN import TestDQN, TrainDQN
+from ReplacementDQN import TestDQN, TrainDQN, ReplayBuffer
 
 name00 = 'DataRecords/TrainTrack1000.npy'
 name10 = 'DataRecords/TrainTrack1010.npy'
 name20 = 'DataRecords/TrainTrack1020.npy'
 name30 = 'DataRecords/TrainTrack1030.npy'
-
-
-import sys
-from types import ModuleType, FunctionType
-from gc import get_referents
-
-# Custom objects know their class.
-# Function objects seem to know way too much, including modules.
-# Exclude modules as well.
-BLACKLIST = type, ModuleType, FunctionType
-
-
-def getsize(obj):
-    """sum size of object & members."""
-    if isinstance(obj, BLACKLIST):
-        raise TypeError('getsize() does not take argument of type: '+ str(type(obj)))
-    seen_ids = set()
-    size = 0
-    objects = [obj]
-    while objects:
-        need_referents = []
-        for obj in objects:
-            if not isinstance(obj, BLACKLIST) and id(obj) not in seen_ids:
-                seen_ids.add(id(obj))
-                size += sys.getsizeof(obj)
-                need_referents.append(obj)
-        objects = get_referents(*need_referents)
-    return size
-
+name40 = 'DataRecords/TrainTrack1040.npy'
+name50 = 'DataRecords/TrainTrack1050.npy'
+name60 = 'DataRecords/TrainTrack1060.npy'
 
 
 def evaluate_agent(env, agent, show=True):
@@ -74,13 +48,15 @@ def evaluate_agent(env, agent, show=True):
             plt.figure(2).savefig("Testing_" + agent.name)
             env.render()
 
-def collect_observations(env, agent, n_itterations=10000):
+
+def collect_observations(buffer, env_track_name, n_itterations=10000):
+    env = TrainEnv(env_track_name)
     s, done = env.reset(), False
     for i in range(n_itterations):
         action = env.random_action()
         s_p, r, done, _ = env.step(action)
         done_mask = 0.0 if done else 1.0
-        agent.buffer.append((s, action, r, s_p, done_mask))
+        buffer.put((s, action, r, s_p, done_mask))
         s = s_p
         if done:
             s = env.reset()
@@ -90,51 +66,52 @@ def collect_observations(env, agent, n_itterations=10000):
     print(" ")
 
 
-def TrainAgent(agent, env):
+def TrainAgent(track_name, agent_name, buffer, i=0, load=True):
+    env = TrainEnv(track_name)
+    agent = TrainDQN(env.state_space, env.action_space, agent_name)
+    agent.try_load(load)
+
     print_n = 20
     rewards = []
-    collect_observations(env, agent, 5000)
-    for n in range(2000):
+    for n in range(201):
         score, done, state = 0, False, env.reset()
         while not done:
             a = agent.learning_act(state)
             s_prime, r, done, _ = env.step(a)
             done_mask = 0.0 if done else 1.0
-            agent.buffer.append((state, a, r, s_prime, done_mask))
+            buffer.put((state, a, r, s_prime, done_mask))
             state = s_prime
             score += r
-            agent.experience_replay()
+            agent.experience_replay(buffer)
         rewards.append(score)
 
-        # if ps.virtual_memory().free < 5e8:
-        #     print(f"Memory Error: Breaking --> {ps.virtual_memory().free}")
-        #     break
-
         if n % print_n == 1:
+            env.render()    
             exp = agent.exploration_rate
             mean = np.mean(rewards[-20:])
-            b = len(agent.buffer)
+            b = buffer.size()
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
-            # agent.save()
-
-            lib.plot(rewards, figure_n=2)
-            # plt.figure(2).savefig("Training_" + agent.name)
 
     agent.save()
     lib.plot(rewards, figure_n=2)
-    plt.figure(2).savefig("Training_DQN")
+    plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
+
+    return rewards
 
 
 # run training
 def RunDQNTraining():
-    env = TrainEnv(name20)
-    agent = TrainDQN(env.state_space, env.action_space, "TestDQN1")
+    track_name = name50
+    agent_name = "DQNtrain2"
+    buffer = ReplayBuffer()
+    total_rewards = []
 
-    # env = gym.make('CartPole-v1')
-    # agent = TrainDQN(4, 2, "TestDQN-CartPole")
-
-
-    TrainAgent(agent, env)
+    collect_observations(buffer, track_name, 5000)
+    # TrainAgent(track_name, agent_name, buffer, 0, False)
+    for i in range(1, 100):
+        print(f"Running batch: {i}")
+        rewards = TrainAgent(track_name, agent_name, buffer, i, True)
+        total_rewards += rewards
 
 
 # testing algorithms

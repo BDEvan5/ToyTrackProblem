@@ -43,6 +43,12 @@ def transform_coords(x=[0, 0], theta=np.pi):
 
     return np.array([new_x, new_y])
 
+def normalise_coords(x=[0, 0]):
+    r = x[0]/x[1]
+    y = np.sqrt(1/(1+r**2))
+    x = y * r
+    return [x, y]
+
 
 def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     plt.figure(figure_n)
