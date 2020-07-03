@@ -155,12 +155,16 @@ class TrainModEnv(TrainMap, CarModel):
         self.pind = 1
 
     def run_path_finder(self):
-        path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
+        # path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
+        path_finder = PathFinder(self.return_false, self.start, self.end)
         path = path_finder.run_search(10)
         self.wpts = path
         self.target = None
 
         # self.show_map(self.wpts)
+
+    def return_false(self, x):
+        return False
         
     def reset(self):
         self.eps += 1
@@ -194,7 +198,9 @@ class TrainModEnv(TrainMap, CarModel):
         reward, done = self._get_reward(crash)
         obs = self._get_state_obs()
 
-        return obs, reward, done, None
+        reward2 = int(not crash)
+        reward = 0.01 * reward
+        return obs, reward, done, reward2 
 
     def _get_reward(self, crash):
         if crash:

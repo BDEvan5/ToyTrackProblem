@@ -158,7 +158,7 @@ def TrainRepAgent(track_name, agent_name, buffer, i=0, load=True):
 
     return rewards
 
-def TrainModAgent(track_name, agent_name, buffer, i=0, load=True):
+def TrainModAgent(track_name, agent_name, buffer0, buffer1, i=0, load=True):
     env = TrainModEnv(track_name)
     agent = TrainModDQN(env.state_space, env.action_space, agent_name)
     agent.try_load(load)
@@ -168,22 +168,25 @@ def TrainModAgent(track_name, agent_name, buffer, i=0, load=True):
     for n in range(201):
         score, done, state = 0, False, env.reset()
         while not done:
-            a = agent.learning_act(state)
-            s_prime, r, done, _ = env.step(a)
+            a, system, mod_act = agent.full_action(state)
+            s_prime, r, done, r2 = env.step(a)
             done_mask = 0.0 if done else 1.0
-            buffer.put((state, a, r, s_prime, done_mask))
+            buffer0.put((state, a, r2, s_prime, done_mask))
+            if system == 1: # mod action
+                buffer1.put((state, mod_act, r, s_prime, done_mask))
             state = s_prime
             score += r
-            agent.experience_replay(buffer)
-            env.box_render()
+            agent.experience_replay(buffer0, buffer1)
+            # env.box_render()
         rewards.append(score)
 
         env.render()    
         if n % print_n == 1:
-            exp = agent.exploration_rate
+            exp = agent.model.exploration_rate
             mean = np.mean(rewards[-20:])
-            b = buffer.size()
-            print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
+            b0 = buffer0.size()
+            b1 = buffer1.size()
+            print(f"Run: {n} --> Score: {score:.4f} --> Mean: {mean:.4f} --> exp: {exp:.4f} --> Buf: {b0, b1}")
 
     agent.save()
     lib.plot(rewards, figure_n=2)
@@ -212,17 +215,23 @@ def RunRepDQNTraining():
 
 def RunModDQNTraining():
     track_name = name50
-    agent_name = "DQNtrainModification"
-    buffer = ReplayBuffer()
+    agent_name = "DQNtrainMod1"
+    buffer0 = ReplayBuffer()
+    buffer1 = ReplayBuffer()
     total_rewards = []
 
+    # collect_observations(buffer, track_name, 500)
+    #todo: will need new observations fcn
 
-    # collect_observations(buffer, track_name, 5000)
-    # TrainModAgent(track_name, agent_name, buffer, 0, False)
+    # rewards = TrainModAgent(track_name, agent_name, buffer0, buffer1, 0, False)
+    total_rewards += rewards
     for i in range(1, 100):
         print(f"Running batch: {i}")
-        rewards = TrainModAgent(track_name, agent_name, buffer, i, True)
+        rewards = TrainModAgent(track_name, agent_name, buffer0, buffer1, 0, True)
         total_rewards += rewards
+
+        lib.plot(total_rewards, figure_n=2)
+        plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
 
         
 
@@ -261,9 +270,9 @@ def RunPurePursuitTest():
 
 if __name__ == "__main__":
     # RunRepDQNTraining()
-    # RunModDQNTraining()
+    RunModDQNTraining()
 
     # RunCorridorTest()
-    RunRepDQNTest()
+    # RunRepDQNTest()
     # RunModDQNTest()
     # RunPurePursuitTest()
