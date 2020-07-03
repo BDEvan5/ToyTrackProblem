@@ -131,12 +131,14 @@ class TrainRepDQN:
 
 class TestRepDQN:
     def __init__(self, obs_space, act_space, name="best_avg"):
-        self.model = Qnet(obs_space, act_space)
+        # self.model = Qnet(obs_space, act_space)
+        self.model = None
         self.name = name
 
     def load(self, directory="./dqn_saves"):
         filename = self.name
-        self.model.load_state_dict(torch.load('%s/%s_model.pth' % (directory, filename)))
+        # self.model.load_state_dict(torch.load('%s/%s_model.pth' % (directory, filename)))
+        self.model = torch.load('%s/%s_model.pth' % (directory, filename))
         print(f"Loaded Agent: {self.name}")
 
     def act(self, obs):

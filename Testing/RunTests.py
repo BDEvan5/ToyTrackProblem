@@ -131,7 +131,7 @@ def TrainRepAgent(track_name, agent_name, buffer, i=0, load=True):
 
     print_n = 10
     rewards = []
-    for n in range(21):
+    for n in range(102):
         score, done, state = 0, False, env.reset()
         while not done:
             a = agent.learning_act(state)
@@ -260,10 +260,10 @@ def RunPurePursuitTest():
 
 
 if __name__ == "__main__":
-    RunRepDQNTraining()
+    # RunRepDQNTraining()
     # RunModDQNTraining()
 
     # RunCorridorTest()
-    # RunRepDQNTest()
+    RunRepDQNTest()
     # RunModDQNTest()
     # RunPurePursuitTest()

@@ -220,19 +220,26 @@ class TestEnv(TestMap, CarModel):
 
         return obs, reward, done, None
 
-    def _get_reward(self):
-        beta = 0.6
+    def _get_reward(self, crash):
+        if crash:
+            r_crash = -100
+            return r_crash, True
+
+        beta = 0.5 # scale to 
         r_done = 100
-        step_penalty = 5
+        # step_penalty = 5
         max_steps = 1000
 
         cur_distance = lib.get_distance(self.car_x, self.end)
         if cur_distance < 1 + self.action_scale:
             return r_done, True
         d_dis = self.last_distance - cur_distance
-        reward = beta * (d_dis**2 * d_dis/abs(d_dis)) - step_penalty
+        reward = 0
+        if abs(d_dis) > 0.01:
+            reward = beta * (d_dis**2 * d_dis/abs(d_dis)) # - step_penalty
         self.last_distance = cur_distance
         done = True if self.steps > max_steps else False
+
         return reward, done
 
     def render(self):
