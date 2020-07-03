@@ -183,7 +183,7 @@ class TrainModEnv(TrainMap, CarModel):
         self.memory.clear()
 
         self.set_start_end()
-        self._set_up_heat_map()
+        # self._set_up_heat_map()
         self.run_path_finder()
         self.pind = 1
 
@@ -227,7 +227,9 @@ class TrainModEnv(TrainMap, CarModel):
         if cur_distance < 1 + self.action_scale:
             return r_done, True
         d_dis = self.last_distance - cur_distance
-        reward = beta * (d_dis**2 * d_dis/abs(d_dis)) # - step_penalty
+        reward = 0
+        if abs(d_dis) > 0.01:
+            reward = beta * (d_dis**2 * d_dis/abs(d_dis)) # - step_penalty
         self.last_distance = cur_distance
         done = True if self.steps > max_steps else False
         return reward, done

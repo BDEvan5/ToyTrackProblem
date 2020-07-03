@@ -111,9 +111,9 @@ class TrainModDQN:
         return action, system, mod_action
 
     def get_pursuit_action(self, obs):
-        try:
+        if abs(obs[0]) > 0.01:
             grad = obs[1] / obs[0] # y/x
-        except:
+        else:
             grad = 10000
         angle = np.arctan(grad)
         if angle > 0:
