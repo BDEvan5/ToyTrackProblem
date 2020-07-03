@@ -37,25 +37,33 @@ class Qnet(nn.Module):
         self.fc2 = nn.Linear(h_size, h_size)
         self.fc3 = nn.Linear(h_size, action_space)
 
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
+        self.optimizer = optim.Adam(self.parameters(), lr=LEARNING_RATE)
+        self.exploration_rate = EXPLORATION_MAX
+
+    def forward(self, obs):
+        x = F.relu(self.fc1(obs))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
+        if torch.any(torch.isnan(x)):
+            print(f"Error in model values: nan detected")
+            print(f"Obs: {obs}")
+            print(f"Weights: {self.fc1.weight}")
+            # raise ValueError
         return x
       
 
 class TrainRepDQN:
     def __init__(self, obs_space, action_space, name="best_avg"):
-        self.model = Qnet(obs_space, action_space)
-        self.target = Qnet(obs_space, action_space)
+        self.obs_space = obs_space
         self.action_space = action_space
-        self.exploration_rate = EXPLORATION_MAX
-        self.optimizer = optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
+        self.model = None
+        self.target = None
+        
         self.update_steps = 0
         self.name = name
 
     def learning_act(self, obs):
-        if random.random() < self.exploration_rate:
+        if random.random() < self.model.exploration_rate:
             return random.randint(0, self.action_space-1)
         else: 
             return self.act(obs)
@@ -80,9 +88,9 @@ class TrainRepDQN:
             q_a = q_vals.gather(1, a)
             loss = F.mse_loss(q_a, q_update.detach())
 
-            self.optimizer.zero_grad()
+            self.model.optimizer.zero_grad()
             loss.backward()
-            self.optimizer.step()
+            self.model.optimizer.step()
 
         self.update_networks()
 
@@ -91,19 +99,23 @@ class TrainRepDQN:
         if self.update_steps % 100 == 1: # every 20 eps or so
             self.target.load_state_dict(self.model.state_dict())
         if self.update_steps % 12 == 1:
-            self.exploration_rate *= EXPLORATION_DECAY 
-            self.exploration_rate = max(EXPLORATION_MIN, self.exploration_rate)
+            self.model.exploration_rate *= EXPLORATION_DECAY 
+            self.model.exploration_rate = max(EXPLORATION_MIN, self.model.exploration_rate)
 
     def save(self, directory="./dqn_saves"):
         filename = self.name
-        torch.save(self.model.state_dict(), '%s/%s_model.pth' % (directory, filename))
-        torch.save(self.target.state_dict(), '%s/%s_target.pth' % (directory, filename))
+        # torch.save(self.model.state_dict(), '%s/%s_model.pth' % (directory, filename))
+        # torch.save(self.target.state_dict(), '%s/%s_target.pth' % (directory, filename))
+        torch.save(self.model, '%s/%s_model.pth' % (directory, filename))
+        torch.save(self.target, '%s/%s_target.pth' % (directory, filename))
         print(f"Saved Agent: {self.name}")
 
     def load(self, directory="./dqn_saves"):
         filename = self.name
-        self.model.load_state_dict(torch.load('%s/%s_model.pth' % (directory, filename)))
-        self.target.load_state_dict(torch.load('%s/%s_target.pth' % (directory, filename)))
+        # self.model.load_state_dict(torch.load('%s/%s_model.pth' % (directory, filename)))
+        # self.target.load_state_dict(torch.load('%s/%s_target.pth' % (directory, filename)))
+        self.model = torch.load('%s/%s_model.pth' % (directory, filename))
+        self.target = torch.load('%s/%s_target.pth' % (directory, filename))
         print(f"Loaded Agent: {self.name}")
 
     def try_load(self, load=True):
@@ -113,6 +125,8 @@ class TrainRepDQN:
             except:
                 pass
         else:
+            self.model = Qnet(self.obs_space, self.action_space)
+            self.target = Qnet(self.obs_space, self.action_space)
             print(f"Not loading - restarting training")
 
 class TestRepDQN:

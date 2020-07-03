@@ -211,14 +211,13 @@ class TestEnv(TestMap, CarModel):
         self.steps += 1
 
         new_x, new_theta = self._x_step_discrete(action)
-        if self._check_location(new_x):
-            obs = self._get_state_obs()
-            r_crash = -100
-            return obs, r_crash, True, None
-        self.car_x = new_x 
-        self.theta = new_theta
+        crash = self._check_location(new_x) 
+        if not crash:
+            self.car_x = new_x
+            self.theta = new_theta
+        reward, done = self._get_reward(crash)
         obs = self._get_state_obs()
-        reward, done = self._get_reward()
+
         return obs, reward, done, None
 
     def _get_reward(self):
