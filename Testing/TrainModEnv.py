@@ -81,6 +81,8 @@ class TrainMap:
         plt.imshow(self.race_map, origin='lower')
         plt.plot(self.start[0], self.start[1], '*', markersize=20)
         plt.plot(self.end[0], self.end[1], '*', markersize=20)
+        for pt in self.wpts:
+            plt.plot(pt[0], pt[1], 'x', markersize=10)
         plt.show()
         # plt.pause(0.001)
 
@@ -156,12 +158,21 @@ class TrainModEnv(TrainMap, CarModel):
 
     def run_path_finder(self):
         # path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
-        path_finder = PathFinder(self.return_false, self.start, self.end)
-        path = path_finder.run_search(10)
-        self.wpts = path
+        # path_finder = PathFinder(self.return_false, self.start, self.end)
+        # path = path_finder.run_search(10)
+        wpt_n = 6
+        wpts = []
+        dx = lib.sub_locations(self.end, self.start)
+        dxx = dx[0] / wpt_n
+        dyy = dx[1] / wpt_n
+        for i in range(wpt_n):
+            pt = lib.add_locations(self.start, [dxx, dyy], i)
+            wpts.append(pt)
+
+        self.wpts = wpts
         self.target = None
 
-        # self.show_map(self.wpts)
+        # self.show_map()
 
     def return_false(self, x):
         return False

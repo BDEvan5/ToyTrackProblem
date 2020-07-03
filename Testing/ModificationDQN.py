@@ -83,7 +83,7 @@ class TrainModDQN:
         if random.random() < self.model.exploration_rate:
             return random.randint(0, self.mod_space-1)
         else: 
-            return self.act(obs)
+            return self.mod_act(obs)
 
     def mod_act(self, obs):
         out = self.model.forward(obs)

@@ -98,6 +98,36 @@ def collect_observations(buffer, env_track_name, n_itterations=10000):
         sys.stdout.flush()
     print(" ")
 
+def collect_mod_observations(buffer0, buffer1, env_track_name, n_itterations=10000):
+    env = TrainModEnv(env_track_name)
+    pp = PurePursuit(env.state_space, env.action_space)
+    s, done = env.reset(), False
+    for i in range(n_itterations):
+        pre_mod = pp.act(s)
+        system = random.randint(0, 1)
+        if system == 1:
+            mod_act = random.randint(0, 1)
+            action_modifier = 2 if mod_act == 1 else -2
+            action = pre_mod + action_modifier # swerves left or right
+            action = np.clip(action, 0, env.action_space-1)
+        else:
+            action = pre_mod
+        # action = env.random_action()
+        s_p, r, done, r2 = env.step(action)
+        done_mask = 0.0 if done else 1.0
+        buffer0.put((s, system, r2, s_p, done_mask))
+        if system == 1: # mod action
+            buffer1.put((s, mod_act, r, s_p, done_mask))
+        s = s_p
+        if done:
+            s = env.reset()
+
+        print("\rPopulating Buffer {}/{}.".format(i, n_itterations), end="")
+        sys.stdout.flush()
+    print(" ")
+
+
+
 def DebugAgentTraining(agent, env):
     rewards = []
     
@@ -214,17 +244,16 @@ def RunRepDQNTraining():
         plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
 
 def RunModDQNTraining():
-    track_name = name50
+    track_name = name60
     agent_name = "DQNtrainMod1"
     buffer0 = ReplayBuffer()
     buffer1 = ReplayBuffer()
     total_rewards = []
 
-    # collect_observations(buffer, track_name, 500)
-    #todo: will need new observations fcn
+    collect_mod_observations(buffer0, buffer1, track_name, 500)
 
     # rewards = TrainModAgent(track_name, agent_name, buffer0, buffer1, 0, False)
-    total_rewards += rewards
+    # total_rewards += rewards
     for i in range(1, 100):
         print(f"Running batch: {i}")
         rewards = TrainModAgent(track_name, agent_name, buffer0, buffer1, 0, True)
