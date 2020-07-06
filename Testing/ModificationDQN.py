@@ -225,18 +225,59 @@ class TestModDQN:
     def __init__(self, obs_space, act_space, name="best_avg"):
         self.model = Qnet(obs_space, act_space)
         self.name = name
+        self.action_space = act_space
 
     def load(self, directory="./dqn_saves"):
         filename = self.name
-        self.model.load_state_dict(torch.load('%s/%s_model.pth' % (directory, filename)))
+        # self.model.load_state_dict(torch.load('%s/%s_model.pth' % (directory, filename)))
         self.model = torch.load('%s/%s_model.pth' % (directory, filename))
+        self.value_model = torch.load('%s/%s_Vmodel.pth' % (directory, filename))
         print(f"Loaded Agent: {self.name}")
 
+    def mod_act(self, obs):
+        out = self.model.forward(obs)
+        return out.argmax().item()
+
     def act(self, obs):
+        pp_action = self.get_pursuit_action(obs)
         obs_t = torch.from_numpy(obs).float()
-        out = self.model.forward(obs_t)
-        a = out.argmax().item()
-        return a
+        value_obs = np.append(obs, pp_action)
+        value_obs_t = torch.from_numpy(value_obs).float()
+        safe_value = self.value_model.forward(value_obs_t)
+        # 0= crash, 1 = no crash
+        threshold = 0.5
+        if safe_value.detach().item() > threshold:
+            action = pp_action
+        else:
+            mod_action = self.mod_act(obs_t) # [0, 1]
+            action_modifier = 2 if mod_action == 1 else -2
+            action = pp_action + action_modifier # swerves left or right
+            action = np.clip(action, 0, self.action_space-1)
+
+        return action
+
+    def get_pursuit_action(self, obs):
+        if abs(obs[0]) > 0.01:
+            grad = obs[1] / obs[0] # y/x
+        else:
+            grad = 10000
+        angle = np.arctan(grad)
+        if angle > 0:
+            angle = np.pi - angle
+        else:
+            angle = - angle
+        dth = np.pi / (self.action_space - 1)
+        action = int(angle / dth)
+
+        return action
+
+    def get_pp_acts(self, obses):
+        arr = np.zeros((len(obses)))
+        for i, obs in enumerate(obses):
+            arr[i] = self.get_pursuit_action(obs)
+
+        return arr
+
 
 
 

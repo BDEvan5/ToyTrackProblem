@@ -134,12 +134,12 @@ class TestMap:
         # self.end = [680, 100]
 
         # map 00
-        # self.start = [100, 900]
-        # self.end = [900, 100]
+        self.start = [100, 900]
+        self.end = [900, 100]
 
         # map 10
-        self.start = [530, 50]
-        self.end = [900, 200]
+        # self.start = [530, 50]
+        # self.end = [900, 200]
 
         # map 10
         # self.start = []

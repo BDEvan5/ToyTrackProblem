@@ -85,10 +85,10 @@ def evaluate_agent(env, agent, show=True):
         rewards.append(score)
         steps.append(env.steps) # record how many steps it took
 
-        if n % print_n == 1:
+        if n % print_n == 1 or show:
             mean = np.mean(rewards[-20:])
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> steps: {steps[-1]}")
-        if show and n%show_n == 1:
+        if (show and n%show_n == 1) or show:
             lib.plot(rewards, figure_n=2)
             plt.figure(2).savefig("Testing_" + agent.name)
             env.render()
@@ -321,19 +321,21 @@ def RunModDQNTraining():
 
 
 # testing algorithms
-def RunRepDQNTest(map_name):
+def RunRepDQNTest(map_name, agent_name):
     env = TestEnv(map_name)
-    agent = TestRepDQN(env.state_space, env.action_space, "DQNtrain2")
+    agent_name = "DQNtrain2"
+    agent = TestRepDQN(env.state_space, env.action_space, agent_name)
 
-    evaluate_agent(env, agent)
+    evaluate_agent(env, agent, True)
+    # evaluate_agent(env, agent, False)
 
-def RunModDQNTest(map_name):
-    env = TestEnv(name30)
-    env.run_path_finder()
-    # env = gym.make('CartPole-v1')
-    agent = TestModDQN(env.state_space, env.action_space, "TestDQN-CartPole")
+def RunModDQNTest(map_name, agent_name):
+    env = TestEnv(map_name)
+    agent_name = "DQNtrainMod3"
+    agent = TestModDQN(env.state_space, env.action_space, agent_name)
 
-    evaluate_agent(env, agent)
+    evaluate_agent(env, agent, True)
+    # evaluate_agent(env, agent, False)
 
 def RunCorridorTest(map_name):
     env = TestEnv(map_name)
@@ -353,13 +355,16 @@ def RunPurePursuitTest(map_name):
 if __name__ == "__main__":
     # DebugModAgent()
 
-    # map_name = test00
-    map_name = test10
+    map_name = test00
+    # map_name = test10
 
-    # RunRepDQNTraining()
-    # RunModDQNTraining()
+    rep_name = "RepTestDqnR1"
+    mod_name = "ModTestDqnR1"
 
-    RunCorridorTest(map_name)
+    # RunRepDQNTraining(rep_name)
+    # RunModDQNTraining(mod_name)
+
+    # RunCorridorTest(map_name)
     # RunPurePursuitTest(map_name)
-    # RunRepDQNTest(map_name)
-    # RunModDQNTest(map_name)
+    # RunRepDQNTest(map_name, rep_name)
+    RunModDQNTest(map_name, mod_name)
