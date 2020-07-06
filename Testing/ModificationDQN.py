@@ -97,13 +97,14 @@ class TrainModDQN:
         safe_value = self.value_model.forward(value_obs_t)
         # 0= crash, 1 = no crash
         threshold = 0.5
-        if safe_value.detach().item() > threshold:
+        if safe_value.detach().item() > threshold or True:
             action = pp_action
             system = 0 
             mod_action = None
         else:
             mod_action = self.learning_mod_act(obs_t) # [0, 1]
             action_modifier = 2 if mod_action == 1 else -2
+            # action_modifier = 0
             action = pp_action + action_modifier # swerves left or right
             action = np.clip(action, 0, self.action_space-1)
             system = 1

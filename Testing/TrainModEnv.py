@@ -256,9 +256,11 @@ class TrainModEnv(TrainMap, CarModel):
 
     def _get_state_obs(self):
         self._update_ranges()
-        target = self._get_target()
+        # target = self._get_target()
+        target = self.end
 
         rel_target = lib.sub_locations(target, self.car_x)
+        # rel_target = self.end
         self.target = rel_target
         transformed_target = lib.transform_coords(rel_target, self.theta)
         normalised_target = lib.normalise_coords(transformed_target)
