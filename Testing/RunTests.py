@@ -22,6 +22,10 @@ name30 = 'DataRecords/TrainTrack1030.npy'
 name40 = 'DataRecords/TrainTrack1040.npy'
 name50 = 'DataRecords/TrainTrack1050.npy'
 name60 = 'DataRecords/TrainTrack1060.npy'
+name70 = 'DataRecords/TrainTrack1070.npy'
+name80 = 'DataRecords/TrainTrack1080.npy'
+name90 = 'DataRecords/TrainTrack1090.npy'
+name01 = 'DataRecords/TrainTrack1100.npy'
 
 MEMORY_SIZE = 100000
 
@@ -284,13 +288,13 @@ def RunRepDQNTraining():
         plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
 
 def RunModDQNTraining():
-    track_name = name50
+    track_name = name80
     agent_name = "DQNtrainMod1"
     buffer0 = ReplayBuffer()
     buffer1 = ReplayBuffer()
     total_rewards = []
 
-    collect_mod_observations(buffer0, buffer1, track_name, 500)
+    collect_mod_observations(buffer0, buffer1, track_name, 5000)
 
     rewards = TrainModAgent(track_name, agent_name, buffer0, buffer1, 0, False)
     # total_rewards += rewards
@@ -299,7 +303,7 @@ def RunModDQNTraining():
         rewards = TrainModAgent(track_name, agent_name, buffer0, buffer1, 0, True)
         total_rewards += rewards
 
-        lib.plot(total_rewards, figure_n=2)
+        lib.plot(total_rewards, figure_n=3)
         plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
 
         

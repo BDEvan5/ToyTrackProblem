@@ -97,7 +97,7 @@ class TrainModDQN:
         safe_value = self.value_model.forward(value_obs_t)
         # 0= crash, 1 = no crash
         threshold = 0.5
-        if safe_value.detach().item() > threshold or True:
+        if safe_value.detach().item() > threshold:
             action = pp_action
             system = 0 
             mod_action = None

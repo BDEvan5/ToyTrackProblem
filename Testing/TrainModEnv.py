@@ -156,6 +156,9 @@ class TrainModEnv(TrainMap, CarModel):
         self.wpts = []
         self.pind = 1
 
+        self.step_size = 2
+        self.n_searches = 25
+
     def run_path_finder(self):
         # path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
         # path_finder = PathFinder(self.return_false, self.start, self.end)
@@ -184,7 +187,7 @@ class TrainModEnv(TrainMap, CarModel):
 
         self.set_start_end()
         # self._set_up_heat_map()
-        self.run_path_finder()
+        # self.run_path_finder()
         self.pind = 1
 
         self.theta = np.pi / 2 - np.arctan(lib.get_gradient(self.start, self.end))
@@ -218,21 +221,22 @@ class TrainModEnv(TrainMap, CarModel):
             r_crash = -100
             return r_crash, True
 
-        beta = 0.5 # scale to 
-        r_done = 100
-        step_penalty = 5
-        max_steps = 1000
+        # beta = 0.5 # scale to 
+        r_done = 0 # 100
+        # step_penalty = 5
+        # max_steps = 1000
 
         cur_distance = lib.get_distance(self.car_x, self.end)
         if cur_distance < 1 + self.action_scale:
             return r_done, True
-        d_dis = self.last_distance - cur_distance
-        reward = 0
-        if abs(d_dis) > 0.01:
-            reward = beta * (d_dis**2 * d_dis/abs(d_dis)) # - step_penalty
-        self.last_distance = cur_distance
-        done = True if self.steps > max_steps else False
-        return reward, done
+        # d_dis = self.last_distance - cur_distance
+        # reward = 0
+        # if abs(d_dis) > 0.01:
+        #     reward = beta * (d_dis**2 * d_dis/abs(d_dis)) # - step_penalty
+        # self.last_distance = cur_distance
+        # done = True if self.steps > max_steps else False
+        # return reward, done
+        return 0, False
 
     def render(self):
         x, y = [], []
@@ -285,18 +289,16 @@ class TrainModEnv(TrainMap, CarModel):
 
         return target
 
-    def _update_ranges(self):
-        step_size = 3
-        n_searches = 15
+    def _update_ranges(self): 
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
-            for j in range(n_searches): # number of search points
-                fs = step_size * j
+            for j in range(self.n_searches): # number of search points
+                fs = self.step_size * j
                 dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
                 search_val = lib.add_locations(self.car_x, dx)
                 if self._check_location(search_val):
                     break             
-            self.ranges[i] = (j-1) / n_searches # gives a scaled val to 1 
+            self.ranges[i] = (j) / self.n_searches # gives a scaled val to 1 
 
     def box_render(self):
         car_x = int(self.car_x[0])
@@ -315,7 +317,7 @@ class TrainModEnv(TrainMap, CarModel):
 
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
-            fs = self.ranges[i] * 15 * 3
+            fs = self.ranges[i] * self.step_size * self.n_searches
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations(self.car_x, dx)
             x = [car_x, range_val[0]]
@@ -342,7 +344,7 @@ class TrainModEnv(TrainMap, CarModel):
 
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
-            fs = self.ranges[i] * 8 * 20
+            fs = self.ranges[i] * self.step_size * self.n_searches
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations(car_pos, dx)
             x = [car_pos[0], range_val[0]]
