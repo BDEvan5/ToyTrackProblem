@@ -289,7 +289,7 @@ def RunRepDQNTraining():
 
 def RunModDQNTraining():
     track_name = name80
-    agent_name = "DQNtrainMod1"
+    agent_name = "DQNtrainMod3"
     buffer0 = ReplayBuffer()
     buffer1 = ReplayBuffer()
     total_rewards = []
