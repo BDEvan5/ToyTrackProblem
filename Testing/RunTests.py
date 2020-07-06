@@ -9,7 +9,7 @@ import torch
 
 import LibFunctions as lib
 from TestEnv import TestEnv
-from TrainReplacementEnv import TrainRepEnv
+from TrainRepEnv import TrainRepEnv
 from TrainModEnv import TrainModEnv
 from Corridor import CorridorAgent, PurePursuit
 from ReplacementDQN import TestRepDQN, TrainRepDQN
