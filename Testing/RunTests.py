@@ -193,7 +193,7 @@ def DebugModAgent(i=0, load=False):
 
     # agent.save()
     lib.plot(rewards, figure_n=2)
-    plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
+    plt.figure(2).savefig("PNGs/Training_DQN" + str(i))
 
     return rewards
 
@@ -228,7 +228,7 @@ def TrainRepAgent(track_name, agent_name, buffer, i=0, load=True):
     agent.save()
 
     # lib.plot(rewards, figure_n=2)
-    # plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
+    # plt.figure(2).savefig("PNGs/Training_DQN" + str(i))
 
     return rewards
 
@@ -264,7 +264,7 @@ def TrainModAgent(track_name, agent_name, buffer0, buffer1, i=0, load=True):
 
     agent.save()
     lib.plot(rewards, figure_n=2)
-    plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
+    plt.figure(2).savefig("PNGs/Training_DQN" + str(i))
 
     return rewards
 
@@ -275,7 +275,7 @@ def RunRepDQNTraining():
     buffer = ReplayBuffer()
     total_rewards = []
 
-    collect_observations(buffer, track_name, 500)
+    collect_observations(buffer, track_name, 5000)
 
     rewards = TrainRepAgent(track_name, agent_name, buffer, 0, False)
     total_rewards += rewards
@@ -285,7 +285,7 @@ def RunRepDQNTraining():
         total_rewards += rewards
 
         lib.plot(total_rewards, figure_n=2)
-        plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
+        plt.figure(2).savefig("PNGs/Training_DQN" + str(i))
 
 def RunModDQNTraining():
     track_name = name80
@@ -304,7 +304,7 @@ def RunModDQNTraining():
         total_rewards += rewards
 
         lib.plot(total_rewards, figure_n=3)
-        plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
+        plt.figure(2).savefig("PNGs/Training_DQN" + str(i))
 
         
 
@@ -344,8 +344,8 @@ def RunPurePursuitTest():
 if __name__ == "__main__":
     # DebugModAgent()
 
-    # RunRepDQNTraining()
-    RunModDQNTraining()
+    RunRepDQNTraining()
+    # RunModDQNTraining()
 
     # RunCorridorTest()
     # RunRepDQNTest()
