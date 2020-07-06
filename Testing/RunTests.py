@@ -336,11 +336,11 @@ def RunModDQNTest(map_name):
     evaluate_agent(env, agent)
 
 def RunCorridorTest(map_name):
-    env = TestEnv(name00)
-
+    env = TestEnv(map_name)
     corridor_agent = CorridorAgent(env.state_space ,env.action_space)
 
     evaluate_agent(env, corridor_agent, True)
+    evaluate_agent(env, corridor_agent, False)
 
 def RunPurePursuitTest(map_name):
     env = TestEnv(map_name)
@@ -359,7 +359,7 @@ if __name__ == "__main__":
     # RunRepDQNTraining()
     # RunModDQNTraining()
 
-    # RunCorridorTest(map_name)
-    RunPurePursuitTest(map_name)
+    RunCorridorTest(map_name)
+    # RunPurePursuitTest(map_name)
     # RunRepDQNTest(map_name)
     # RunModDQNTest(map_name)

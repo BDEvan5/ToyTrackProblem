@@ -52,7 +52,7 @@ class PathFinder:
                 break
             self.generate_children()
             i += 1
-
+        print(f"Number of itterations: {i}")
         assert i < max_steps, "Max Iterations reached: problem with search"
         assert len(self.open_list) > 0, "Search broke: no open nodes"
         path = self.get_path_list()

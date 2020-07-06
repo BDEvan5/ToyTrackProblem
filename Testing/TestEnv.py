@@ -75,7 +75,7 @@ class TestMap:
             self.heat_map = np.load(self.hm_name)
             print(f"Heatmap loaded")
         except:
-            print(f"Starting heatmap production")
+            
             self._set_up_heat_map()
             np.save(self.hm_name, self.heat_map)
             print(f"Heatmap saved")
@@ -126,7 +126,6 @@ class TestMap:
         plt.show()
         # plt.pause(0.001)
 
-
     def set_start_end(self):
         # self.start = [36, 80]
         # self.end = [948, 700] 
@@ -155,9 +154,11 @@ class TestMap:
         # self.end = []
 
     def _set_up_heat_map(self):
+        print(f"Starting heatmap production")
         track_map = self.race_map
-        for _ in range(19): # blocks up to 5 away will start to have a gradient
+        for i in range(15): # blocks up to 5 away will start to have a gradient
             new_map = np.zeros_like(track_map)
+            print(f"Map run: {i}")
             for i in range(1, 998):
                 for j in range(1, 998):
                     left = track_map[i-1, j]
@@ -222,20 +223,21 @@ class TestEnv(TestMap, CarModel):
         self.run_path_finder()
 
     def run_path_finder(self):
-        self.show_hm()
+        # self.show_map()
+        # self.show_hm()
         try:
-            raise Exception
+            # raise Exception
             self.wpts = np.load(self.path_name)
             print(f"Path Loaded")
         except:
             path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
-            path = path_finder.run_search(20)
+            path = path_finder.run_search(10)
             path = modify_path(path)
             self.wpts = path
             np.save(self.path_name, self.wpts)
             print("Path Generated")
 
-        self.show_map(self.wpts)
+        # self.show_map(self.wpts)
       
     def reset(self):
         self.eps += 1
@@ -278,7 +280,7 @@ class TestEnv(TestMap, CarModel):
         max_steps = 1000
 
         cur_distance = lib.get_distance(self.car_x, self.end)
-        if cur_distance < 1 + self.action_scale:
+        if cur_distance < 2* self.action_scale:
             return r_done, True
         d_dis = self.last_distance - cur_distance
         reward = 0
