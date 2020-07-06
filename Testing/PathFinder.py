@@ -48,13 +48,13 @@ class PathFinder:
             self.find_current_node()
 
             if self.check_done():
-                # print("The shortest path has been found")
+                print("The shortest path has been found")
                 break
             self.generate_children()
             i += 1
 
         assert i < max_steps, "Max Iterations reached: problem with search"
-        assert len(self.open_list) > 0 or i ==1, "Search broke: no open nodes"
+        assert len(self.open_list) > 0, "Search broke: no open nodes"
         path = self.get_path_list()
 
         return path
@@ -256,7 +256,7 @@ def modify_path(path):
     path = new_path
 
     new_path = []
-    ds = 20
+    ds = 30
     new_path.append(path[0])
     for pt in path:
         dis = f.get_distance(new_path[-1], pt)

@@ -15,17 +15,24 @@ from Corridor import CorridorAgent, PurePursuit
 from ReplacementDQN import TestRepDQN, TrainRepDQN
 from ModificationDQN import TestModDQN, TrainModDQN
 
-name00 = 'DataRecords/TrainTrack1000.npy'
-name10 = 'DataRecords/TrainTrack1010.npy'
-name20 = 'DataRecords/TrainTrack1020.npy'
-name30 = 'DataRecords/TrainTrack1030.npy'
-name40 = 'DataRecords/TrainTrack1040.npy'
-name50 = 'DataRecords/TrainTrack1050.npy'
-name60 = 'DataRecords/TrainTrack1060.npy'
-name70 = 'DataRecords/TrainTrack1070.npy'
-name80 = 'DataRecords/TrainTrack1080.npy'
-name90 = 'DataRecords/TrainTrack1090.npy'
-name01 = 'DataRecords/TrainTrack1100.npy'
+name00 = 'TrainTrack1000'
+name10 = 'TrainTrack1010'
+name20 = 'TrainTrack1020'
+name30 = 'TrainTrack1030'
+name40 = 'TrainTrack1040'
+name50 = 'TrainTrack1050'
+name60 = 'TrainTrack1060'
+name70 = 'TrainTrack1070'
+name80 = 'TrainTrack1080'
+name90 = 'TrainTrack1090'
+name01 = 'TrainTrack1100'
+
+test00 = 'TestTrack1000'
+test10 = 'TestTrack1010'
+test20 = 'TestTrack1020'
+test30 = 'TestTrack1030'
+test40 = 'TestTrack1040'
+test50 = 'TestTrack1050'
 
 MEMORY_SIZE = 100000
 
@@ -62,7 +69,7 @@ def evaluate_agent(env, agent, show=True):
     print_n = 10
     show_n = 10
 
-    rewards = []
+    rewards, steps = [], []
     for n in range(100):
         score, done, state = 0, False, env.reset()
         while not done:
@@ -76,17 +83,21 @@ def evaluate_agent(env, agent, show=True):
                 pass
             
         rewards.append(score)
+        steps.append(env.steps) # record how many steps it took
 
         if n % print_n == 1:
             mean = np.mean(rewards[-20:])
-            print(f"Run: {n} --> Score: {score} --> Mean: {mean} ")
+            print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> steps: {steps[-1]}")
         if show and n%show_n == 1:
             lib.plot(rewards, figure_n=2)
             plt.figure(2).savefig("Testing_" + agent.name)
             env.render()
 
+    mean_steps = np.mean(steps)
+    print(f"Mean steps = {mean_steps}")
 
-def collect_observations(buffer, env_track_name, n_itterations=10000):
+
+def collect_rep_observations(buffer, env_track_name, n_itterations=10000):
     env = TrainRepEnv(env_track_name)
     s, done = env.reset(), False
     for i in range(n_itterations):
@@ -275,7 +286,7 @@ def RunRepDQNTraining():
     buffer = ReplayBuffer()
     total_rewards = []
 
-    collect_observations(buffer, track_name, 5000)
+    collect_rep_observations(buffer, track_name, 5000)
 
     rewards = TrainRepAgent(track_name, agent_name, buffer, 0, False)
     total_rewards += rewards
@@ -310,15 +321,13 @@ def RunModDQNTraining():
 
 
 # testing algorithms
-def RunRepDQNTest():
-    env = TestEnv(name30)
-    env.run_path_finder()
-    # env = gym.make('CartPole-v1')
+def RunRepDQNTest(map_name):
+    env = TestEnv(map_name)
     agent = TestRepDQN(env.state_space, env.action_space, "DQNtrain2")
 
     evaluate_agent(env, agent)
 
-def RunModDQNTest():
+def RunModDQNTest(map_name):
     env = TestEnv(name30)
     env.run_path_finder()
     # env = gym.make('CartPole-v1')
@@ -326,28 +335,31 @@ def RunModDQNTest():
 
     evaluate_agent(env, agent)
 
-def RunCorridorTest():
+def RunCorridorTest(map_name):
     env = TestEnv(name00)
 
     corridor_agent = CorridorAgent(env.state_space ,env.action_space)
 
     evaluate_agent(env, corridor_agent, True)
 
-def RunPurePursuitTest():
-    env = TestEnv(name30)
-    env.run_path_finder()
+def RunPurePursuitTest(map_name):
+    env = TestEnv(map_name)
     agent = PurePursuit(env.state_space ,env.action_space)
 
-    evaluate_agent(env, agent, True)
+    # evaluate_agent(env, agent, True)
+    evaluate_agent(env, agent, False)
 
 
 if __name__ == "__main__":
     # DebugModAgent()
 
-    RunRepDQNTraining()
+    # map_name = test00
+    map_name = test10
+
+    # RunRepDQNTraining()
     # RunModDQNTraining()
 
-    # RunCorridorTest()
-    # RunRepDQNTest()
-    # RunModDQNTest()
-    # RunPurePursuitTest()
+    # RunCorridorTest(map_name)
+    RunPurePursuitTest(map_name)
+    # RunRepDQNTest(map_name)
+    # RunModDQNTest(map_name)

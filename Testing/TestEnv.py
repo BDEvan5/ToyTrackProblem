@@ -55,13 +55,14 @@ class TestMap:
 
         self.x_bound = [1, 999]
         self.y_bound = [1, 999]
-        self.hm_name = 'DataRecords/heatmap.npy'
+        self.hm_name = 'DataRecords/' + self.name + '_heatmap.npy'
 
         self.create_race_map()
         # self.race_map = np.flip(self.race_map)
 
     def create_race_map(self):
-        array = np.load(self.name)
+        race_map_name = 'DataRecords/' + self.name + '.npy'
+        array = np.load(race_map_name)
         new_map = np.zeros((self.map_dim, self.map_dim))
         block_range = self.map_dim / array.shape[0]
         for i in range(self.map_dim):
@@ -70,9 +71,11 @@ class TestMap:
 
         self.race_map = new_map.T
         try:
+            # raise Exception
             self.heat_map = np.load(self.hm_name)
             print(f"Heatmap loaded")
         except:
+            print(f"Starting heatmap production")
             self._set_up_heat_map()
             np.save(self.hm_name, self.heat_map)
             print(f"Heatmap saved")
@@ -106,16 +109,54 @@ class TestMap:
         plt.show()
         # plt.pause(0.001)
 
+    def show_hm(self, path=None):
+        plt.imshow(self.heat_map.T, origin='lower')
+        plt.plot(self.start[0], self.start[1], '*', markersize=20)
+        plt.plot(self.end[0], self.end[1], '*', markersize=20)
+
+
+        if path is not None:
+            xs, ys = [], []
+            for pt in path:
+                xs.append(pt[0])
+                ys.append(pt[1])
+            
+            plt.plot(xs, ys)
+
+        plt.show()
+        # plt.pause(0.001)
+
+
     def set_start_end(self):
         # self.start = [36, 80]
         # self.end = [948, 700] 
 
-        self.start = [180, 970]
-        self.end = [680, 100]
+        # self.start = [180, 970]
+        # self.end = [680, 100]
+
+        # map 00
+        # self.start = [100, 900]
+        # self.end = [900, 100]
+
+        # map 10
+        self.start = [530, 50]
+        self.end = [900, 200]
+
+        # map 10
+        # self.start = []
+        # self.end = []
+
+        # # map 10
+        # self.start = []
+        # self.end = []
+
+        # # map 10
+        # self.start = []
+        # self.end = []
 
     def _set_up_heat_map(self):
         track_map = self.race_map
-        for _ in range(15): # blocks up to 5 away will start to have a gradient
+        for _ in range(19): # blocks up to 5 away will start to have a gradient
             new_map = np.zeros_like(track_map)
             for i in range(1, 998):
                 for j in range(1, 998):
@@ -170,25 +211,31 @@ class TestEnv(TestMap, CarModel):
         CarModel.__init__(self, self.n_ranges)
         self.set_start_end()
 
-        wpts = None
+        self.wpts = None
         self.pind = None
-        self.path_name = "DataRecords/path.npy"
+        self.path_name = "DataRecords/" + self.name + "_path.npy" 
         self.target = None
 
+        self.step_size = 20
+        self.n_searches = 15
+
+        self.run_path_finder()
+
     def run_path_finder(self):
+        self.show_hm()
         try:
-            # raise Exception
+            raise Exception
             self.wpts = np.load(self.path_name)
             print(f"Path Loaded")
         except:
             path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
-            path = path_finder.run_search(5)
+            path = path_finder.run_search(20)
             path = modify_path(path)
             self.wpts = path
             np.save(self.path_name, self.wpts)
             print("Path Generated")
 
-        # self.show_map(self.wpts)
+        self.show_map(self.wpts)
       
     def reset(self):
         self.eps += 1
@@ -256,6 +303,9 @@ class TestEnv(TestMap, CarModel):
         plt.plot(x, y)
         plt.plot(self.start[0], self.start[1], '*', markersize=20)
         plt.plot(self.end[0], self.end[1], '*', markersize=20)
+
+        for pt in self.wpts:
+            plt.plot(pt[0], pt[1], 'x', markersize=10)
         
         plt.pause(0.001)
         # fig.savefig(f"Renders/Rendering_{self.eps}")
@@ -291,17 +341,15 @@ class TestEnv(TestMap, CarModel):
         return target
 
     def _update_ranges(self):
-        step_size = 20
-        n_searches = 8
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
-            for j in range(n_searches): # number of search points
-                fs = step_size * j
+            for j in range(self.n_searches): # number of search points
+                fs = self.step_size * j
                 dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
                 search_val = lib.add_locations(self.car_x, dx)
                 if self._check_location(search_val):
                     break             
-            self.ranges[i] = (j-1) / n_searches # gives a scaled val to 1 
+            self.ranges[i] = (j) / self.n_searches # gives a scaled val to 1 
 
     def box_render(self):
         box = 100
@@ -329,7 +377,7 @@ class TestEnv(TestMap, CarModel):
 
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
-            fs = self.ranges[i] * 8 * 20
+            fs = self.ranges[i] * self.step_size * self.n_searches
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations(car_pos, dx)
             x = [car_pos[0], range_val[0]]
@@ -355,7 +403,7 @@ class TestEnv(TestMap, CarModel):
 
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
-            fs = self.ranges[i] * 8 * 20
+            fs = self.ranges[i] * self.step_size * self.n_searches
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations(car_pos, dx)
             x = [car_pos[0], range_val[0]]

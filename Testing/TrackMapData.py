@@ -15,8 +15,8 @@ class TrackMapData:
         self.n_blocks = int(self.map_size[0]/self.res) # how many blocks per dimension
 
         #zeros to ones
-        # self.track_map = np.ones((self.n_blocks, self.n_blocks), dtype=np.bool)
-        self.track_map = np.zeros((self.n_blocks, self.n_blocks), dtype=np.bool)
+        self.track_map = np.ones((self.n_blocks, self.n_blocks), dtype=np.bool)
+        # self.track_map = np.zeros((self.n_blocks, self.n_blocks), dtype=np.bool)
         self.track_hm = None
         self.obs_map = np.zeros_like(self.track_map) # stores heatmap of obstacles
         
