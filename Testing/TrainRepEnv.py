@@ -46,7 +46,7 @@ class CarModel:
         return np.random.randint(0, self.action_space-1)
 
 class TrainMap:
-    def __init__(self, name='DataRecords/TrainTrack1020.npy'):
+    def __init__(self, name):
         self.name = name
         self.map_dim = 100
 
@@ -60,7 +60,8 @@ class TrainMap:
         self.create_race_map()
 
     def create_race_map(self):
-        new_map = np.load(self.name)
+        track_name = 'DataRecords/' + self.name + '.npy'
+        new_map = np.load(track_name)
         t_map = new_map
         self.race_map = t_map
 
@@ -155,6 +156,7 @@ class TrainRepEnv(TrainMap, CarModel):
         reward = 0
         if abs(d_dis) > 0.01:
             reward = beta * (d_dis**2 * d_dis/abs(d_dis)) # - step_penalty
+            # reward = beta * d_dis# - step_penalty
         self.last_distance = cur_distance
         done = True if self.steps > max_steps else False
 

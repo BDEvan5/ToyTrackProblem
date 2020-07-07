@@ -62,7 +62,8 @@ class TrainMap:
         self.create_race_map()
 
     def create_race_map(self):
-        new_map = np.load(self.name)
+        track_name = 'DataRecords/' + self.name + '.npy'
+        new_map = np.load(track_name)
         t_map = new_map
         self.race_map = t_map
 
