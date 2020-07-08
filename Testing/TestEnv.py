@@ -75,10 +75,29 @@ class TestMap:
             self.heat_map = np.load(self.hm_name)
             print(f"Heatmap loaded")
         except:
-            
             self._set_up_heat_map()
             np.save(self.hm_name, self.heat_map)
             print(f"Heatmap saved")
+
+        self._add_obstacles()
+
+    def _add_obstacles(self):
+        # map 1
+        obs_locs = [[100, 700], [200, 200], [550, 500], [700, 700], [700, 400]]
+
+        # map2 
+        # obs_locs = [[200, 200], [600, 600]]
+
+        obs_size = [50, 100]
+        for obs in obs_locs:
+            for i in range(obs_size[0]):
+                for j in range(obs_size[1]):
+                    x = i + obs[0]
+                    y = j + obs[1]
+                    self.race_map[x, y] = 2
+
+
+
 
     def _check_location(self, x):
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
