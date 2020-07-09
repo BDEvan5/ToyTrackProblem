@@ -52,16 +52,12 @@ class MostBasicEnv:
         self.car_x = None
         self.theta = None
 
-        self.steps = 0
-        self.memory = []
-        self.eps = 0
         self.x_bound = [1, 99]
         self.y_bound = [1, 99]
         
         self.target = None
         self.end = None
         self.start = [50, 0]
-        self.last_distance = 50
         self.race_map = np.zeros((100, 100))
 
         self.ranges = np.zeros(self.n_ranges)
@@ -124,11 +120,7 @@ class MostBasicEnv:
         return obs
 
     def step(self, action):
-        self.memory.append(self.car_x)
-        self.steps += 1
-
         new_x, new_theta = self._x_step_discrete(action)
-        # crash = self._check_location(new_x) 
         crash = self._check_line(self.car_x, new_x)
         if not crash:
             self.car_x = new_x
@@ -184,29 +176,12 @@ class MostBasicEnv:
         return np.random.randint(0, self.action_space-1)
 
     def _get_reward(self, crash, action):
-        beta = 0.8 # scale to 
-        r_done = 0
-        # step_penalty = 5
-        max_steps = 1000
-
-        # done
-        done = True if self.steps > max_steps else False
-
         # crash
         if crash:
             r_crash = -100
             return r_crash, True
 
-        # end
-        # cur_distance = lib.get_distance(self.car_x, self.end)
-        # if cur_distance < 1 + self.action_scale:
-        #     return r_done, True
-
         grad = lib.get_gradient(self.car_x, self.end)
-        # try:
-        #     grad = [1] / obs[0] # y/x
-        # except:
-        #     grad = 10000
         angle = np.arctan(grad)
         if angle > 0:
             angle = np.pi - angle
@@ -218,7 +193,7 @@ class MostBasicEnv:
         d_action = abs(best_action - action) ** 2
         reward = - 5 * d_action
 
-        return reward, done
+        return reward, False
 
     def render(self):
         car_x = int(self.car_x[0])
@@ -266,7 +241,7 @@ def CustomTrainLoop(agent_name, buffer, load=True):
     print_n = 100
     rewards = []
     score = 0.0
-    for n in range(10000):
+    for n in range(3000):
         state = env.reset()
         a = agent.learning_act(state)
         s_prime, r, done, _ = env.step(a)
@@ -294,7 +269,7 @@ def CustomTrainLoop(agent_name, buffer, load=True):
     return rewards
 
 def runCustomLoop():
-    agent_name = "RepBasicTrain"
+    agent_name = "RepBasicTrain1"
     buffer = ReplayBuffer()
 
     collect_custom_obs(buffer)

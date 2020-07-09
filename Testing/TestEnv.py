@@ -256,7 +256,11 @@ class TestEnv(TestMap, CarModel):
             np.save(self.path_name, self.wpts)
             print("Path Generated")
 
+        self.wpts = np.append(self.wpts, self.end)
+        self.wpts = np.reshape(self.wpts, (-1, 2))
+        print(f"Wpts including end")
         # self.show_map(self.wpts)
+
       
     def reset(self):
         self.eps += 1
