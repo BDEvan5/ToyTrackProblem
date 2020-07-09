@@ -428,13 +428,14 @@ if __name__ == "__main__":
 
     # rep_name = "RepTestDqnStd"
     # rep_name = "RepTestDqnSquare"
-    rep_name = "RepOpt1"
+    # rep_name = "RepOpt1"
+    rep_name = "RepBasicTrain"
     # rep_name = "Testing"
     # mod_name = "ModTestDqnIntermediate"
 
     # RunRepDQNTraining1(rep_name)
     # RunRepDQNTraining2(rep_name)
-    RunRepDQNTraining3(rep_name)
+    # RunRepDQNTraining3(rep_name)
 
     # RunModDQNTraining1(mod_name)
     # RunModDQNTraining2(mod_name)
@@ -442,5 +443,5 @@ if __name__ == "__main__":
 
     # RunCorridorTest(map_name)
     # RunPurePursuitTest(map_name)
-    # RunRepDQNTest(map_name, rep_name)
+    RunRepDQNTest(map_name, rep_name)
     # RunModDQNTest(map_name, mod_name)

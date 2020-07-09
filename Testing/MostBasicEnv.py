@@ -43,8 +43,7 @@ class ReplayBuffer():
 
 
 class MostBasicEnv:
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
         self.n_ranges = 10
         self.state_space = self.n_ranges + 2
         self.action_space = 10
@@ -88,9 +87,9 @@ class MostBasicEnv:
         self.end = [self.target[0] * fs + self.car_x[0] , self.target[1] * fs + self.car_x[1]]
 
     def _locate_obstacles(self):
-        n_obs = 4
-        xs = np.random.randint(0, 80, (n_obs, 1))
-        ys = np.random.randint(0, 40, (n_obs, 1))
+        n_obs = 3
+        xs = np.random.randint(20, 60, (n_obs, 1))
+        ys = np.random.randint(4, 30, (n_obs, 1))
         obs_locs = np.concatenate([xs, ys], axis=1)
         # obs_locs = np.random.random((n_obs, 2)) * 100 # [random coord]
         obs_size = [15, 8]
@@ -134,7 +133,7 @@ class MostBasicEnv:
         if not crash:
             self.car_x = new_x
             self.theta = new_theta
-        reward, done = self._get_reward(crash)
+        reward, done = self._get_reward(crash, action)
         reward = reward * 0.01 # scale to -1, 1
         obs = self._get_state_obs()
 
@@ -184,26 +183,40 @@ class MostBasicEnv:
     def random_action(self):
         return np.random.randint(0, self.action_space-1)
 
-    def _get_reward(self, crash):
-        if crash:
-            r_crash = -0
-            return r_crash, True
-
+    def _get_reward(self, crash, action):
         beta = 0.8 # scale to 
         r_done = 0
         # step_penalty = 5
         max_steps = 1000
 
-        cur_distance = lib.get_distance(self.car_x, self.end)
-        if cur_distance < 1 + self.action_scale:
-            return r_done, True
-        d_dis = self.last_distance - cur_distance
-        reward = 0
-        if abs(d_dis) > 0.01:
-            reward = beta * (d_dis**2 * d_dis/abs(d_dis)) # - step_penalty
-            # reward = beta * d_dis# - step_penalty
-        # self.last_distance = cur_distance
+        # done
         done = True if self.steps > max_steps else False
+
+        # crash
+        if crash:
+            r_crash = -100
+            return r_crash, True
+
+        # end
+        # cur_distance = lib.get_distance(self.car_x, self.end)
+        # if cur_distance < 1 + self.action_scale:
+        #     return r_done, True
+
+        grad = lib.get_gradient(self.car_x, self.end)
+        # try:
+        #     grad = [1] / obs[0] # y/x
+        # except:
+        #     grad = 10000
+        angle = np.arctan(grad)
+        if angle > 0:
+            angle = np.pi - angle
+        else:
+            angle = - angle
+        dth = np.pi / (self.action_space - 1)
+        best_action = int(angle / dth)
+
+        d_action = abs(best_action - action) ** 2
+        reward = - 5 * d_action
 
         return reward, done
 
@@ -232,34 +245,31 @@ class MostBasicEnv:
         plt.pause(0.001)
 
 
+def collect_custom_obs(buffer, n_itterations=5000):
+    env = MostBasicEnv()
+    for n in range(n_itterations):
+        state = env.reset()
+        a = env.random_action()
+        s_prime, r, done, _ = env.step(a)
+        done_mask = 0.0 if done else 1.0
+        buffer.put((state, a, r, s_prime, done_mask))
+        print("\rPopulating Buffer {}/{}.".format(n, n_itterations), end="")
+        sys.stdout.flush()
+    print(" ")
 
-def CustomTrainLoop():
-    env_name = "MyBasicEnv"
-    agent_name = "RepBasicTrain"
-    env = MostBasicEnv(env_name)
+
+def CustomTrainLoop(agent_name, buffer, load=True):
+    env = MostBasicEnv()
     agent = TrainRepDQN(env.state_space, env.action_space, agent_name)
-    agent.try_load(False)
-    buffer = ReplayBuffer()
-
-    # for n in range(5000):
-    #     state = env.reset()
-    #     a = env.random_action()
-    #     s_prime, r, done, _ = env.step(a)
-    #     done_mask = 0.0 if done else 1.0
-    #     buffer.put((state, a, r, s_prime, done_mask))
-    #     print("\rPopulating Buffer {}/5000.".format(n), end="")
-    #     sys.stdout.flush()
-    # print(" ")
-
+    agent.try_load(load)
+    
     print_n = 100
     rewards = []
     score = 0.0
-    for n in range(50000):
+    for n in range(10000):
         state = env.reset()
-        # env.render()
         a = agent.learning_act(state)
         s_prime, r, done, _ = env.step(a)
-        # env.render()
         done_mask = 0.0 if done else 1.0
         buffer.put((state, a, r, s_prime, done_mask))
 
@@ -268,25 +278,37 @@ def CustomTrainLoop():
         score += r
 
         if n % print_n == 1:
-            rewards.append(score) # score is per 500 steps
-            score = 0
             env.render()    
             exp = agent.model.exploration_rate
             mean = np.mean(rewards[-20:])
             b = buffer.size()
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
+            rewards.append(score) # score is per 500 steps
+            score = 0
             lib.plot(rewards, figure_n=2)
-            agent.save()
+    agent.save()
 
-    lib.plot(rewards, figure_n=2)
-    plt.figure(2).savefig("PNGs/Training_DQN_basic" + str(i))
+    # lib.plot(rewards, figure_n=2)
+    # plt.figure(2).savefig("PNGs/Training_DQN_basic")
 
-    # return rewards
+    return rewards
 
+def runCustomLoop():
+    agent_name = "RepBasicTrain"
+    buffer = ReplayBuffer()
 
+    collect_custom_obs(buffer)
+    rewards = []
 
+    r = CustomTrainLoop(agent_name, buffer, False)
+    rewards += r
+    for i in range(10):
+        print(f"Running train: {i}")
+        r = CustomTrainLoop(agent_name, buffer, True)   
+        rewards += r
+        lib.plot(rewards, figure_n=3)
 
 
 if __name__ == "__main__":
-    CustomTrainLoop()
+    runCustomLoop()
 

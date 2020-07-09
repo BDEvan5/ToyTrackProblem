@@ -123,6 +123,7 @@ class TrainRepDQN:
             try:
                 self.load()
             except:
+                print(f"Unable to load model")
                 pass
         else:
             self.model = Qnet(self.obs_space, self.action_space)
