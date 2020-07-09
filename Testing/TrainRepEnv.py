@@ -141,10 +141,10 @@ class TrainRepEnv(TrainMap, CarModel):
 
     def _get_reward(self, crash):
         if crash:
-            r_crash = -100
+            r_crash = -50
             return r_crash, True
 
-        beta = 0.5 # scale to 
+        beta = 0.8 # scale to 
         r_done = 100
         # step_penalty = 5
         max_steps = 1000

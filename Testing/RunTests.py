@@ -427,13 +427,14 @@ if __name__ == "__main__":
     # map_name = test10
 
     # rep_name = "RepTestDqnStd"
-    rep_name = "RepTestDqnSquare"
+    # rep_name = "RepTestDqnSquare"
+    rep_name = "RepOpt1"
     # rep_name = "Testing"
-    mod_name = "ModTestDqnIntermediate"
+    # mod_name = "ModTestDqnIntermediate"
 
     # RunRepDQNTraining1(rep_name)
     # RunRepDQNTraining2(rep_name)
-    # RunRepDQNTraining3(rep_name)
+    RunRepDQNTraining3(rep_name)
 
     # RunModDQNTraining1(mod_name)
     # RunModDQNTraining2(mod_name)
