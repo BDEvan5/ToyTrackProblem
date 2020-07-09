@@ -83,7 +83,7 @@ class TestMap:
 
     def _add_obstacles(self):
         # map 1
-        obs_locs = [[100, 700], [200, 200], [550, 500], [700, 700], [700, 400]]
+        obs_locs = [[200, 200], [550, 500], [700, 700], [700, 400]]
 
         # map2 
         # obs_locs = [[200, 200], [600, 600]]
@@ -436,7 +436,7 @@ class TestEnv(TestMap, CarModel):
             plt.plot(x, y)
 
         
-        plt.pause(0.01)
+        plt.pause(0.1)
         # plt.show()
 
 
