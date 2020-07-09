@@ -120,7 +120,6 @@ class TrainRepEnv(TrainMap, CarModel):
         
         self.last_distance = lib.get_distance(self.start, self.end)
         self.car_x = self.start
-        self._update_ranges()
 
         return self._get_state_obs()
 
@@ -141,11 +140,11 @@ class TrainRepEnv(TrainMap, CarModel):
 
     def _get_reward(self, crash):
         if crash:
-            r_crash = -50
+            r_crash = -0
             return r_crash, True
 
         beta = 0.8 # scale to 
-        r_done = 100
+        r_done = 0
         # step_penalty = 5
         max_steps = 1000
 
@@ -200,7 +199,7 @@ class TrainRepEnv(TrainMap, CarModel):
                 search_val = lib.add_locations(self.car_x, dx)
                 if self._check_location(search_val):
                     break             
-            self.ranges[i] = (j-1) / n_searches # gives a scaled val to 1 
+            self.ranges[i] = (j) / n_searches # gives a scaled val to 1 
 
     def box_render(self):
         car_x = int(self.car_x[0])

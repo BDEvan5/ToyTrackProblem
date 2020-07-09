@@ -393,7 +393,7 @@ def RunRepDQNTest(map_name, agent_name):
     env = TestEnv(map_name)
     # agent_name = "DQNtrain2"
     agent = TestRepDQN(env.state_space, env.action_space, agent_name)
-    env.show_map()
+    # env.show_map()
     evaluate_agent(env, agent, True)
     # evaluate_agent(env, agent, False)
 
@@ -442,5 +442,5 @@ if __name__ == "__main__":
 
     # RunCorridorTest(map_name)
     # RunPurePursuitTest(map_name)
-    RunRepDQNTest(map_name, rep_name)
+    # RunRepDQNTest(map_name, rep_name)
     # RunModDQNTest(map_name, mod_name)
