@@ -429,7 +429,7 @@ if __name__ == "__main__":
     # rep_name = "Testing"
     # mod_name = "ModTestDqnIntermediate"
 
-    # RunRepDQNTraining(rep_name, 0, 0, create=True)
+    RunRepDQNTraining(rep_name, 0, 0, create=True)
     # RunRepDQNTraining(rep_name, 5, 10, False)
     # RunRepDQNTraining(rep_name, 10, 5, create=False)
 

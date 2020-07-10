@@ -135,39 +135,52 @@ class TrainModDQN:
 
 
     def experience_replay(self, buffer0, buffer1):
+        self.train_switching(buffer0)
+        self.train_modification(buffer1)
+
+    def train_modification(self, buffer1):
         n_train = 1
+        # train sys1: mod sys
         for i in range(n_train):
             if buffer1.size() < BATCH_SIZE:
                 return
-            s, a, r, s_p, done = buffer1.memory_sample(BATCH_SIZE)
+            s, a_mod, r, s_p, done = buffer1.memory_sample(BATCH_SIZE)
+            # a = [0, 1]: swerve l, r
 
             next_values = self.target.forward(s_p)
             max_vals = torch.max(next_values, dim=1)[0].reshape((BATCH_SIZE, 1))
             g = torch.ones_like(done) * GAMMA
             q_update = r + g * max_vals * done
+
             q_vals = self.model.forward(s)
-            q_a = q_vals.gather(1, a)
+            q_a = q_vals.gather(1, a_mod)
+
             loss = F.mse_loss(q_a, q_update.detach())
 
             self.model.optimizer.zero_grad()
             loss.backward()
             self.model.optimizer.step()
 
+    def train_switching(self, buffer0):
+        n_train = 1
+        # train system0: switching system
         for i in range(n_train):
             if buffer0.size() < BATCH_SIZE:
                 return
-            s, a, r, s_p, done = buffer0.memory_sample(BATCH_SIZE)
+            s, a_sys, r, s_p, done = buffer0.memory_sample(BATCH_SIZE)
 
-            pp_act = self.get_pp_acts(s_p.numpy())
-            cat_act = torch.from_numpy(pp_act[:, None]).float()
-            obs = torch.cat([s_p, cat_act], dim=1)
+            pp_act_pr = self.get_pp_acts(s_p.numpy())
+            cat_act_pr = torch.from_numpy(pp_act_pr[:, None]).float()
+            obs_pr = torch.cat([s_p, cat_act], dim=1)
             next_values = self.value_target.forward(obs)
-            # max_vals = torch.max(next_values, dim=1)[0].reshape((BATCH_SIZE, 1))
             g = torch.ones_like(done) * GAMMA
             q_update = r + g * next_values * done
-            obs = torch.cat([s_p, a.float()], dim=1)
+
+            pp_act = self.get_pp_acts(s.numpy())
+            cat_act = torch.from_numpy(pp_act[:, None]).float()
+            obs = torch.cat([s, cat_act], dim=1)
             q_vals = self.value_model.forward(obs)
-            # q_a = q_vals.gather(1, a)
+
             loss = F.mse_loss(q_vals, q_update.detach())
 
             self.value_model.optimizer.zero_grad()

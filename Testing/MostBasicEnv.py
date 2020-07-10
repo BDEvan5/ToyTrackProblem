@@ -6,10 +6,8 @@ import collections
 import random
 import torch
 
-from ReplacementDQN import TrainRepDQN
-import sys
-import collections
-
+from ModificationDQN import TrainModDQN
+from Corridor import PurePursuit
 
 MEMORY_SIZE = 100000
 
@@ -42,7 +40,7 @@ class ReplayBuffer():
 
 
 
-class MostBasicEnv:
+class BasicTrainModEnv:
     def __init__(self):
         self.n_ranges = 10
         self.state_space = self.n_ranges + 2
@@ -125,11 +123,11 @@ class MostBasicEnv:
         if not crash:
             self.car_x = new_x
             self.theta = new_theta
-        reward, done = self._get_reward(crash, action)
-        reward = reward * 0.01 # scale to -1, 1
+        r0, r1, done = self._get_reward(crash, action)
+
         obs = self._get_state_obs()
 
-        return obs, reward, done, None
+        return obs, r0, done, r1
 
     def _x_step_discrete(self, action):
         # actions in range [0, n_acts) are a fan in front of vehicle
@@ -176,24 +174,35 @@ class MostBasicEnv:
         return np.random.randint(0, self.action_space-1)
 
     def _get_reward(self, crash, action):
+        # switch?
+        pp_action = self._get_pp_action()
+        if action == pp_action: # no switch
+            r0 = 1
+        else: # switch
+            r0 = 0
+
+        r1 = 1 # if no crash
+        done = False
         # crash
         if crash:
-            r_crash = -100
-            return r_crash, True
+            r0 = r0 -1
+            r1 = -1 # if crash
+            done = True
 
-        grad = lib.get_gradient(self.car_x, self.end)
+        return r0, r1, done
+
+    def _get_pp_action(self):
+        grad = lib.get_gradient(self.start, self.end)
         angle = np.arctan(grad)
         if angle > 0:
             angle = np.pi - angle
         else:
             angle = - angle
         dth = np.pi / (self.action_space - 1)
-        best_action = int(angle / dth)
+        pp_action = int(angle / dth)
 
-        d_action = abs(best_action - action) ** 2
-        reward = - 5 * d_action
+        return pp_action
 
-        return reward, False
 
     def render(self):
         car_x = int(self.car_x[0])
@@ -283,7 +292,93 @@ def runCustomLoop():
         rewards += r
         lib.plot(rewards, figure_n=3)
 
+"""Copied algorithms"""
+def collect_mod_observations(buffer0, buffer1, n_itterations=10000):
+    env = BasicTrainModEnv()
+    pp = PurePursuit(env.state_space, env.action_space)
+    s, done = env.reset(), False
+    for i in range(n_itterations):
+        pre_mod = pp.act(s)
+        system = random.randint(0, 1)
+        if system == 1:
+            mod_act = random.randint(0, 1)
+            action_modifier = 2 if mod_act == 1 else -2
+            action = pre_mod + action_modifier # swerves left or right
+            action = np.clip(action, 0, env.action_space-1)
+        else:
+            action = pre_mod
+        # action = env.random_action()
+        s_p, r, done, r2 = env.step(action)
+        done_mask = 0.0 if done else 1.0
+        buffer0.put((s, system, r2, s_p, done_mask))
+        if system == 1: # mod action
+            buffer1.put((s, mod_act, r, s_p, done_mask))
+        s = s_p
+        if done:
+            s = env.reset()
+
+        print("\rPopulating Buffer {}/{}.".format(i, n_itterations), end="")
+        sys.stdout.flush()
+    print(" ")
+
+
+def TrainModAgent(agent_name, buffer0, buffer1, i=0, load=True):
+    env = BasicTrainModEnv()
+    agent = TrainModDQN(env.state_space, env.action_space, agent_name)
+    agent.try_load(load)
+
+    print_n = 100
+    rewards, score = [], 0.0
+    for n in range(10000):
+        state = env.reset()
+        a, system, mod_act = agent.full_action(state)
+        s_prime, r0, done, r1 = env.step(a)
+        buffer0.put((state, a, r0, s_prime, 1)) 
+        if system == 1: # mod action
+            buffer1.put((state, mod_act, r1, s_prime))
+        score += r
+        agent.experience_replay(buffer0, buffer1)
+
+        rewards.append(score)
+
+        if n % print_n == 0 and n > 0:
+            env.render()    
+            exp = agent.model.exploration_rate
+            mean = np.mean(rewards[-20:])
+            b0 = buffer0.size()
+            b1 = buffer1.size()
+            print(f"Run: {n} --> Score: {score:.4f} --> Mean: {mean:.4f} --> exp: {exp:.4f} --> Buf: {b0, b1}")
+            lib.plot(rewards, figure_n=2)
+
+    agent.save()
+
+    return rewards
+
+def RunModDQNTraining1(agent_name, start=1, n_runs=5, create=False):
+    track_name = name50
+    buffer0 = ReplayBuffer()
+    buffer1 = ReplayBuffer()
+    total_rewards = []
+
+    # collect_mod_observations(buffer0, buffer1, track_name, 5000)
+
+    if create:
+        rewards = TrainModAgent(agent_name, buffer0, buffer1, 0, False)
+        total_rewards += rewards
+        lib.plot(total_rewards, figure_n=3)
+
+    for i in range(start, n_runs):
+        print(f"Running batch: {i}")
+        rewards = TrainModAgent(agent_name, buffer0, buffer1, 0, True)
+        total_rewards += rewards
+
+        lib.plot(total_rewards, figure_n=3)
+        plt.figure(3).savefig("PNGs/Training_DQN" + str(i))
+        np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
+
 
 if __name__ == "__main__":
-    runCustomLoop()
+    agent_name = "ModBuild"
+
+    RunModDQNTraining(agent_name)
 

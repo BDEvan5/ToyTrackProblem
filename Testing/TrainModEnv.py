@@ -242,7 +242,6 @@ class TrainModEnv(TrainMap, CarModel):
         done = True if self.steps > max_steps else False
         return reward, done
 
-
     def render(self):
         x, y = [], []
         for step in self.memory:
