@@ -246,7 +246,8 @@ def TrainRepAgent(agent_name, buffer, i=0, load=True):
         state = env.reset()
         a = agent.learning_act(state)
         s_prime, r, done, _ = env.step(a)
-        buffer.put((state, a, r, s_prime, 1)) # never done
+        done_mask = 0.0 if done else 1.0
+        buffer.put((state, a, r, s_prime, done_mask)) # never done
         score += r
         agent.experience_replay(buffer)
 
@@ -323,8 +324,11 @@ def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
         s = single_rep_eval(agent_name, map_name)
         evals.append(s)
 
-    print(evals)
-    print(f"Max: {max(evals)}")
+    try:
+        print(evals)
+        print(f"Max: {max(evals)}")
+    except:
+        pass
 
 
 def RunModDQNTraining1(agent_name):
@@ -429,7 +433,7 @@ if __name__ == "__main__":
     # rep_name = "Testing"
     # mod_name = "ModTestDqnIntermediate"
 
-    RunRepDQNTraining(rep_name, 0, 0, create=True)
+    # RunRepDQNTraining(rep_name, 0, 0, create=True)
     # RunRepDQNTraining(rep_name, 5, 10, False)
     # RunRepDQNTraining(rep_name, 10, 5, create=False)
 
