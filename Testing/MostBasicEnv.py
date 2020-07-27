@@ -354,8 +354,8 @@ def TrainModAgent(agent_name, buffer0, buffer1, i=0, load=True):
 
     return rewards
 
-def RunModDQNTraining1(agent_name, start=1, n_runs=5, create=False):
-    track_name = name50
+def RunModDQNTraining(agent_name, start=1, n_runs=5, create=False):
+    # track_name = name750
     buffer0 = ReplayBuffer()
     buffer1 = ReplayBuffer()
     total_rewards = []
@@ -367,7 +367,7 @@ def RunModDQNTraining1(agent_name, start=1, n_runs=5, create=False):
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
 
-    for i in range(start, n_runs):
+    for i in range(start, start + n_runs):
         print(f"Running batch: {i}")
         rewards = TrainModAgent(agent_name, buffer0, buffer1, 0, True)
         total_rewards += rewards
