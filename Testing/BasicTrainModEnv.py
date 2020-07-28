@@ -329,14 +329,14 @@ def TrainModAgent(agent_name, buffer0, buffer1, i=0, load=True):
 
     print_n = 100
     rewards, score = [], 0.0
-    for n in range(10000):
+    for n in range(1000):
         state = env.reset()
         a, system, mod_act = agent.full_action(state)
         s_prime, r0, done, r1 = env.step(a)
-        buffer0.put((state, a, r0, s_prime, 1)) 
+        buffer0.put((state, system, r0, s_prime, done)) 
         if system == 1: # mod action
-            buffer1.put((state, mod_act, r1, s_prime))
-        score += r
+            buffer1.put((state, mod_act, r1, s_prime, done))
+        score += r0
         agent.experience_replay(buffer0, buffer1)
 
         rewards.append(score)
@@ -355,7 +355,6 @@ def TrainModAgent(agent_name, buffer0, buffer1, i=0, load=True):
     return rewards
 
 def RunModDQNTraining(agent_name, start=1, n_runs=5, create=False):
-    # track_name = name750
     buffer0 = ReplayBuffer()
     buffer1 = ReplayBuffer()
     total_rewards = []
@@ -380,5 +379,6 @@ def RunModDQNTraining(agent_name, start=1, n_runs=5, create=False):
 if __name__ == "__main__":
     agent_name = "ModBuild"
 
-    RunModDQNTraining(agent_name)
+    RunModDQNTraining(agent_name, 1, 5, create=True)
+    RunModDQNTraining(agent_name, 6, 5, create=False)
 

@@ -65,10 +65,8 @@ class ValueNet(nn.Module):
         x = self.fc3(x)
         return x
 
-class TrainModDQN:
-    def __init__(self, obs_space, action_space, name="best_avg"):
-        self.model = None
-        self.target = None
+class DecisionDQN:
+    def __init__(self, obs_space, action_space, name=""):
         self.value_model = None
         self.value_target = None
 
@@ -76,33 +74,112 @@ class TrainModDQN:
         self.obs_space = obs_space
         self.mod_space = 2
 
-        self.update_steps = 0
-        self.name = name
+    def decide(self, obs, pp_action):
+        value_obs = np.append(obs, pp_action)
+        value_obs_t = torch.from_numpy(value_obs).float()
+        safe_value = self.value_model.forward(value_obs_t)
+
+        return safe_value.detach().item() 
+
+
+    def train_switching(self, buffer0):
+        n_train = 1
+        # train system0: switching system
+        for i in range(n_train):
+            if buffer0.size() < BATCH_SIZE:
+                return
+            s, a_sys, r, s_p, done = buffer0.memory_sample(BATCH_SIZE)
+
+            # gets the prime values
+            pp_act_pr = self.get_pp_acts(s_p.numpy())
+            cat_act_pr = torch.from_numpy(pp_act_pr[:, None]).float()
+            obs_pr = torch.cat([s_p, cat_act_pr], dim=1)
+
+            next_values = self.value_target.forward(obs_pr)
+            g = torch.ones_like(done) * GAMMA
+            q_update = r + g * next_values * done
+
+            pp_act = self.get_pp_acts(s.numpy())
+            cat_act = torch.from_numpy(pp_act[:, None]).float()
+            obs = torch.cat([s, cat_act], dim=1)
+            q_vals = self.value_model.forward(obs)
+
+            loss = F.mse_loss(q_vals, q_update.detach())
+
+            self.value_model.optimizer.zero_grad()
+            loss.backward()
+            self.value_model.optimizer.step()
+
+        self.update_networks()
+
+
+
+class ModificationDQN:
+    def __init__(self, obs_space, action_space, name=""):
+        self.model = None
+        self.target = None
+
+        self.action_space = action_space
+        self.obs_space = obs_space
+        self.mod_space = 2
 
     def learning_mod_act(self, obs):
         if random.random() < self.model.exploration_rate:
             return random.randint(0, self.mod_space-1)
         else: 
-            return self.mod_act(obs)
+            obs_t = torch.from_numpy(obs).float()
+            return self.mod_act(obs_t)
 
     def mod_act(self, obs):
         out = self.model.forward(obs)
         return out.argmax().item()
 
+    def train_modification(self, buffer1):
+        n_train = 1
+        # train sys1: mod sys
+        for i in range(n_train):
+            if buffer1.size() < BATCH_SIZE:
+                return
+            s, a_mod, r, s_p, done = buffer1.memory_sample(BATCH_SIZE)
+            # a = [0, 1]: swerve l, r
+
+            next_values = self.target.forward(s_p)
+            max_vals = torch.max(next_values, dim=1)[0].reshape((BATCH_SIZE, 1))
+            g = torch.ones_like(done) * GAMMA
+            q_update = r + g * max_vals * done
+
+            q_vals = self.model.forward(s)
+            q_a = q_vals.gather(1, a_mod)
+
+            loss = F.mse_loss(q_a, q_update.detach())
+
+            self.model.optimizer.zero_grad()
+            loss.backward()
+            self.model.optimizer.step()
+
+
+
+
+
+class TrainModDQN(DecisionDQN, ModificationDQN):
+    def __init__(self, obs_space, action_space, name="best_avg"):
+        DecisionDQN.__init__(self, obs_space, action_space)
+        ModificationDQN.__init__(self, obs_space, action_space)
+
+        self.update_steps = 0
+        self.name = name
+
     def full_action(self, obs):
         pp_action = self.get_pursuit_action(obs)
-        obs_t = torch.from_numpy(obs).float()
-        value_obs = np.append(obs, pp_action)
-        value_obs_t = torch.from_numpy(value_obs).float()
-        safe_value = self.value_model.forward(value_obs_t)
-        # 0= crash, 1 = no crash
+        safe_value = self.decide(obs, pp_action)
+        
         threshold = 0.5
-        if safe_value.detach().item() > threshold:
+        if safe_value > threshold:
             action = pp_action
             system = 0 
             mod_action = None
         else:
-            mod_action = self.learning_mod_act(obs_t) # [0, 1]
+            mod_action = self.learning_mod_act(obs) # [0, 1]
             action_modifier = 2 if mod_action == 1 else -2
             # action_modifier = 0
             action = pp_action + action_modifier # swerves left or right
@@ -138,57 +215,8 @@ class TrainModDQN:
         self.train_switching(buffer0)
         self.train_modification(buffer1)
 
-    def train_modification(self, buffer1):
-        n_train = 1
-        # train sys1: mod sys
-        for i in range(n_train):
-            if buffer1.size() < BATCH_SIZE:
-                return
-            s, a_mod, r, s_p, done = buffer1.memory_sample(BATCH_SIZE)
-            # a = [0, 1]: swerve l, r
 
-            next_values = self.target.forward(s_p)
-            max_vals = torch.max(next_values, dim=1)[0].reshape((BATCH_SIZE, 1))
-            g = torch.ones_like(done) * GAMMA
-            q_update = r + g * max_vals * done
-
-            q_vals = self.model.forward(s)
-            q_a = q_vals.gather(1, a_mod)
-
-            loss = F.mse_loss(q_a, q_update.detach())
-
-            self.model.optimizer.zero_grad()
-            loss.backward()
-            self.model.optimizer.step()
-
-    def train_switching(self, buffer0):
-        n_train = 1
-        # train system0: switching system
-        for i in range(n_train):
-            if buffer0.size() < BATCH_SIZE:
-                return
-            s, a_sys, r, s_p, done = buffer0.memory_sample(BATCH_SIZE)
-
-            pp_act_pr = self.get_pp_acts(s_p.numpy())
-            cat_act_pr = torch.from_numpy(pp_act_pr[:, None]).float()
-            obs_pr = torch.cat([s_p, cat_act], dim=1)
-            next_values = self.value_target.forward(obs)
-            g = torch.ones_like(done) * GAMMA
-            q_update = r + g * next_values * done
-
-            pp_act = self.get_pp_acts(s.numpy())
-            cat_act = torch.from_numpy(pp_act[:, None]).float()
-            obs = torch.cat([s, cat_act], dim=1)
-            q_vals = self.value_model.forward(obs)
-
-            loss = F.mse_loss(q_vals, q_update.detach())
-
-            self.value_model.optimizer.zero_grad()
-            loss.backward()
-            self.value_model.optimizer.step()
-
-        self.update_networks()
-
+    """These functions are admin for both model sets"""
     def update_networks(self):
         self.update_steps += 1
         if self.update_steps % 100 == 1: # every 20 eps or so
@@ -226,13 +254,17 @@ class TrainModDQN:
                 self.load()
             except:
                 print(f"Unable to load model")
-                pass
+                self.create_model()
         else:
-            self.model = Qnet(self.obs_space, self.mod_space)
-            self.target = Qnet(self.obs_space, self.mod_space)
-            self.value_model = ValueNet(self.obs_space)
-            self.value_target = ValueNet(self.obs_space)
-            print(f"Not loading - restarting training")
+            self.create_model()
+
+    def create_model(self):
+        self.model = Qnet(self.obs_space, self.mod_space)
+        self.target = Qnet(self.obs_space, self.mod_space)
+        self.value_model = ValueNet(self.obs_space)
+        self.value_target = ValueNet(self.obs_space)
+        print(f"Creating new model")
+
 
 class TestModDQN:
     def __init__(self, obs_space, act_space, name="best_avg"):
