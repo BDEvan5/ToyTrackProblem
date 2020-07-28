@@ -67,7 +67,7 @@ class DecisionDQN:
         # train system0: switching system
         for i in range(n_train):
             if buffer0.size() < BATCH_SIZE:
-                return
+                return 0
             s, a_sys, r, s_p, done = buffer0.memory_sample(BATCH_SIZE)
 
             q_update = r.float() # always done
@@ -84,6 +84,9 @@ class DecisionDQN:
             self.value_model.optimizer.step()
 
         self.update_networks()
+        l = loss.item()
+
+        return l
 
     def update_networks(self):
         self.update_steps += 1
