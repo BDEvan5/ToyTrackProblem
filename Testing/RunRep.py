@@ -74,6 +74,9 @@ def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
         rewards = TrainRepAgent(agent_name, buffer, 0, False)
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
+        agent = TestRepDQN(12, 10, agent_name)
+        s = single_rep_eval(agent)
+        evals.append(s)
 
     for i in range(start, start + n_runs):
         print(f"Running batch: {i}")

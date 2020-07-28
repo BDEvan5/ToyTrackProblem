@@ -407,7 +407,7 @@ class TestEnv(TestMap, CarModel):
             plt.plot(x, y)
 
         
-        plt.pause(0.01)
+        plt.pause(0.001)
         # plt.show()
 
     def full_render(self):
