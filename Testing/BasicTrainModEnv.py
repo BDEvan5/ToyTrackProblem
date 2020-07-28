@@ -154,6 +154,8 @@ class BasicTrainModEnv:
             return True
         if x[1] > self.y_bound[1]:
             return True 
+        if x[1] < 0:
+            return False # represents the area below the zero line. Done for ranges
 
         if self.race_map[int(x[0]), int(x[1])]:
             return True
@@ -174,20 +176,23 @@ class BasicTrainModEnv:
         return np.random.randint(0, self.action_space-1)
 
     def _get_reward(self, crash, action):
+        # crash
+        if crash:
+            r0 = -1
+            r1 = -1 # if crash
+            done = True
+
+            return r0, r1, done
+        
         # switch?
         pp_action = self._get_pp_action()
         if action == pp_action: # no switch
             r0 = 1
         else: # switch
-            r0 = 0
+            r0 = 0.5
 
-        r1 = 1 # if no crash
+        r1 = 1 # no crash
         done = False
-        # crash
-        if crash:
-            r0 = r0 -1
-            r1 = -1 # if crash
-            done = True
 
         return r0, r1, done
 
@@ -202,7 +207,6 @@ class BasicTrainModEnv:
         pp_action = int(angle / dth)
 
         return pp_action
-
 
     def render(self):
         car_x = int(self.car_x[0])
@@ -359,7 +363,7 @@ def RunModDQNTraining(agent_name, start=1, n_runs=5, create=False):
     buffer1 = ReplayBuffer()
     total_rewards = []
 
-    # collect_mod_observations(buffer0, buffer1, track_name, 5000)
+    collect_mod_observations(buffer0, buffer1, 5000)
 
     if create:
         rewards = TrainModAgent(agent_name, buffer0, buffer1, 0, False)

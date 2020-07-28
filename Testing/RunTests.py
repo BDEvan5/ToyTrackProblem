@@ -9,11 +9,12 @@ import torch
 
 import LibFunctions as lib
 from TestEnv import TestEnv
-from TrainRepEnv import TrainRepEnv
-from BasicTrainRepEnv import BasicTrainRepEnv
-from BasicTrainModEnv import BasicTrainModEnv
 from Corridor import CorridorAgent, PurePursuit
+
+from BasicTrainRepEnv import BasicTrainRepEnv
 from ReplacementDQN import TestRepDQN, TrainRepDQN
+
+from BasicTrainModEnv import BasicTrainModEnv
 from ModificationDQN import TestModDQN, TrainModDQN
 
 test00 = 'TestTrack1000'
@@ -126,8 +127,8 @@ def collect_rep_observations(buffer, env_track_name, n_itterations=5000):
         sys.stdout.flush()
     print(" ")
 
-def collect_mod_observations(buffer0, buffer1, env_track_name, n_itterations=10000):
-    env = TrainModEnv(env_track_name)
+def collect_mod_observations(buffer0, buffer1, n_itterations=10000):
+    env = BasicTrainModEnv()
     pp = PurePursuit(env.state_space, env.action_space)
     s, done = env.reset(), False
     for i in range(n_itterations):
@@ -252,39 +253,36 @@ def TrainRepAgent(agent_name, buffer, i=0, load=True):
 
     return rewards
 
-def TrainModAgent(track_name, agent_name, buffer0, buffer1, i=0, load=True):
-    env = TrainModEnv(track_name)
+def TrainModAgent(agent_name, buffer0, buffer1, i=0, load=True):
+    env = BasicTrainModEnv()
     agent = TrainModDQN(env.state_space, env.action_space, agent_name)
     agent.try_load(load)
 
-    print_n = 20
-    rewards = []
-    for n in range(102):
-        score, done, state = 0, False, env.reset()
-        while not done:
-            a, system, mod_act = agent.full_action(state)
-            s_prime, r, done, r2 = env.step(a)
-            done_mask = 0.0 if done else 1.0
-            buffer0.put((state, a, r2, s_prime, done_mask))
-            if system == 1: # mod action
-                buffer1.put((state, mod_act, r, s_prime, done_mask))
-            state = s_prime
-            score += r
-            agent.experience_replay(buffer0, buffer1)
-            # env.box_render()
-        rewards.append(score)
+    print_n = 100
+    rewards, score = [], 0.0
+    for n in range(1000):
+        state = env.reset()
+        a, system, mod_act = agent.full_action(state)
+        s_prime, r0, done, r1 = env.step(a)
+        buffer0.put((state, system, r0, s_prime, done)) 
+        if system == 1: # mod action
+            buffer1.put((state, mod_act, r1, s_prime, done))
+        score += done
+        agent.experience_replay(buffer0, buffer1)
 
-        if n % print_n == 1:
+
+        if n % print_n == 0 and n > 0:
+            rewards.append(score)
             env.render()    
             exp = agent.model.exploration_rate
             mean = np.mean(rewards[-20:])
             b0 = buffer0.size()
             b1 = buffer1.size()
             print(f"Run: {n} --> Score: {score:.4f} --> Mean: {mean:.4f} --> exp: {exp:.4f} --> Buf: {b0, b1}")
+            score = 0
+            lib.plot(rewards, figure_n=2)
 
     agent.save()
-    lib.plot(rewards, figure_n=2)
-    plt.figure(2).savefig("PNGs/Training_DQN" + str(i))
 
     return rewards
 
@@ -319,32 +317,26 @@ def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
         pass
 
 
-def RunModDQNTraining(agent_name, start=0, n_runs=5, create=False):
+def RunModDQNTraining(agent_name, start=1, n_runs=5, create=False):
     buffer0 = ReplayBuffer()
     buffer1 = ReplayBuffer()
     total_rewards = []
 
-    collect_mod_observations(buffer0, buffer1, track_name, 5000)
-    evals = []
+    collect_mod_observations(buffer0, buffer1, 5000)
 
     if create:
-        rewards = TrainModAgent(track_name, agent_name, buffer0, buffer1, 0, False)
+        rewards = TrainModAgent(agent_name, buffer0, buffer1, 0, False)
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
 
     for i in range(start, start + n_runs):
         print(f"Running batch: {i}")
-        rewards = TrainModAgent(track_name, agent_name, buffer0, buffer1, 0, True)
+        rewards = TrainModAgent(agent_name, buffer0, buffer1, 0, True)
         total_rewards += rewards
 
         lib.plot(total_rewards, figure_n=3)
-        plt.figure(2).savefig("PNGs/Training_DQN_mod" + str(i))
+        plt.figure(3).savefig("PNGs/Training_DQN" + str(i))
         np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
-        s = single_rep_eval(agent_name, map_name)
-        evals.append(s)
-
-
-
         
 
 
@@ -390,15 +382,16 @@ if __name__ == "__main__":
     # rep_name = "RepTestDqnSquare"
     # rep_name = "RepOpt1"
     # rep_name = "RepBasicTrain2"
-    rep_name = "Testing"
+    # rep_name = "Testing"
     # mod_name = "ModTestDqnIntermediate"
+    mod_name = "ModBuild"
 
-    RunRepDQNTraining(rep_name, 0, 5, create=True)
+    # RunRepDQNTraining(rep_name, 0, 5, create=True)
     # RunRepDQNTraining(rep_name, 5, 5, False)
     # RunRepDQNTraining(rep_name, 10, 5, create=False)
 
-    # RunModDQNTraining(mod_name, 0, 5, True)
-    # RunModDQNTraining(mod_name, 5, 5, False)
+    RunModDQNTraining(mod_name, 0, 5, True)
+    RunModDQNTraining(mod_name, 5, 5, False)
     # RunModDQNTraining(mod_name, 10, 5, False)
 
 
