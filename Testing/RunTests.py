@@ -11,22 +11,10 @@ import LibFunctions as lib
 from TestEnv import TestEnv
 from TrainRepEnv import TrainRepEnv
 from BasicTrainRepEnv import BasicTrainRepEnv
-from TrainModEnv import TrainModEnv
+from BasicTrainModEnv import BasicTrainModEnv
 from Corridor import CorridorAgent, PurePursuit
 from ReplacementDQN import TestRepDQN, TrainRepDQN
 from ModificationDQN import TestModDQN, TrainModDQN
-
-name00 = 'TrainTrack1000'
-name10 = 'TrainTrack1010'
-name20 = 'TrainTrack1020'
-name30 = 'TrainTrack1030'
-name40 = 'TrainTrack1040'
-name50 = 'TrainTrack1050'
-name60 = 'TrainTrack1060'
-name70 = 'TrainTrack1070'
-name80 = 'TrainTrack1080'
-name90 = 'TrainTrack1090'
-name01 = 'TrainTrack1100'
 
 test00 = 'TestTrack1000'
 test10 = 'TestTrack1010'
@@ -65,7 +53,7 @@ class ReplayBuffer():
         return len(self.buffer)
 # todo: move tensors to the agent.
 
-"""Final Evals"""
+"""Final group Evals"""
 def evaluate_agent(env, agent, show=True):
     agent.load()
     print_n = 10
@@ -242,7 +230,7 @@ def TrainRepAgent(agent_name, buffer, i=0, load=True):
     print_n = 100
     rewards = []
     score = 0.0
-    for n in range(10000):
+    for n in range(1000):
         state = env.reset()
         a = agent.learning_act(state)
         s_prime, r, done, _ = env.step(a)
@@ -355,40 +343,7 @@ def RunModDQNTraining(agent_name, start=0, n_runs=5, create=False):
         s = single_rep_eval(agent_name, map_name)
         evals.append(s)
 
-"""Old"""
-# def RunModDQNTraining2(agent_name):
-#     track_name = name70
-#     buffer0 = ReplayBuffer()
-#     buffer1 = ReplayBuffer()
-#     total_rewards = []
 
-#     collect_mod_observations(buffer0, buffer1, track_name, 5000)
-
-#     for i in range(10, 15):
-#         print(f"Running batch: {i}")
-#         rewards = TrainModAgent(track_name, agent_name, buffer0, buffer1, 0, True)
-#         total_rewards += rewards
-
-#         lib.plot(total_rewards, figure_n=3)
-#         plt.figure(2).savefig("PNGs/Training_DQN" + str(i))
-#         np.save('DataRecords/' + agent_name + '_rewards2.npy', total_rewards)
-
-# def RunModDQNTraining3(agent_name):
-#     track_name = name70
-#     buffer0 = ReplayBuffer()
-#     buffer1 = ReplayBuffer()
-#     total_rewards = []
-
-#     collect_mod_observations(buffer0, buffer1, track_name, 5000)
-
-#     for i in range(15, 20):
-#         print(f"Running batch: {i}")
-#         rewards = TrainModAgent(track_name, agent_name, buffer0, buffer1, 0, True)
-#         total_rewards += rewards
-
-#         lib.plot(total_rewards, figure_n=3)
-#         plt.figure(2).savefig("PNGs/Training_DQN" + str(i))
-#         np.save('DataRecords/' + agent_name + '_rewards3.npy', total_rewards)
 
         
 
@@ -435,16 +390,16 @@ if __name__ == "__main__":
     # rep_name = "RepTestDqnSquare"
     # rep_name = "RepOpt1"
     # rep_name = "RepBasicTrain2"
-    # rep_name = "Testing"
-    mod_name = "ModTestDqnIntermediate"
+    rep_name = "Testing"
+    # mod_name = "ModTestDqnIntermediate"
 
-    # RunRepDQNTraining(rep_name, 0, 5, create=True)
+    RunRepDQNTraining(rep_name, 0, 5, create=True)
     # RunRepDQNTraining(rep_name, 5, 5, False)
     # RunRepDQNTraining(rep_name, 10, 5, create=False)
 
-    RunModDQNTraining(mod_name, 0, 5, True)
-    RunModDQNTraining(mod_name, 5, 5, False)
-    RunModDQNTraining(mod_name, 10, 5, False)
+    # RunModDQNTraining(mod_name, 0, 5, True)
+    # RunModDQNTraining(mod_name, 5, 5, False)
+    # RunModDQNTraining(mod_name, 10, 5, False)
 
 
     # RunCorridorTest(map_name)

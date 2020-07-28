@@ -153,7 +153,8 @@ class BasicTrainRepEnv:
         best_action = int(angle / dth)
 
         d_action = abs(best_action - action) ** 2
-        reward = - 5 * d_action
+        reward = - 5 * d_action + 25 # biasing term for bigger difference
+        # reward = 100
 
         return reward, False
 
