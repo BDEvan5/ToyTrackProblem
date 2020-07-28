@@ -83,12 +83,12 @@ class TestMap:
 
     def _add_obstacles(self):
         # map 1
-        obs_locs = [[200, 200], [550, 500], [700, 700], [700, 400]]
+        obs_locs = [[200, 200], [550, 450], [700, 700], [700, 400]]
 
         # map2 
         # obs_locs = [[200, 200], [600, 600]]
 
-        obs_size = [50, 100]
+        obs_size = [50, 80]
         for obs in obs_locs:
             for i in range(obs_size[0]):
                 for j in range(obs_size[1]):
@@ -300,7 +300,7 @@ class TestEnv(TestMap, CarModel):
         beta = 0.5 # scale to 
         r_done = 100
         # step_penalty = 5
-        max_steps = 1000
+        max_steps = 400
 
         cur_distance = lib.get_distance(self.car_x, self.end)
         if cur_distance < 2* self.action_scale:
@@ -436,7 +436,7 @@ class TestEnv(TestMap, CarModel):
             plt.plot(x, y)
 
         
-        plt.pause(0.1)
+        plt.pause(0.01)
         # plt.show()
 
 

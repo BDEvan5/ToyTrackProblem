@@ -116,8 +116,11 @@ class BasicTrainRepEnv:
     def _check_location(self, x):
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
             return True
-        if x[1] < 0 or x[1] > self.y_bound[1]:
+        # if x[1] < 0 or x[1] > self.y_bound[1]:
+        if x[1] > self.y_bound[1]: # removes the cut off of the y axis
             return True 
+        if x[1] < 0:
+            return False # no obstacles below 0
 
         if self.race_map[int(x[0]), int(x[1])]:
             return True
@@ -153,7 +156,7 @@ class BasicTrainRepEnv:
         best_action = int(angle / dth)
 
         d_action = abs(best_action - action) ** 2
-        reward = - 5 * d_action + 25 # biasing term for bigger difference
+        reward = - 10 * d_action + 100 # biasing term for bigger difference
         # reward = 100
 
         return reward, False
