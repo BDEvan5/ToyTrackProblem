@@ -136,6 +136,8 @@ class TestRepDQN:
         self.model = None
         self.name = name
 
+        self.load() # always load by name
+
     def load(self, directory="./dqn_saves"):
         filename = self.name
         # self.model.load_state_dict(torch.load('%s/%s_model.pth' % (directory, filename)))
