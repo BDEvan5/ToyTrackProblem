@@ -66,13 +66,9 @@ class ValueNet(nn.Module):
         return x
 
 class DecisionDQN:
-    def __init__(self, obs_space, action_space, name=""):
+    def __init__(self):
         self.value_model = None
         self.value_target = None
-
-        self.action_space = action_space
-        self.obs_space = obs_space
-        self.mod_space = 2
 
     def decide(self, obs, pp_action):
         value_obs = np.append(obs, pp_action)
@@ -80,7 +76,6 @@ class DecisionDQN:
         safe_value = self.value_model.forward(value_obs_t)
 
         return safe_value.detach().item() 
-
 
     def train_switching(self, buffer0):
         n_train = 1
@@ -112,16 +107,10 @@ class DecisionDQN:
 
         self.update_networks()
 
-
-
 class ModificationDQN:
-    def __init__(self, obs_space, action_space, name=""):
+    def __init__(self):
         self.model = None
         self.target = None
-
-        self.action_space = action_space
-        self.obs_space = obs_space
-        self.mod_space = 2
 
     def learning_mod_act(self, obs):
         if random.random() < self.model.exploration_rate:
@@ -163,13 +152,17 @@ class ModificationDQN:
 
 class TrainModDQN(DecisionDQN, ModificationDQN):
     def __init__(self, obs_space, action_space, name="best_avg"):
-        DecisionDQN.__init__(self, obs_space, action_space)
-        ModificationDQN.__init__(self, obs_space, action_space)
+        DecisionDQN.__init__(self)
+        ModificationDQN.__init__(self)
+
+        self.action_space = action_space
+        self.obs_space = obs_space
+        self.mod_space = 6 # internal parameter
 
         self.update_steps = 0
         self.name = name
 
-    def full_action(self, obs):
+    def act(self, obs):
         pp_action = self.get_pursuit_action(obs)
         safe_value = self.decide(obs, pp_action)
         
@@ -210,11 +203,9 @@ class TrainModDQN(DecisionDQN, ModificationDQN):
 
         return arr
 
-
     def experience_replay(self, buffer0, buffer1):
         self.train_switching(buffer0)
         self.train_modification(buffer1)
-
 
     """These functions are admin for both model sets"""
     def update_networks(self):
@@ -272,6 +263,8 @@ class TestModDQN:
         self.name = name
         self.action_space = act_space
 
+        self.load()
+
     def load(self, directory="./dqn_saves"):
         filename = self.name
         # self.model.load_state_dict(torch.load('%s/%s_model.pth' % (directory, filename)))
@@ -316,107 +309,107 @@ class TestModDQN:
 
         return action
 
-    def get_pp_acts(self, obses):
-        arr = np.zeros((len(obses)))
-        for i, obs in enumerate(obses):
-            arr[i] = self.get_pursuit_action(obs)
+    # def get_pp_acts(self, obses):
+    #     arr = np.zeros((len(obses)))
+    #     for i, obs in enumerate(obses):
+    #         arr[i] = self.get_pursuit_action(obs)
 
-        return arr
-
-
+    #     return arr
 
 
-def DebugAgentTraining(agent, env):
-    rewards = []
+
+
+# def DebugAgentTraining(agent, env):
+#     rewards = []
     
-    # observe_myenv(env, agent, 5000)
-    for n in range(5000):
-        score, done, state = 0, False, env.reset()
-        while not done:
-            a = agent.learning_act(state)
-            s_prime, r, done, _ = env.step(a)
-            done_mask = 0.0 if done else 1.0
-            agent.buffer.append((state, a, r, s_prime, done_mask))
-            state = s_prime
-            score += r
-            agent.experience_replay()
-            env.box_render()
+#     # observe_myenv(env, agent, 5000)
+#     for n in range(5000):
+#         score, done, state = 0, False, env.reset()
+#         while not done:
+#             a = agent.learning_act(state)
+#             s_prime, r, done, _ = env.step(a)
+#             done_mask = 0.0 if done else 1.0
+#             agent.buffer.append((state, a, r, s_prime, done_mask))
+#             state = s_prime
+#             score += r
+#             agent.experience_replay()
+#             env.box_render()
             
-        rewards.append(score)
+#         rewards.append(score)
 
-        exp = agent.exploration_rate
-        mean = np.mean(rewards[-20:])
-        b = len(agent.buffer)
-        print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
-        env.render()
-        agent.save()
-
-
-def collect_observations(env, agent, n_itterations=10000):
-    s, done = env.reset(), False
-    for i in range(n_itterations):
-        # action = env.random_action()
-        action = env.action_space.sample()
-        s_p, r, done, _ = env.step(action)
-        done_mask = 0.0 if done else 1.0
-        agent.buffer.append((s, action, r, s_p, done_mask))
-        s = s_p
-        if done:
-            s = env.reset()
-
-        print("\rPopulating Buffer {}/{}.".format(i, n_itterations), end="")
-        sys.stdout.flush()
-    print(" ")
+#         exp = agent.exploration_rate
+#         mean = np.mean(rewards[-20:])
+#         b = len(agent.buffer)
+#         print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
+#         env.render()
+#         agent.save()
 
 
+# def collect_observations(env, agent, n_itterations=10000):
+#     s, done = env.reset(), False
+#     for i in range(n_itterations):
+#         # action = env.random_action()
+#         action = env.action_space.sample()
+#         s_p, r, done, _ = env.step(action)
+#         done_mask = 0.0 if done else 1.0
+#         agent.buffer.append((s, action, r, s_p, done_mask))
+#         s = s_p
+#         if done:
+#             s = env.reset()
 
-def TrainAgent(track_name, agent_name, buffer, i=0, load=True):
-    env = TestEnv(track_name)
-    agent = TrainDQN(env.state_space, env.action_space, agent_name)
-    agent.try_load(load)
+#         print("\rPopulating Buffer {}/{}.".format(i, n_itterations), end="")
+#         sys.stdout.flush()
+#     print(" ")
 
-    print_n = 20
-    rewards = []
-    for n in range(201):
-        score, done, state = 0, False, env.reset()
-        while not done:
-            a = agent.learning_act(state)
-            s_prime, r, done, _ = env.step(a)
-            done_mask = 0.0 if done else 1.0
-            buffer.put((state, a, r, s_prime, done_mask))
-            state = s_prime
-            score += r
-            agent.experience_replay(buffer)
-        rewards.append(score)
 
-        if n % print_n == 1:
-            env.render()    
-            exp = agent.exploration_rate
-            mean = np.mean(rewards[-20:])
-            b = buffer.size()
-            print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
 
-    agent.save()
-    lib.plot(rewards, figure_n=2)
-    plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
+# def TrainAgent(track_name, agent_name, buffer, i=0, load=True):
+#     env = TestEnv(track_name)
+#     agent = TrainDQN(env.state_space, env.action_space, agent_name)
+#     agent.try_load(load)
 
-    return rewards
+#     print_n = 20
+#     rewards = []
+#     for n in range(201):
+#         score, done, state = 0, False, env.reset()
+#         while not done:
+#             a = agent.learning_act(state)
+#             s_prime, r, done, _ = env.step(a)
+#             done_mask = 0.0 if done else 1.0
+#             buffer.put((state, a, r, s_prime, done_mask))
+#             state = s_prime
+#             score += r
+#             agent.experience_replay(buffer)
+#         rewards.append(score)
 
-# run training
-def RunDQNTraining():
-    track_name = name50
-    agent_name = "DQNtrain2"
-    buffer = ReplayBuffer()
-    total_rewards = []
+#         if n % print_n == 1:
+#             env.render()    
+#             exp = agent.exploration_rate
+#             mean = np.mean(rewards[-20:])
+#             b = buffer.size()
+#             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
 
-    collect_observations(buffer, track_name, 5000)
-    # TrainAgent(track_name, agent_name, buffer, 0, False)
-    for i in range(1, 100):
-        print(f"Running batch: {i}")
-        rewards = TrainAgent(track_name, agent_name, buffer, i, True)
-        total_rewards += rewards
+#     agent.save()
+#     lib.plot(rewards, figure_n=2)
+#     plt.figure(2).savefig("DataRecords/Training_DQN" + str(i))
 
-if __name__ == "__main__":
-    RunDQNTraining()
+#     return rewards
+
+# # run training
+# def RunDQNTraining():
+#     track_name = name50
+#     agent_name = "DQNtrain2"
+#     buffer = ReplayBuffer()
+#     total_rewards = []
+
+#     collect_observations(buffer, track_name, 5000)
+#     # TrainAgent(track_name, agent_name, buffer, 0, False)
+#     for i in range(1, 100):
+#         print(f"Running batch: {i}")
+#         rewards = TrainAgent(track_name, agent_name, buffer, i, True)
+#         total_rewards += rewards
+
+# if __name__ == "__main__":
+#     RunDQNTraining()
     
 

@@ -56,7 +56,7 @@ def TrainModAgent(agent_name, buffer0, buffer1, i=0, load=True):
     rewards, score = [], 0.0
     for n in range(1000):
         state = env.reset()
-        a, system, mod_act = agent.full_action(state)
+        a, system, mod_act = agent.act(state)
         s_prime, r0, done, r1 = env.step(a)
         buffer0.put((state, system, r0, s_prime, done)) 
         if system == 1: # mod action
@@ -94,6 +94,7 @@ def RunModDQNTraining(agent_name, start=1, n_runs=5, create=False):
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
 
+    evals = []
     for i in range(start, start + n_runs):
         print(f"Running batch: {i}")
         rewards = TrainModAgent(agent_name, buffer0, buffer1, 0, True)
@@ -102,14 +103,20 @@ def RunModDQNTraining(agent_name, start=1, n_runs=5, create=False):
         lib.plot(total_rewards, figure_n=3)
         plt.figure(3).savefig("PNGs/Training_DQN" + str(i))
         np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
+        agent = TestModDQN(12, 10, agent_name)
+        s = single_rep_eval(agent)
+        evals.append(s)
 
 
 if __name__ == "__main__":
     # mod_name = "ModTestDqnIntermediate"
     mod_name = "ModBuild"
 
-    RunModDQNTraining(mod_name, 0, 5, True)
-    RunModDQNTraining(mod_name, 5, 5, False)
+    RunModDQNTraining(mod_name, 0, 2, True)
+    
+    agent = TestModDQN(12, 10, mod_name)
+    single_rep_eval(agent, True)
+    #  
+    # RunModDQNTraining(mod_name, 0, 5, True)
+    # RunModDQNTraining(mod_name, 5, 5, False)
     # RunModDQNTraining(mod_name, 10, 5, False)
-
-    # single_rep_eval(rep_name, test00, True) 

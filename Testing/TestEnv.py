@@ -97,8 +97,6 @@ class TestMap:
                     self.race_map[x, y] = 2
 
 
-
-
     def _check_location(self, x):
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
             return True
@@ -236,7 +234,7 @@ class TestEnv(TestMap, CarModel):
         self.path_name = "DataRecords/" + self.name + "_path.npy" 
         self.target = None
 
-        self.step_size = 20
+        self.step_size = 3
         self.n_searches = 15
 
         self.run_path_finder()
@@ -260,7 +258,6 @@ class TestEnv(TestMap, CarModel):
         self.wpts = np.reshape(self.wpts, (-1, 2))
         print(f"Wpts including end")
         # self.show_map(self.wpts)
-
       
     def reset(self):
         self.eps += 1
@@ -410,7 +407,7 @@ class TestEnv(TestMap, CarModel):
             plt.plot(x, y)
 
         
-        plt.pause(0.1)
+        plt.pause(0.01)
         # plt.show()
 
     def full_render(self):

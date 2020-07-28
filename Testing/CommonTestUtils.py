@@ -51,8 +51,8 @@ def single_rep_eval(agent, show=True):
         state = s_prime
         score += 1 # counts number of steps
         if show:
-            # env.box_render()
-            env.full_render()
+            env.box_render()
+            # env.full_render()
             pass
         
     print(f"SingleRun --> Score: {score} --> steps: {env.steps}")
