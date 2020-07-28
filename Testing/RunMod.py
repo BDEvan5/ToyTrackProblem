@@ -87,7 +87,7 @@ def RunModDQNTraining(agent_name, start=1, n_runs=5, create=False):
     buffer1 = ReplayBuffer()
     total_rewards = []
 
-    collect_mod_observations(buffer0, buffer1, 5000)
+    # collect_mod_observations(buffer0, buffer1, 5000)
 
     if create:
         rewards = TrainModAgent(agent_name, buffer0, buffer1, 0, False)
@@ -112,11 +112,11 @@ if __name__ == "__main__":
     # mod_name = "ModTestDqnIntermediate"
     mod_name = "ModBuild"
 
-    RunModDQNTraining(mod_name, 0, 2, True)
-    
-    agent = TestModDQN(12, 10, mod_name)
-    single_rep_eval(agent, True)
+    # RunModDQNTraining(mod_name, 0, 2, True)
+
+    # agent = TestModDQN(12, 10, mod_name)
+    # single_rep_eval(agent, True)
     #  
-    # RunModDQNTraining(mod_name, 0, 5, True)
+    RunModDQNTraining(mod_name, 0, 5, True)
     # RunModDQNTraining(mod_name, 5, 5, False)
     # RunModDQNTraining(mod_name, 10, 5, False)
