@@ -57,6 +57,7 @@ class TestMap:
         self.y_bound = [1, 999]
         self.hm_name = 'DataRecords/' + self.name + '_heatmap.npy'
 
+        self.set_start_end()
         self.create_race_map()
         # self.race_map = np.flip(self.race_map)
 
@@ -79,16 +80,21 @@ class TestMap:
             np.save(self.hm_name, self.heat_map)
             print(f"Heatmap saved")
 
+        # self.show_hm()
+
         self._add_obstacles()
 
     def _add_obstacles(self):
         # map 1
-        obs_locs = [[200, 250], [550, 450], [700, 700], [700, 400]]
+        # obs_locs = [[200, 250], [550, 450], [700, 700], [700, 400]]
 
         # map2 
         # obs_locs = [[200, 200], [600, 600]]
 
-        obs_size = [50, 80]
+        # map3
+        obs_locs = [[580, 200], [250, 360], [280, 560], [450, 300], [370, 680], [600, 680]]
+
+        obs_size = [40, 60]
         for obs in obs_locs:
             for i in range(obs_size[0]):
                 for j in range(obs_size[1]):
@@ -151,16 +157,16 @@ class TestMap:
         # self.end = [680, 100]
 
         # map 00
-        self.start = [100, 900]
-        self.end = [900, 100]
+        # self.start = [100, 900]
+        # self.end = [900, 100]
 
         # map 10
         # self.start = [530, 50]
         # self.end = [900, 200]
 
         # map 10
-        # self.start = []
-        # self.end = []
+        self.start = [700, 180]
+        self.end = [750, 800]
 
         # # map 10
         # self.start = []
@@ -227,7 +233,7 @@ class TestEnv(TestMap, CarModel):
 
         TestMap.__init__(self, name)
         CarModel.__init__(self, self.n_ranges)
-        self.set_start_end()
+        # self.set_start_end()
 
         self.wpts = None
         self.pind = None
@@ -257,6 +263,15 @@ class TestEnv(TestMap, CarModel):
         self.wpts = np.append(self.wpts, self.end)
         self.wpts = np.reshape(self.wpts, (-1, 2))
         print(f"Wpts including end")
+
+        new_pts = []
+        for wpt in self.wpts:
+            if not self._check_location(wpt):
+                new_pts.append(wpt)
+            else:
+                print(f"Wpt removed: {wpt}")
+        self.wpts = np.asarray(new_pts)    
+
         # self.show_map(self.wpts)
       
     def reset(self):
@@ -407,13 +422,13 @@ class TestEnv(TestMap, CarModel):
             plt.plot(x, y)
 
         
-        plt.pause(0.001)
+        plt.pause(0.01)
         # plt.show()
 
     def full_render(self):
         car_pos = self.car_x
 
-        fig = plt.figure(5)
+        fig = plt.figure(6)
         plt.clf()  
         plt.imshow(self.race_map.T, origin='lower')
         plt.xlim(0, 1000)
@@ -433,8 +448,8 @@ class TestEnv(TestMap, CarModel):
             plt.plot(x, y)
 
         
-        plt.pause(0.01)
-        # plt.show()
+        plt.pause(0.1)
+        plt.show()
 
 
 

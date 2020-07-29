@@ -12,10 +12,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 import LibFunctions as lib
-from BasicTrainRepEnv import BasicTrainRepEnv
+from TrainEnv_PureRep import TrainEnv_PureRep
 from CommonTestUtils import single_rep_eval, ReplayBuffer
-# from Corridor import CorridorAgent, PurePursuit
-
 
 #Hyperparameters
 GAMMA = 0.95
@@ -241,7 +239,9 @@ if __name__ == "__main__":
     # rep_name = "RepBasicTrain2"
     rep_name = "Testing"
 
-    RunRepDQNTraining(rep_name, 0, 5, create=True)
+    # RunRepDQNTraining(rep_name, 0, 5, create=True)
     # RunRepDQNTraining(rep_name, 5, 5, False)
     # RunRepDQNTraining(rep_name, 10, 5, create=False)
 
+    agent = TestRepDQN(12, 10, rep_name)
+    single_rep_eval(agent, True)

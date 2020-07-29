@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 import sys
 
 
-class BasicTrainRepEnv:
+class TrainEnv_PureRep:
     def __init__(self):
         self.n_ranges = 10
         self.state_space = self.n_ranges + 2
