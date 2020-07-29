@@ -77,13 +77,13 @@ class ModificationDQN:
             s, a, r, s_p, done = buffer1.memory_sample(BATCH_SIZE)
 
             pp_acts = self.get_pp_acts(s)[:, None]
-            mod_acts = a - pp_acts + 3
+            mod_acts = a - pp_acts + (self.mod_space-1) / 2
+            mod_acts = mod_acts.clamp(0, self.mod_space-1)
 
             q_update = r.detach()
 
             pp_acts = torch.from_numpy(pp_acts).float()
             nn_s = torch.cat([s, pp_acts], dim=1)
-            # nn_s = np.concatenate([s, pp_acts], axis=0)
             q_vals = self.model.forward(nn_s)
             q_a = q_vals.gather(1, mod_acts.long())
 
@@ -144,8 +144,8 @@ class TrainPureModDQN(ModificationDQN):
         
         nn_state = np.concatenate([obs, [pp_action]])
         mod = self.learning_mod_act(nn_state)
-        new_action = pp_action + mod - 3 # this means it can go straight or swerve up to 3 units in each direction
-        new_action = np.clip(new_action, 0, self.action_space) # check this doesn't cause training problems
+        new_action = pp_action + mod - (self.mod_space-1) / 2 # this means it can go straight or swerve up to 3 units in each direction
+        new_action = np.clip(new_action, 0, self.action_space-1) # check this doesn't cause training problems
 
         return new_action
         
@@ -196,8 +196,8 @@ class TestPureModDQN:
         
         nn_state = np.concatenate([obs, [pp_action]])
         mod = self.mod_act(nn_state)
-        new_action = pp_action + mod - 3 # this means it can go straight or swerve up to 3 units in each direction
-        new_action = np.clip(new_action, 0, self.action_space)
+        new_action = pp_action + mod - (self.mod_space-1) / 2 # this means it can go straight or swerve up to 3 units in each direction
+        new_action = np.clip(new_action, 0, self.action_space-1)
 
         return new_action
 
@@ -217,6 +217,21 @@ class TestPureModDQN:
         return action
 
 """Training functions"""
+def collect_pure_mod_observations(buffer, n_itterations=5000):
+    env = TrainEnv_PureMod()
+    s, done = env.reset(), False
+    for i in range(n_itterations):
+        action = env.random_action()
+        s_p, r, done, _ = env.step(action)
+        done_mask = 0.0 if done else 1.0
+        buffer.put((s, action, r, s_p, done_mask))
+        s = s_p
+        if done:
+            s = env.reset()
+
+        print("\rPopulating Buffer {}/{}.".format(i, n_itterations), end="")
+        sys.stdout.flush()
+    print(" ")
 
 def TrainPureModAgent(agent_name, buffer, i=0, load=True):
     env = TrainEnv_PureMod()
@@ -252,7 +267,7 @@ def RunPureModTraining(agent_name, start=0, n_runs=5, create=False):
     buffer = ReplayBuffer()
     total_rewards = []
 
-    # collect_rep_observations(buffer, 5000)
+    collect_pure_mod_observations(buffer, 500)
     evals = []
 
     if create:
@@ -285,8 +300,8 @@ if __name__ == "__main__":
 
     agent_name = "TestingPureMod"
 
-    agent = TestPureModDQN(12, 10, agent_name)
-    single_rep_eval(agent, True)
+    # agent = TestPureModDQN(12, 10, agent_name)
+    # single_rep_eval(agent, True)
 
     RunPureModTraining(agent_name, 0, 5, create=True)
     RunPureModTraining(agent_name, 5, 5, False)
