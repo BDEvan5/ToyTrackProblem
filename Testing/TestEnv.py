@@ -116,10 +116,11 @@ class TestMap:
         return False
 
     def show_map(self, path=None):
+        fig = plt.figure(7)
+
         plt.imshow(self.race_map.T, origin='lower')
         plt.plot(self.start[0], self.start[1], '*', markersize=20)
         plt.plot(self.end[0], self.end[1], '*', markersize=20)
-
 
         if path is not None:
             xs, ys = [], []
@@ -128,6 +129,7 @@ class TestMap:
                 ys.append(pt[1])
             
             plt.plot(xs, ys)
+            plt.plot(xs, ys, 'x', markersize=16)
 
         plt.show()
         # plt.pause(0.001)

@@ -285,12 +285,15 @@ if __name__ == "__main__":
 
     agent_name = "TestingPureMod"
 
+    agent = TestPureModDQN(12, 10, agent_name)
+    single_rep_eval(agent, True)
+
     RunPureModTraining(agent_name, 0, 5, create=True)
-    # RunPureModTraining(agent_name, 5, 5, False)
+    RunPureModTraining(agent_name, 5, 5, False)
     # RunPureModTraining(agent_name, 10, 5, create=False)
 
-    # agent = TestPureModDQN(12, 10, agent_name)
-    # single_rep_eval(agent, True)
+    agent = TestPureModDQN(12, 10, agent_name)
+    single_rep_eval(agent, True)
 
 
 
