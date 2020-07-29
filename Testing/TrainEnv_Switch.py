@@ -176,26 +176,6 @@ class BasicTrainModEnv:
         return np.random.randint(0, self.action_space-1)
 
     def _get_reward(self, crash, action):
-        # crash
-        # if crash:
-        #     r0 = -1
-        #     r1 = -1 # if crash
-        #     done = True
-
-        #     return r0, r1, done
-        
-        # # switch?
-        # pp_action = self._get_pp_action()
-        # r0 = 1
-        # # if action == pp_action: # no switch
-        # #     r0 = 1
-        # # else: # switch
-        # #     r0 = 0.5
-
-        # r1 = 1 # no crash
-        # done = False
-
-        # return r0, r1, done
         if crash:
             return -1, 0, True
         return 1, 0, False

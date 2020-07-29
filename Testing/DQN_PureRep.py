@@ -12,6 +12,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 import LibFunctions as lib
+from BasicTrainRepEnv import BasicTrainRepEnv
+from CommonTestUtils import single_rep_eval, ReplayBuffer
+# from Corridor import CorridorAgent, PurePursuit
+
 
 #Hyperparameters
 GAMMA = 0.95
@@ -24,9 +28,6 @@ EXPLORATION_MAX = 1.0
 EXPLORATION_MIN = 0.01
 EXPLORATION_DECAY = 0.995
 
-name00 = 'DataRecords/TrainTrack1000.npy'
-name10 = 'DataRecords/TrainTrack1010.npy'
-name20 = 'DataRecords/TrainTrack1020.npy'
 
 
 class Qnet(nn.Module):
@@ -151,41 +152,17 @@ class TestRepDQN:
         return a
 
 
+"""Training functions"""
 
-def DebugAgentTraining(agent, env):
-    rewards = []
-    
-    # observe_myenv(env, agent, 5000)
-    for n in range(5000):
-        score, done, state = 0, False, env.reset()
-        while not done:
-            a = agent.learning_act(state)
-            s_prime, r, done, _ = env.step(a)
-            done_mask = 0.0 if done else 1.0
-            agent.buffer.append((state, a, r, s_prime, done_mask))
-            state = s_prime
-            score += r
-            agent.experience_replay()
-            env.box_render()
-            
-        rewards.append(score)
-
-        exp = agent.exploration_rate
-        mean = np.mean(rewards[-20:])
-        b = len(agent.buffer)
-        print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
-        env.render()
-        agent.save()
-
-
-def collect_observations(env, agent, n_itterations=10000):
+def collect_rep_observations(buffer, env_track_name, n_itterations=5000):
+    # env = TrainRepEnv(env_track_name)
+    env = BasicTrainRepEnv()
     s, done = env.reset(), False
     for i in range(n_itterations):
-        # action = env.random_action()
-        action = env.action_space.sample()
+        action = env.random_action()
         s_p, r, done, _ = env.step(action)
         done_mask = 0.0 if done else 1.0
-        agent.buffer.append((s, action, r, s_p, done_mask))
+        buffer.put((s, action, r, s_p, done_mask))
         s = s_p
         if done:
             s = env.reset()
@@ -194,115 +171,77 @@ def collect_observations(env, agent, n_itterations=10000):
         sys.stdout.flush()
     print(" ")
 
+def TrainRepAgent(agent_name, buffer, i=0, load=True):
+    env = BasicTrainRepEnv()
+    agent = TrainRepDQN(env.state_space, env.action_space, agent_name)
+    agent.try_load(load)
 
-
-def TrainAgent(agent, env):
-    print_n = 20
+    print_n = 100
     rewards = []
-    # collect_observations(env, agent, 5000)
-    for n in range(2000):
-        score, done, state = 0, False, env.reset()
-        while not done:
-            a = agent.learning_act(state)
-            s_prime, r, done, _ = env.step(a)
-            done_mask = 0.0 if done else 1.0
-            agent.buffer.append((state, a, r, s_prime, done_mask))
-            state = s_prime
-            score += r
-            agent.experience_replay()
-        rewards.append(score)
+    score = 0.0
+    for n in range(1000):
+        state = env.reset()
+        a = agent.learning_act(state)
+        s_prime, r, done, _ = env.step(a)
+        done_mask = 0.0 if done else 1.0
+        buffer.put((state, a, r, s_prime, done_mask)) # never done
+        score += r
+        agent.experience_replay(buffer)
 
-        if ps.virtual_memory().free < 5e3:
-            print(f"Memory Error: Breaking --> {ps.virtual_memory().free}")
-            break
-
-        if n % print_n == 1:
-            # env.render()
-            exp = agent.exploration_rate
-            mean = np.mean(rewards[-20:])
-            b = len(agent.buffer)
+        if n % print_n == 0 and n > 0:
+            rewards.append(score)
+            env.render()    
+            exp = agent.model.exploration_rate
+            mean = np.mean(rewards)
+            b = buffer.size()
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
-            # agent.save()
-
-            # lib.plot(rewards, figure_n=2)
-            # plt.figure(2).savefig("Training_" + agent.name)
-
+            score = 0
+            lib.plot(rewards, figure_n=2)
     agent.save()
-    lib.plot(rewards, figure_n=2)
-    plt.figure(2).savefig("Training_DQN")
 
-def noFrillsAgentTraining(agent, env):
-    print_n = 20
-    h = guppy.hpy()
-    rewards = []
-    collect_observations(env, agent, 5000)
-    trainings_steps = 0
-    for n in range(2000):
-        score, done, state = 0, False, env.reset()
-        while not done:
-            a = agent.learning_act(state)
-            s_prime, r, done, _ = env.step(a)
-            done_mask = 0.0 if done else 1.0
-            agent.buffer.append((state, a, r, s_prime, done_mask))
-            state = s_prime
-            score += r
-            trainings_steps += 1
-            agent.experience_replay()
-        rewards.append(score)
+    return rewards
 
-        if n % print_n == 1:
-            # env.render()
-            exp = agent.exploration_rate
-            mean = np.mean(rewards[-20:])
-            b = len(agent.buffer)
-            print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
-            print(f"Training steps: {trainings_steps}")
-            trainings_steps = 0
-            print(f"{h.heap()}")
+def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
+    buffer = ReplayBuffer()
+    total_rewards = []
 
-    # agent.save()
-    # lib.plot(rewards, figure_n=2)
-    # plt.figure(2).savefig("Training_DQN")
+    collect_rep_observations(buffer, 5000)
+    evals = []
 
-# run training
-def RunDQNTraining():
-    # env = TrainEnv(name20)
-    # agent = TrainDQN_Replacement(env.state_space, env.action_space, "TestDQN1")
+    if create:
+        rewards = TrainRepAgent(agent_name, buffer, 0, False)
+        total_rewards += rewards
+        lib.plot(total_rewards, figure_n=3)
+        agent = TestRepDQN(12, 10, agent_name)
+        s = single_rep_eval(agent)
+        evals.append(s)
 
-    env = gym.make('CartPole-v1')
-    agent = TrainDQN_Replacement(4, 2, "TestDQN-CartPole")
+    for i in range(start, start + n_runs):
+        print(f"Running batch: {i}")
+        rewards = TrainRepAgent(agent_name, buffer, i, True)
+        total_rewards += rewards
 
-    TrainAgent(agent, env)
+        lib.plot(total_rewards, figure_n=3)
+        plt.figure(2).savefig("PNGs/Training_DQN_rep" + str(i))
+        np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
+        agent = TestRepDQN(12, 10, agent_name)
+        s = single_rep_eval(agent)
+        evals.append(s)
 
-
-    # agent = TrainDQN_Replacement(env.state_space, env.action_space, "DebugDQN")
-
-    # DebugAgentTraining(agent, env)
-
-def experience_replay(n_itterations=1000):
-    env = gym.make('CartPole-v1')
-    agent = TrainDQN_Replacement(4, 2, "TestDQN-CartPole")
-    collect_observations(env, agent, 1000)
-    for i in range(n_itterations):
-        agent.experience_replay()
-        print("\rExperiencing Replay {}/{}.".format(i, n_itterations), end="")
-        sys.stdout.flush()
-    print("")
-
-
-def run_CartPoleTest():
-    env = gym.make('CartPole-v1')
-    agent = TrainDQN_Replacement(4, 2, "TestDQN-CartPole")
-    # collect_observations(env, agent, 50000)
-
-    # for i in range(100):
-    #     print(timeit.timeit(experience_replay, number=1))
-
-    noFrillsAgentTraining(agent, env)
-    TrainAgent(agent, env)
-  
+    try:
+        print(evals)
+        print(f"Max: {max(evals)}")
+    except:
+        pass
 
 if __name__ == "__main__":
-    run_CartPoleTest()
-    # RunDQNTraining()
-    
+    # rep_name = "RepTestDqnStd"
+    # rep_name = "RepTestDqnSquare"
+    # rep_name = "RepOpt1"
+    # rep_name = "RepBasicTrain2"
+    rep_name = "Testing"
+
+    RunRepDQNTraining(rep_name, 0, 5, create=True)
+    # RunRepDQNTraining(rep_name, 5, 5, False)
+    # RunRepDQNTraining(rep_name, 10, 5, create=False)
+
