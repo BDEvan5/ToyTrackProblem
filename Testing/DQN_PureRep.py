@@ -238,7 +238,7 @@ if __name__ == "__main__":
     # rep_name = "Testing"
 
 
-    RunRepDQNTraining(rep_name, 0, 5, create=True)
+    # RunRepDQNTraining(rep_name, 0, 5, create=True)
     # RunRepDQNTraining(rep_name, 5, 5, False)
     # RunRepDQNTraining(rep_name, 10, 5, create=False)
 

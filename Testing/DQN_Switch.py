@@ -273,7 +273,7 @@ if __name__ == "__main__":
     # mod_name = "ModTestDqnIntermediate"
     switch_name = "DecBuild"
     switch_name = "TestingSR"
-    switch_name = "SwitchSR"
+    # switch_name = "SwitchSR"
 
 
     # agent = TestModDQN(12, 10, mod_name)

@@ -86,13 +86,13 @@ class TestMap:
 
     def _add_obstacles(self):
         # map 1
-        # obs_locs = [[200, 250], [550, 450], [700, 700], [700, 400]]
+        obs_locs = [[200, 250], [550, 450], [700, 700], [700, 400]]
 
         # map2 
         # obs_locs = [[200, 200], [600, 600]]
 
         # map3
-        obs_locs = [[580, 200], [250, 360], [280, 560], [450, 300], [370, 680], [600, 680]]
+        # obs_locs = [[580, 200], [250, 360], [280, 560], [450, 300], [370, 680], [600, 680]]
 
         obs_size = [40, 60]
         for obs in obs_locs:
@@ -159,16 +159,16 @@ class TestMap:
         # self.end = [680, 100]
 
         # map 00
-        # self.start = [100, 900]
-        # self.end = [900, 100]
+        self.start = [100, 900]
+        self.end = [900, 100]
 
         # map 10
         # self.start = [530, 50]
         # self.end = [900, 200]
 
         # map 10
-        self.start = [700, 180]
-        self.end = [750, 800]
+        # self.start = [700, 180]
+        # self.end = [750, 800]
 
         # # map 10
         # self.start = []
@@ -235,7 +235,6 @@ class TestEnv(TestMap, CarModel):
 
         TestMap.__init__(self, name)
         CarModel.__init__(self, self.n_ranges)
-        # self.set_start_end()
 
         self.wpts = None
         self.pind = None
@@ -274,7 +273,7 @@ class TestEnv(TestMap, CarModel):
                 print(f"Wpt removed: {wpt}")
         self.wpts = np.asarray(new_pts)    
 
-        # self.show_map(self.wpts)
+        self.show_map(self.wpts)
       
     def reset(self):
         self.eps += 1
@@ -353,6 +352,9 @@ class TestEnv(TestMap, CarModel):
         self._update_ranges()
 
         target = self._get_target()
+        if self._check_location(target):
+            self.pind += 1
+            target = self._get_target()
 
         rel_target = lib.sub_locations(target, self.car_x)
         self.target = rel_target
@@ -451,7 +453,6 @@ class TestEnv(TestMap, CarModel):
 
         
         plt.pause(0.1)
-        plt.show()
 
 
 

@@ -297,7 +297,6 @@ def RunPureModTraining(agent_name, start=0, n_runs=5, create=False):
         pass
 
 if __name__ == "__main__":
-
     agent_name = "TestingPureMod"
 
     # agent = TestPureModDQN(12, 10, agent_name)

@@ -41,8 +41,8 @@ class ReplayBuffer():
 
 """Single Evals"""
 def single_rep_eval(agent, show=True):
-    # map_name = 'TestTrack1000'
-    map_name = 'TestTrack1020'
+    map_name = 'TestTrack1000'
+    # map_name = 'TestTrack1020'
     env = TestEnv(map_name)
 
     score, done, state = 0, False, env.reset()
@@ -53,7 +53,7 @@ def single_rep_eval(agent, show=True):
         score += 1 # counts number of steps
         if show:
             env.box_render()
-            # env.full_render()
+            env.full_render()
             pass
         
     print(f"SingleRun --> Score: {score} --> steps: {env.steps}")
