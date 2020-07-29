@@ -6,41 +6,8 @@ import collections
 import random
 import torch
 
-from ModificationDQN import TrainModDQN
-from Corridor import PurePursuit
 
-MEMORY_SIZE = 100000
-
-class ReplayBuffer():
-    def __init__(self):
-        self.buffer = collections.deque(maxlen=MEMORY_SIZE)
-    
-    def put(self, transition):
-        self.buffer.append(transition)
-    
-    def memory_sample(self, n):
-        mini_batch = random.sample(self.buffer, n)
-        s_lst, a_lst, r_lst, s_prime_lst, done_mask_lst = [], [], [], [], []
-        
-        for transition in mini_batch:
-            s, a, r, s_prime, done_mask = transition
-            s_lst.append(s)
-            a_lst.append([a])
-            r_lst.append([r])
-            s_prime_lst.append(s_prime)
-            done_mask_lst.append([done_mask])
-
-        # todo: move the tensor bit to the agent file, just return lists for the moment.
-        return torch.tensor(s_lst, dtype=torch.float), torch.tensor(a_lst), \
-               torch.tensor(r_lst), torch.tensor(s_prime_lst, dtype=torch.float), \
-               torch.tensor(done_mask_lst)
-    
-    def size(self):
-        return len(self.buffer)
-
-
-
-class BasicTrainModEnv:
+class TrainEnv_Switch:
     def __init__(self):
         self.n_ranges = 10
         self.state_space = self.n_ranges + 2

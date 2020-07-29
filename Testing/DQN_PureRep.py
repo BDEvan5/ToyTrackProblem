@@ -111,8 +111,6 @@ class TrainRepDQN:
 
     def load(self, directory="./dqn_saves"):
         filename = self.name
-        # self.model.load_state_dict(torch.load('%s/%s_model.pth' % (directory, filename)))
-        # self.target.load_state_dict(torch.load('%s/%s_target.pth' % (directory, filename)))
         self.model = torch.load('%s/%s_model.pth' % (directory, filename))
         self.target = torch.load('%s/%s_target.pth' % (directory, filename))
         print(f"Loaded Agent: {self.name}")
@@ -153,8 +151,7 @@ class TestRepDQN:
 """Training functions"""
 
 def collect_rep_observations(buffer, env_track_name, n_itterations=5000):
-    # env = TrainRepEnv(env_track_name)
-    env = BasicTrainRepEnv()
+    env = TrainEnv_PureRep()
     s, done = env.reset(), False
     for i in range(n_itterations):
         action = env.random_action()
@@ -170,7 +167,7 @@ def collect_rep_observations(buffer, env_track_name, n_itterations=5000):
     print(" ")
 
 def TrainRepAgent(agent_name, buffer, i=0, load=True):
-    env = BasicTrainRepEnv()
+    env = TrainEnv_PureRep()
     agent = TrainRepDQN(env.state_space, env.action_space, agent_name)
     agent.try_load(load)
 
@@ -237,9 +234,11 @@ if __name__ == "__main__":
     # rep_name = "RepTestDqnSquare"
     # rep_name = "RepOpt1"
     # rep_name = "RepBasicTrain2"
-    rep_name = "Testing"
+    rep_name = "RepSW"
+    # rep_name = "Testing"
 
-    # RunRepDQNTraining(rep_name, 0, 5, create=True)
+
+    RunRepDQNTraining(rep_name, 0, 5, create=True)
     # RunRepDQNTraining(rep_name, 5, 5, False)
     # RunRepDQNTraining(rep_name, 10, 5, create=False)
 
