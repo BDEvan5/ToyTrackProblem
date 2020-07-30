@@ -99,6 +99,7 @@ class TrainEnv(RewardFunctions):
 
     def reset(self):
         self.theta = 0
+        self.start = [np.random.random() * 30 + 35 , 0]
         self.car_x = self.start
         self.race_map = np.zeros((100, 100))
         self._update_target()
@@ -116,11 +117,21 @@ class TrainEnv(RewardFunctions):
         self.end = end
 
     def _locate_obstacles(self):
-        n_obs = 3
+        n_obs = 2
         xs = np.random.randint(30, 70, (n_obs, 1))
         ys = np.random.randint(1, 20, (n_obs, 1))
         obs_locs = np.concatenate([xs, ys], axis=1)
-        obs_size = [6, 15]
+        obs_size = [6, 8]
+
+        for obs in obs_locs:
+            for i in range(obs_size[0]):
+                for j in range(obs_size[1]):
+                    x = i + obs[0]
+                    y = j + obs[1]
+                    self.race_map[x, y] = 1
+
+        obs_size = [20, 100]
+        obs_locs = [[15, 0], [65, 0]]
 
         for obs in obs_locs:
             for i in range(obs_size[0]):
