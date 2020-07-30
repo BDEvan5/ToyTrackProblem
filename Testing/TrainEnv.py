@@ -7,13 +7,70 @@ import random
 import torch
 
 
+class RewardFunctions:
+    def __init__(self):
+        self._get_reward = None
 
-class TrainEnv_PureMod:
+    def pure_mod(self):
+        self._get_reward = self._get_mod_reward
+
+    def switch(self):
+        self._get_reward = self._get_switch_reward
+
+    def pure_rep(self):
+        self._get_reward = self._get_rep_reward
+
+    def _get_mod_reward(self, crash, action):
+        if crash:
+            return -1, True
+
+        pp_action = self._get_pp_action()
+        action_dif = abs(action - pp_action)
+
+        beta = 0.5
+        r = 1 - action_dif * beta 
+
+        return r, False
+
+    def _get_rep_reward(self, crash, action):
+        if crash:
+            return -1, True
+
+        pp_action = self._get_pp_action()
+
+        d_action = abs(pp_action - action) ** 2
+        reward = - 0.1 * d_action + 1
+
+        return reward, False
+
+    def _get_switch_reward(self, crash, action):
+        if crash:
+            return -1, True
+        return 1, False
+
+    def _get_pp_action(self):
+        grad = lib.get_gradient(self.start, self.end)
+        angle = np.arctan(grad)
+        if angle > 0:
+            angle = np.pi - angle
+        else:
+            angle = - angle
+        dth = np.pi / (self.action_space - 1)
+        pp_action = int(angle / dth)
+
+        return pp_action
+
+
+
+
+class TrainEnv(RewardFunctions):
     def __init__(self):
         self.n_ranges = 10
         self.state_space = self.n_ranges + 2
         self.action_space = 10
         self.action_scale = 20
+
+        RewardFunctions.__init__(self)
 
         self.car_x = None
         self.theta = None
@@ -142,30 +199,6 @@ class TrainEnv_PureMod:
 
     def random_action(self):
         return np.random.randint(0, self.action_space-1)
-
-    def _get_reward(self, crash, action):
-        if crash:
-            return -1, True
-
-        pp_action = self._get_pp_action()
-        action_dif = abs(action - pp_action)
-
-        beta = 0.5
-        r = 1 - action_dif * beta 
-
-        return r, False
-
-    def _get_pp_action(self):
-        grad = lib.get_gradient(self.start, self.end)
-        angle = np.arctan(grad)
-        if angle > 0:
-            angle = np.pi - angle
-        else:
-            angle = - angle
-        dth = np.pi / (self.action_space - 1)
-        pp_action = int(angle / dth)
-
-        return pp_action
 
     def render(self):
         car_x = int(self.car_x[0])

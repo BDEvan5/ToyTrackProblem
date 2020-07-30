@@ -5,8 +5,6 @@ import random
 from TestEnv import TestEnv
 
 
-
-
 MEMORY_SIZE = 100000
 
 class ReplayBuffer():
@@ -42,9 +40,9 @@ class ReplayBuffer():
 """Single Evals"""
 def single_rep_eval(agent, show=True):
     env = TestEnv()
-    # env.map_1000()
+    env.map_1000()
     # env.map_1010()
-    env.map_1020()
+    # env.map_1020()
 
     score, done, state = 0, False, env.reset()
     while not done:
@@ -57,7 +55,7 @@ def single_rep_eval(agent, show=True):
             env.full_render()
             pass
         
-    print(f"SingleRun --> Score: {score} --> steps: {env.steps}")
+    print(f"SingleRun --> Score: {score} --> Steps: {env.steps}")
     return score
 
 

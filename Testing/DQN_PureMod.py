@@ -14,7 +14,7 @@ import torch.optim as optim
 
 import LibFunctions as lib
 from CommonTestUtils import single_rep_eval, ReplayBuffer
-from TrainEnv_PureMod import TrainEnv_PureMod
+from TrainEnv import TrainEnv
 
 
 #Hyperparameters
@@ -218,7 +218,8 @@ class TestPureModDQN:
 
 """Training functions"""
 def collect_pure_mod_observations(buffer, n_itterations=5000):
-    env = TrainEnv_PureMod()
+    env = TrainEnv()
+    env.pure_mod()
     s, done = env.reset(), False
     for i in range(n_itterations):
         action = env.random_action()
@@ -234,7 +235,8 @@ def collect_pure_mod_observations(buffer, n_itterations=5000):
     print(" ")
 
 def TrainPureModAgent(agent_name, buffer, i=0, load=True):
-    env = TrainEnv_PureMod()
+    env = TrainEnv()
+    env.pure_mod()
     agent = TrainPureModDQN(env.state_space, env.action_space, agent_name)
     agent.try_load(load)
 
@@ -302,7 +304,7 @@ if __name__ == "__main__":
     # agent = TestPureModDQN(12, 10, agent_name)
     # single_rep_eval(agent, True)
 
-    # RunPureModTraining(agent_name, 0, 5, create=True)
+    RunPureModTraining(agent_name, 0, 5, create=True)
     # RunPureModTraining(agent_name, 5, 5, False)
     # RunPureModTraining(agent_name, 10, 5, create=False)
 

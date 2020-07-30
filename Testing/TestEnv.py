@@ -4,10 +4,6 @@ from matplotlib import pyplot as plt
 
 from PathFinder import PathFinder, modify_path
 
-name00 = 'DataRecords/TrainTrack1000.npy'
-name10 = 'DataRecords/TrainTrack1010.npy'
-name20 = 'DataRecords/TrainTrack1020.npy'
-name30 = 'DataRecords/TrainTrack1030.npy'
 
 class CarModel:
     def __init__(self, n_ranges=10):
@@ -22,7 +18,7 @@ class CarModel:
 
         # parameters
         self.action_space = 10
-        self.action_scale = 20
+        self.action_scale = self.map_dim / 50
 
     def _x_step_discrete(self, action):
         # actions in range [0, n_acts) are a fan in front of vehicle
@@ -49,13 +45,12 @@ class MapSetUp:
     def map_1000(self):
         self.name = 'TestTrack1000'
 
-        self.start = [100, 900]
-        self.end = [900, 100]
+        self.start = [10, 90]
+        self.end = [90, 10]
 
-        self.obs_locs = [[200, 250], [550, 450], [700, 700], [700, 400]]
+        self.obs_locs = [[20, 25], [55, 45], [70, 70], [70, 40]]
         self.set_up_map()
         
-
     def map_1010(self):
         self.name = 'TestTrack1010'
 
@@ -88,18 +83,16 @@ class TestMap(MapSetUp):
     def __init__(self):
         MapSetUp.__init__(self)
         self.name = None
-        self.map_dim = 1000
+        self.map_dim = 100
 
         self.race_map = None
         self.heat_map = None
         self.start = None
         self.end = None
 
-        self.x_bound = [1, 999]
-        self.y_bound = [1, 999]
+        self.x_bound = [1, 99]
+        self.y_bound = [1, 99]
         self.hm_name = None
-
-        # self.create_race_map()
 
     def create_race_map(self):
         race_map_name = 'DataRecords/' + self.name + '.npy'
@@ -112,7 +105,7 @@ class TestMap(MapSetUp):
 
         self.race_map = new_map.T
         try:
-            # raise Exception
+            raise Exception
             self.heat_map = np.load(self.hm_name)
             print(f"Heatmap loaded")
         except:
@@ -124,12 +117,13 @@ class TestMap(MapSetUp):
 
     def _place_obs(self):
         obs_locs = self.obs_locs
-        obs_size = [40, 60]
+        obs_size = [4, 6]
         for obs in obs_locs:
             for i in range(obs_size[0]):
                 for j in range(obs_size[1]):
                     x = i + obs[0]
                     y = j + obs[1]
+                    # if not s
                     self.race_map[x, y] = 2
 
     def _check_location(self, x):
@@ -183,11 +177,11 @@ class TestMap(MapSetUp):
     def _set_up_heat_map(self):
         print(f"Starting heatmap production")
         track_map = self.race_map
-        for i in range(15): # blocks up to 5 away will start to have a gradient
+        for i in range(2): 
             new_map = np.zeros_like(track_map)
             print(f"Map run: {i}")
-            for i in range(1, 998):
-                for j in range(1, 998):
+            for i in range(1, self.map_dim - 2):
+                for j in range(1, self.map_dim - 2):
                     left = track_map[i-1, j]
                     right = track_map[i+1, j]
                     up = track_map[i, j+1]
@@ -204,7 +198,7 @@ class TestMap(MapSetUp):
                     obs_sum = sum((centre, left, right, up, down, left_up, left_down, right_up, right_down))
                     if obs_sum > 0:
                         new_map[i, j] = 1
-                    # new_map[i, j] = max(obs_sum / 16, track_map[i, j])
+
             track_map = new_map
         self.heat_map = new_map
 
@@ -226,8 +220,6 @@ class TestMap(MapSetUp):
         return False
 
 
-
-
 class TestEnv(TestMap, CarModel):
     def __init__(self):
         self.steps = 0
@@ -245,19 +237,19 @@ class TestEnv(TestMap, CarModel):
         self.path_name = None
         self.target = None
 
-        self.step_size = 3
+        self.step_size = self.action_scale
         self.n_searches = 15
 
     def run_path_finder(self):
         # self.show_map()
         # self.show_hm()
         try:
-            # raise Exception
+            raise Exception
             self.wpts = np.load(self.path_name)
             print(f"Path Loaded")
         except:
             path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
-            path = path_finder.run_search(10)
+            path = path_finder.run_search(5)
             path = modify_path(path)
             self.wpts = path
             np.save(self.path_name, self.wpts)
@@ -275,7 +267,7 @@ class TestEnv(TestMap, CarModel):
                 print(f"Wpt removed: {wpt}")
         self.wpts = np.asarray(new_pts)    
 
-        self.show_map(self.wpts)
+        # self.show_map(self.wpts)
       
     def reset(self):
         self.eps += 1
@@ -395,13 +387,13 @@ class TestEnv(TestMap, CarModel):
             self.ranges[i] = (j) / self.n_searches # gives a scaled val to 1 
 
     def box_render(self):
-        box = 100
+        box = int(self.map_dim / 5)
         car_x = int(self.car_x[0])
         car_y = int(self.car_x[1])
         x_min = max(0, car_x-box)
         y_min = max(0, car_y-box)
-        x_max = min(1000, x_min+2*box)
-        y_max = min(1000, y_min+2*box)
+        x_max = min(self.map_dim, x_min+2*box)
+        y_max = min(self.map_dim, y_min+2*box)
         plot_map = self.race_map[x_min:x_max, y_min:y_max]
         # plot_map = self.race_map[y_min:y_max, x_min:x_max]
         x_mid = (x_min + x_max) / 2
@@ -411,8 +403,8 @@ class TestEnv(TestMap, CarModel):
         fig = plt.figure(5)
         plt.clf()  
         plt.imshow(plot_map.T, origin='lower')
-        plt.xlim(0, 200)
-        plt.ylim(0, 200)
+        plt.xlim(0, box * 2)
+        plt.ylim(0, box * 2)
 
         plt.plot(car_pos[0], car_pos[1], '+', markersize=20)
         targ = lib.add_locations(self.target, car_pos)
@@ -428,7 +420,7 @@ class TestEnv(TestMap, CarModel):
             plt.plot(x, y)
 
         
-        plt.pause(0.01)
+        plt.pause(0.001)
         # plt.show()
 
     def full_render(self):
@@ -437,8 +429,8 @@ class TestEnv(TestMap, CarModel):
         fig = plt.figure(6)
         plt.clf()  
         plt.imshow(self.race_map.T, origin='lower')
-        plt.xlim(0, 1000)
-        plt.ylim(0, 1000)
+        plt.xlim(0, self.map_dim)
+        plt.ylim(0, self.map_dim)
 
         plt.plot(car_pos[0], car_pos[1], '+', markersize=20)
         targ = lib.add_locations(car_pos, self.target)
@@ -454,7 +446,7 @@ class TestEnv(TestMap, CarModel):
             plt.plot(x, y)
 
         
-        plt.pause(0.1)
+        plt.pause(0.002)
 
 
 

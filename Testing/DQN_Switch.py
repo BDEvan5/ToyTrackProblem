@@ -13,7 +13,7 @@ import torch.optim as optim
 
 
 import LibFunctions as lib
-from TrainEnv_Switch import TrainEnv_Switch
+from TrainEnv import TrainEnv
 from CommonTestUtils import ReplayBuffer, single_rep_eval, PurePursuit
 
 
@@ -155,7 +155,8 @@ class DecisionDQN:
 
 """Collect obs"""
 def collect_mod_observations(buffer, n_itterations=10000):
-    env = TrainEnv_Switch()
+    env = TrainEnv()
+    env.switch()
     pp = PurePursuit(env.state_space, env.action_space)
     s, done = env.reset(), False
 
@@ -171,34 +172,6 @@ def collect_mod_observations(buffer, n_itterations=10000):
 
 
 """Training loops"""
-def TrainDecAgent(agent_name, buffer, i=0, load=True):
-    env = BasicTrainModEnv()
-    agent = DecisionDQN(env.state_space, env.action_space, agent_name)
-    agent.try_load(load)
-
-    print_n = 100
-    rewards, score = [], 0.0
-    for n in range(1000):
-        state = env.reset()
-        a = agent.act(state)
-        s_prime, r, done, _ = env.step(a)
-        buffer.put((state, a, r, s_prime, done)) 
-        loss = agent.train_switching(buffer)
-        score += loss
-
-        if n % print_n == 0 and n > 0:
-            rewards.append(score)
-            env.render()    
-            exp = agent.value_model.exploration_rate
-            mean = np.mean(rewards[-20:])
-            b0 = buffer.size()
-            print(f"Run: {n} --> Score: {score:.4f} --> Mean: {mean:.4f} --> exp: {exp:.4f} --> Buf: {b0}")
-            score = 0
-            lib.plot(rewards, figure_n=2)
-
-    agent.save()
-
-    return rewards
 
 # supervised learning approach
 def SuperLearn(agent_name, buffer, load=True):

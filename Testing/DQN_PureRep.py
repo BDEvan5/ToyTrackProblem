@@ -12,7 +12,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 import LibFunctions as lib
-from TrainEnv_PureRep import TrainEnv_PureRep
+from TrainEnv import TrainEnv
 from CommonTestUtils import single_rep_eval, ReplayBuffer
 
 #Hyperparameters
@@ -150,8 +150,9 @@ class TestRepDQN:
 
 """Training functions"""
 
-def collect_rep_observations(buffer, env_track_name, n_itterations=5000):
-    env = TrainEnv_PureRep()
+def collect_rep_observations(buffer, n_itterations=5000):
+    env = TrainEnv()
+    env.pure_rep()
     s, done = env.reset(), False
     for i in range(n_itterations):
         action = env.random_action()
@@ -167,7 +168,8 @@ def collect_rep_observations(buffer, env_track_name, n_itterations=5000):
     print(" ")
 
 def TrainRepAgent(agent_name, buffer, i=0, load=True):
-    env = TrainEnv_PureRep()
+    env = TrainEnv()
+    env.pure_rep()
     agent = TrainRepDQN(env.state_space, env.action_space, agent_name)
     agent.try_load(load)
 
@@ -200,7 +202,7 @@ def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
     buffer = ReplayBuffer()
     total_rewards = []
 
-    collect_rep_observations(buffer, 5000)
+    collect_rep_observations(buffer, 500)
     evals = []
 
     if create:
@@ -234,13 +236,13 @@ if __name__ == "__main__":
     # rep_name = "RepTestDqnSquare"
     # rep_name = "RepOpt1"
     # rep_name = "RepBasicTrain2"
-    rep_name = "RepSW"
-    # rep_name = "Testing"
+    # rep_name = "RepSW"
+    rep_name = "Testing"
 
 
-    # RunRepDQNTraining(rep_name, 0, 5, create=True)
+    RunRepDQNTraining(rep_name, 0, 5, create=True)
     # RunRepDQNTraining(rep_name, 5, 5, False)
     # RunRepDQNTraining(rep_name, 10, 5, create=False)
 
-    agent = TestRepDQN(12, 10, rep_name)
-    single_rep_eval(agent, True)
+    # agent = TestRepDQN(12, 10, rep_name)
+    # single_rep_eval(agent, True)
