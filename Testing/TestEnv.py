@@ -48,25 +48,25 @@ class MapSetUp:
         self.start = [10, 90]
         self.end = [90, 10]
 
-        self.obs_locs = [[20, 25], [55, 45], [70, 70], [70, 40]]
+        self.obs_locs = [[18, 50], [22, 22], [55, 45], [70, 74], [70, 40]]
         self.set_up_map()
         
     def map_1010(self):
         self.name = 'TestTrack1010'
 
-        self.start = [530, 50]
-        self.end = [900, 200]
+        self.start = [53, 5]
+        self.end = [90, 20]
 
-        self.obs_locs = [[200, 200], [600, 600]]
+        self.obs_locs = [[20, 20], [60, 60]]
         self.set_up_map()
 
     def map_1020(self):
         self.name = 'TestTrack1020'
 
-        self.start = [700, 180]
-        self.end = [750, 800]
+        self.start = [70, 18]
+        self.end = [75, 80]
 
-        self.obs_locs = [[580, 200], [250, 360], [280, 560], [450, 300], [370, 680], [600, 680]]
+        self.obs_locs = [[58, 20], [25, 36], [28, 56], [45, 30], [37, 68], [60, 68]]
         self.set_up_map()
 
     def set_up_map(self):
@@ -105,7 +105,7 @@ class TestMap(MapSetUp):
 
         self.race_map = new_map.T
         try:
-            raise Exception
+            # raise Exception
             self.heat_map = np.load(self.hm_name)
             print(f"Heatmap loaded")
         except:
@@ -117,7 +117,7 @@ class TestMap(MapSetUp):
 
     def _place_obs(self):
         obs_locs = self.obs_locs
-        obs_size = [4, 6]
+        obs_size = [6, 10]
         for obs in obs_locs:
             for i in range(obs_size[0]):
                 for j in range(obs_size[1]):
@@ -237,19 +237,19 @@ class TestEnv(TestMap, CarModel):
         self.path_name = None
         self.target = None
 
-        self.step_size = self.action_scale
-        self.n_searches = 15
+        self.step_size = 1
+        self.n_searches = 30
 
     def run_path_finder(self):
         # self.show_map()
         # self.show_hm()
         try:
-            raise Exception
+            # raise Exception
             self.wpts = np.load(self.path_name)
             print(f"Path Loaded")
         except:
             path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
-            path = path_finder.run_search(5)
+            path = path_finder.run_search(2)
             path = modify_path(path)
             self.wpts = path
             np.save(self.path_name, self.wpts)
@@ -395,7 +395,6 @@ class TestEnv(TestMap, CarModel):
         x_max = min(self.map_dim, x_min+2*box)
         y_max = min(self.map_dim, y_min+2*box)
         plot_map = self.race_map[x_min:x_max, y_min:y_max]
-        # plot_map = self.race_map[y_min:y_max, x_min:x_max]
         x_mid = (x_min + x_max) / 2
         y_mid = (y_min + y_max) / 2
         car_pos = [car_x - x_mid + box, car_y - y_mid + box]
@@ -446,28 +445,31 @@ class TestEnv(TestMap, CarModel):
             plt.plot(x, y)
 
         
-        plt.pause(0.002)
+        plt.pause(0.001)
+
+    def render_snapshot(self):
+        fig = plt.figure(8)
+        plt.clf()  
+        plt.imshow(self.race_map.T, origin='lower')
+        plt.xlim(0, self.map_dim)
+        plt.ylim(0, self.map_dim)
+
+        xs, ys = [], []
+        for x in self.memory:
+            xs.append(x[0])
+            ys.append(x[1])
+        plt.plot(xs, ys, '+', markersize=12)
+        plt.plot(xs, ys)
+
+        xs, ys = [], []
+        for pt in self.wpts:
+            xs.append(pt[0])
+            ys.append(pt[1])
+        
+        plt.plot(xs, ys)
+        plt.plot(xs, ys, 'x', markersize=20)
+            
+        plt.pause(0.001)
 
 
 
-
-
-
-def test_TrainEnv():
-    env = TestEnv(name30)
-    env.run_path_finder()
-    env.show_map()
-
-    env.reset()
-    print_n = 1000
-    for i in range(100000):
-        s, d, r, _ = env.step(np.random.randint(0, env.action_space-1))
-        if d:
-            env.reset()
-        if i % print_n == 1:
-            print(f"Running test: {i}")
-
-if __name__ == "__main__":
-
-
-    test_TrainEnv()

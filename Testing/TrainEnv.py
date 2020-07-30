@@ -38,9 +38,13 @@ class RewardFunctions:
 
         pp_action = self._get_pp_action()
 
-        d_action = abs(pp_action - action) ** 2
-        reward = - 0.1 * d_action + 1
+        d_action = abs(pp_action - action)
+        if d_action == 0:
+            reward = 1
+        else:
+            reward = - 0.2 * d_action + 0.8
 
+        reward = np.clip(reward, -0.8, 1)
         return reward, False
 
     def _get_switch_reward(self, crash, action):
@@ -65,10 +69,11 @@ class RewardFunctions:
 
 class TrainEnv(RewardFunctions):
     def __init__(self):
+        self.map_dim = 100
         self.n_ranges = 10
         self.state_space = self.n_ranges + 2
         self.action_space = 10
-        self.action_scale = 20
+        self.action_scale = self.map_dim / 20
 
         RewardFunctions.__init__(self)
 
@@ -77,6 +82,9 @@ class TrainEnv(RewardFunctions):
 
         self.x_bound = [1, 99]
         self.y_bound = [1, 99]
+
+        self.step_size = int(1)
+        self.n_searches = 30
         
         self.target = None
         self.end = None
@@ -99,19 +107,20 @@ class TrainEnv(RewardFunctions):
         return self._get_state_obs()
 
     def _update_target(self):
-        target_theta = np.random.random() * np.pi - np.pi/ 2# randome angle [-np.ip/2, pi/2]
+        rand = np.random.random()
+        target_theta = rand * np.pi - np.pi/ 2# randome angle [-np.ip/2, pi/2]
         self.target = [np.sin(target_theta) , np.cos(target_theta)]
         fs = 50
-        # the end is always 50 away in direction of target
-        self.end = [self.target[0] * fs + self.car_x[0] , self.target[1] * fs + self.car_x[1]]
+        mod = [self.target[0] * fs, self.target[1] * fs]
+        end = lib.add_locations(mod, self.car_x)
+        self.end = end
 
     def _locate_obstacles(self):
         n_obs = 3
-        xs = np.random.randint(20, 60, (n_obs, 1))
-        ys = np.random.randint(4, 30, (n_obs, 1))
+        xs = np.random.randint(30, 70, (n_obs, 1))
+        ys = np.random.randint(1, 20, (n_obs, 1))
         obs_locs = np.concatenate([xs, ys], axis=1)
-        # obs_locs = np.random.random((n_obs, 2)) * 100 # [random coord]
-        obs_size = [15, 8]
+        obs_size = [6, 15]
 
         for obs in obs_locs:
             for i in range(obs_size[0]):
@@ -121,17 +130,15 @@ class TrainEnv(RewardFunctions):
                     self.race_map[x, y] = 1
 
     def _update_ranges(self):
-        step_size = 3
-        n_searches = 15
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
-            for j in range(n_searches): # number of search points
-                fs = step_size * j
+            for j in range(self.n_searches): # number of search points
+                fs = self.step_size * j
                 dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
                 search_val = lib.add_locations(self.car_x, dx)
                 if self._check_location(search_val):
                     break             
-            self.ranges[i] = (j) / (n_searches) # gives a scaled val to 1 
+            self.ranges[i] = (j) / (self.n_searches) # gives a scaled val to 1 
 
     def _get_state_obs(self):
         self._update_ranges()
@@ -206,15 +213,15 @@ class TrainEnv(RewardFunctions):
         fig = plt.figure(4)
         plt.clf()  
         plt.imshow(self.race_map.T, origin='lower')
-        plt.xlim(0, 100)
-        plt.ylim(-10, 100)
+        plt.xlim(0, self.map_dim)
+        plt.ylim(-10, self.map_dim)
         plt.plot(self.start[0], self.start[1], '*', markersize=12)
         plt.plot(self.end[0], self.end[1], '*', markersize=12)
         plt.plot(self.car_x[0], self.car_x[1], '+', markersize=16)
 
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
-            fs = self.ranges[i] * 15 * 3
+            fs = self.ranges[i] * self.n_searches * self.step_size
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations(self.car_x, dx)
             x = [car_x, range_val[0]]

@@ -33,7 +33,6 @@ class ReplayBuffer():
     
     def size(self):
         return len(self.buffer)
-# todo: move tensors to the agent.
 
 
 
@@ -51,9 +50,10 @@ def single_rep_eval(agent, show=True):
         state = s_prime
         score += 1 # counts number of steps
         if show:
-            env.box_render()
-            env.full_render()
+            # env.box_render()
+            # env.full_render()
             pass
+    env.render_snapshot()
         
     print(f"SingleRun --> Score: {score} --> Steps: {env.steps}")
     return score
