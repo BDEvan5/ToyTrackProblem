@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from CommonTestUtils import PurePursuit, single_rep_eval
+from CommonTestUtils import PurePursuit, single_evaluation
 from DQN_PureRep import Qnet
 from DQN_Switch import ValueNet
 
@@ -67,7 +67,7 @@ if __name__ == "__main__":
 
     agent = TestSwitchRep(12, 10, switch_name, rep_name)
     agent.load()
-    single_rep_eval(agent, True)
+    single_evaluation(agent, True, True)
 
 
 

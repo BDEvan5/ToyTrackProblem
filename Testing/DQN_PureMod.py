@@ -13,7 +13,7 @@ import torch.optim as optim
 
 
 import LibFunctions as lib
-from CommonTestUtils import single_rep_eval, ReplayBuffer
+from CommonTestUtils import single_evaluation, ReplayBuffer
 from TrainEnv import TrainEnv
 
 
@@ -261,6 +261,11 @@ def TrainPureModAgent(agent_name, buffer, i=0, load=True):
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
             score = 0
             lib.plot(rewards, figure_n=2)
+
+            agent.save()
+            test_agent = TestPureModDQN(12, 10, agent_name)
+            s = single_evaluation(test_agent)
+            
     agent.save()
 
     return rewards
@@ -269,7 +274,7 @@ def RunPureModTraining(agent_name, start=0, n_runs=5, create=False):
     buffer = ReplayBuffer()
     total_rewards = []
 
-    collect_pure_mod_observations(buffer, 500)
+    collect_pure_mod_observations(buffer, 5000)
     evals = []
 
     if create:
@@ -277,7 +282,7 @@ def RunPureModTraining(agent_name, start=0, n_runs=5, create=False):
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
         agent = TestPureModDQN(12, 10, agent_name)
-        s = single_rep_eval(agent)
+        s = single_evaluation(agent)
         evals.append(s)
 
     for i in range(start, start + n_runs):
@@ -289,7 +294,7 @@ def RunPureModTraining(agent_name, start=0, n_runs=5, create=False):
         plt.figure(2).savefig("PNGs/Training_DQN_rep" + str(i))
         np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
         agent = TestPureModDQN(12, 10, agent_name)
-        s = single_rep_eval(agent)
+        s = single_evaluation(agent)
         evals.append(s)
 
     try:
@@ -300,16 +305,17 @@ def RunPureModTraining(agent_name, start=0, n_runs=5, create=False):
 
 if __name__ == "__main__":
     agent_name = "TestingPureMod"
+    agent_name = "ModTest"
 
     # agent = TestPureModDQN(12, 10, agent_name)
-    # single_rep_eval(agent, True)
+    # single_evaluation(agent, True)
 
     RunPureModTraining(agent_name, 0, 5, create=True)
     # RunPureModTraining(agent_name, 5, 5, False)
     # RunPureModTraining(agent_name, 10, 5, create=False)
 
     agent = TestPureModDQN(12, 10, agent_name)
-    single_rep_eval(agent, True)
+    single_evaluation(agent, True)
 
 
 

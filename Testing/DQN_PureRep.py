@@ -11,7 +11,7 @@ import torch.optim as optim
 
 import LibFunctions as lib
 from TrainEnv import TrainEnv
-from CommonTestUtils import single_rep_eval, ReplayBuffer
+from CommonTestUtils import single_evaluation, ReplayBuffer
 
 #Hyperparameters
 GAMMA = 0.95
@@ -208,7 +208,7 @@ def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
         agent = TestRepDQN(12, 10, agent_name)
-        s = single_rep_eval(agent)
+        s = single_evaluation(agent)
         evals.append(s)
 
     for i in range(start, start + n_runs):
@@ -220,7 +220,7 @@ def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
         plt.figure(2).savefig("PNGs/Training_DQN_rep" + str(i))
         np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
         agent = TestRepDQN(12, 10, agent_name)
-        s = single_rep_eval(agent)
+        s = single_evaluation(agent)
         evals.append(s)
 
     try:
@@ -267,7 +267,7 @@ def RunSuperLearn(agent_name, create=True):
         total_rewards += r
         lib.plot(total_rewards, figure_n=3)
         agent = TestRepDQN(12, 10, agent_name)
-        single_rep_eval(agent, True)
+        single_evaluation(agent, True)
 
     
 
@@ -276,8 +276,9 @@ if __name__ == "__main__":
     # rep_name = "RepTestDqnSquare"
     # rep_name = "RepOpt1"
     # rep_name = "RepBasicTrain2"
-    # rep_name = "RepSW"
-    rep_name = "Testing"
+    # rep_name = "RepSR"
+    # rep_name = "Testing"
+    rep_name = "RepTest"
 
     # RunSuperLearn(rep_name, True)
     # RunSuperLearn(rep_name, False)
@@ -287,4 +288,4 @@ if __name__ == "__main__":
     # RunRepDQNTraining(rep_name, 10, 5, create=False)
 
     # agent = TestRepDQN(12, 10, rep_name)
-    # single_rep_eval(agent, True)
+    # single_evaluation(agent, True)

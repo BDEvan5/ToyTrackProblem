@@ -9,20 +9,11 @@ import torch
 
 import LibFunctions as lib
 from TestEnv import TestEnv
-from Corridor import CorridorAgent, PurePursuit
+from CommonTestUtils import CorridorAgent, PurePursuit, single_evaluation
 
-from BasicTrainRepEnv import BasicTrainRepEnv
-from ReplacementDQN import TestRepDQN, TrainRepDQN
-
-from BasicTrainModEnv import BasicTrainModEnv
-from ModificationDQN import TestModDQN, TrainModDQN
-
-test00 = 'TestTrack1000'
-test10 = 'TestTrack1010'
-test20 = 'TestTrack1020'
-test30 = 'TestTrack1030'
-test40 = 'TestTrack1040'
-test50 = 'TestTrack1050'
+from DQN_PureRep import TestRepDQN, Qnet
+from DQN_PureMod import TestPureModDQN
+from DQN_SwitchRep import TestSwitchRep
 
 """Final group Evals"""
 def evaluate_agent(env, agent, show=True):
@@ -60,63 +51,44 @@ def evaluate_agent(env, agent, show=True):
 
 
 """Run Tests"""
-def RunRepDQNTest(map_name, agent_name):
-    env = TestEnv(map_name)
-    # agent_name = "DQNtrain2"
-    agent = TestRepDQN(env.state_space, env.action_space, agent_name)
-    # env.show_map()
-    evaluate_agent(env, agent, True)
-    # evaluate_agent(env, agent, False)
+def RunPureRepDQNTest():
+    rep_name = "RepTest"
 
-def RunModDQNTest(map_name, agent_name):
-    env = TestEnv(map_name)
-    # agent_name = "DQNtrainMod3"
-    agent = TestModDQN(env.state_space, env.action_space, agent_name)
+    agent = TestRepDQN(12, 10, rep_name)
+    single_evaluation(agent, True, True)
 
-    evaluate_agent(env, agent, True)
-    # evaluate_agent(env, agent, False)
+def RunPureModDQNTest():
+    agent_name = "ModTest"
 
-def RunCorridorTest(map_name):
-    env = TestEnv(map_name)
-    corridor_agent = CorridorAgent(env.state_space ,env.action_space)
+    agent = TestPureModDQN(12, 10, agent_name)
+    single_evaluation(agent, True, True)
 
-    evaluate_agent(env, corridor_agent, True)
-    evaluate_agent(env, corridor_agent, False)
+def RunSwitchRepDQNTest():
+    switch_name = "SwitchSR"
+    rep_name = "RepSR"
 
-def RunPurePursuitTest(map_name):
-    env = TestEnv(map_name)
-    agent = PurePursuit(env.state_space ,env.action_space)
+    agent = TestSwitchRep(12, 10, switch_name, rep_name)
+    agent.load()
+    single_evaluation(agent, True, True)
 
-    # evaluate_agent(env, agent, True)
-    evaluate_agent(env, agent, False)
+def RunCorridorTest():
+    agent = CorridorAgent(12, 10)
+
+    single_evaluation(agent, True, True)
+
+def RunPurePursuitTest():
+    agent = PurePursuit(12, 10)
+
+    single_evaluation(agent, True, True)
 
 
 if __name__ == "__main__":
-    # DebugModAgent()
-
-    map_name = test00
-    # map_name = test10
-
-    # rep_name = "RepTestDqnStd"
-    # rep_name = "RepTestDqnSquare"
-    # rep_name = "RepOpt1"
-    # rep_name = "RepBasicTrain2"
-    # rep_name = "Testing"
-    # mod_name = "ModTestDqnIntermediate"
-    mod_name = "ModBuild"
-
-    # RunRepDQNTraining(rep_name, 0, 5, create=True)
-    # RunRepDQNTraining(rep_name, 5, 5, False)
-    # RunRepDQNTraining(rep_name, 10, 5, create=False)
-
-    RunModDQNTraining(mod_name, 0, 5, True)
-    RunModDQNTraining(mod_name, 5, 5, False)
-    # RunModDQNTraining(mod_name, 10, 5, False)
 
 
-    # RunCorridorTest(map_name)
-    # RunPurePursuitTest(map_name)
-    # RunRepDQNTest(map_name, rep_name)
-    # RunModDQNTest(map_name, mod_name)
+    # RunCorridorTest()
+    # RunPurePursuitTest()
+
+    RunPureRepDQNTest()
+    # RunPureModDQNTest()
 
     # single_rep_eval(rep_name, test00, True)

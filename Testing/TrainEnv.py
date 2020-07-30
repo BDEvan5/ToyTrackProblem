@@ -26,9 +26,10 @@ class RewardFunctions:
 
         pp_action = self._get_pp_action()
         action_dif = abs(action - pp_action)
-
-        beta = 0.5
-        r = 1 - action_dif * beta 
+        if action_dif == 0:
+            r = 1
+        else:
+            r = 0.8 - action_dif * 0.2 
 
         return r, False
 
@@ -42,9 +43,9 @@ class RewardFunctions:
         if d_action == 0:
             reward = 1
         else:
-            reward = - 0.2 * d_action + 0.8
+            reward = - 0.3 * d_action + 0.9
 
-        reward = np.clip(reward, -0.8, 1)
+        reward = np.clip(reward, -0.9, 1)
         return reward, False
 
     def _get_switch_reward(self, crash, action):
@@ -99,11 +100,15 @@ class TrainEnv(RewardFunctions):
 
     def reset(self):
         self.theta = 0
-        self.start = [np.random.random() * 30 + 35 , 0]
+        self.start = [np.random.random() * 30 + 35 , 20]
         self.car_x = self.start
         self.race_map = np.zeros((100, 100))
         self._update_target()
+
         self._locate_obstacles()
+        while self._check_location(self.start):
+            self.race_map = np.zeros((100, 100))
+            self._locate_obstacles()
 
         return self._get_state_obs()
 
@@ -119,7 +124,35 @@ class TrainEnv(RewardFunctions):
     def _locate_obstacles(self):
         n_obs = 2
         xs = np.random.randint(30, 70, (n_obs, 1))
-        ys = np.random.randint(1, 20, (n_obs, 1))
+        ys = np.random.randint(21, 40, (n_obs, 1))
+        obs_locs = np.concatenate([xs, ys], axis=1)
+        obs_size = [6, 8]
+
+        for obs in obs_locs:
+            for i in range(obs_size[0]):
+                for j in range(obs_size[1]):
+                    x = i + obs[0]
+                    y = j + obs[1]
+                    self.race_map[x, y] = 1
+
+        # left
+        n_obs = 1
+        xs = np.random.randint(30, 49, (n_obs, 1))
+        ys = np.random.randint(10, 30, (n_obs, 1))
+        obs_locs = np.concatenate([xs, ys], axis=1)
+        obs_size = [6, 8]
+
+        for obs in obs_locs:
+            for i in range(obs_size[0]):
+                for j in range(obs_size[1]):
+                    x = i + obs[0]
+                    y = j + obs[1]
+                    self.race_map[x, y] = 1
+
+        # right
+        n_obs = 1
+        xs = np.random.randint(51, 70, (n_obs, 1))
+        ys = np.random.randint(10, 30, (n_obs, 1))
         obs_locs = np.concatenate([xs, ys], axis=1)
         obs_size = [6, 8]
 

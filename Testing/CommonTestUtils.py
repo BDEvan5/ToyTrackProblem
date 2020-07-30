@@ -3,6 +3,7 @@ import torch
 from collections import deque
 import random
 from TestEnv import TestEnv
+from matplotlib import pyplot as plt
 
 
 MEMORY_SIZE = 100000
@@ -37,7 +38,7 @@ class ReplayBuffer():
 
 
 """Single Evals"""
-def single_rep_eval(agent, show=True):
+def single_evaluation(agent, show_snap=True, show_render=False):
     env = TestEnv()
     env.map_1000()
     # env.map_1010()
@@ -49,11 +50,14 @@ def single_rep_eval(agent, show=True):
         s_prime, _, done, _ = env.step(a)
         state = s_prime
         score += 1 # counts number of steps
-        if show:
+        if show_render:
             # env.box_render()
             # env.full_render()
             pass
-    env.render_snapshot()
+    if show_snap:
+        env.render_snapshot()
+        if show_render:
+            plt.show()
         
     print(f"SingleRun --> Score: {score} --> Steps: {env.steps}")
     return score

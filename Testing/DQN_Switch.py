@@ -14,7 +14,7 @@ import torch.optim as optim
 
 import LibFunctions as lib
 from TrainEnv import TrainEnv
-from CommonTestUtils import ReplayBuffer, single_rep_eval, PurePursuit
+from CommonTestUtils import ReplayBuffer, single_evaluation, PurePursuit
 
 
 #Hyperparameters
@@ -238,7 +238,7 @@ def RunDecDQNTraining(agent_name, start=1, n_runs=5, create=False):
         plt.figure(3).savefig("PNGs/Training_DQN" + str(i))
         np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
         # agent = TestDecDQN(12, 10, agent_name)
-        # s = single_rep_eval(agent)
+        # s = single_evaluation(agent)
         # evals.append(s)
 
 
@@ -250,7 +250,7 @@ if __name__ == "__main__":
 
 
     # agent = TestModDQN(12, 10, mod_name)
-    # single_rep_eval(agent, True)
+    # single_evaluation(agent, True)
     #  
     RunSuperLearn(switch_name)
 

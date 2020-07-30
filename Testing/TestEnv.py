@@ -107,7 +107,7 @@ class TestMap(MapSetUp):
         try:
             # raise Exception
             self.heat_map = np.load(self.hm_name)
-            print(f"Heatmap loaded")
+            # print(f"Heatmap loaded")
         except:
             self._set_up_heat_map()
             np.save(self.hm_name, self.heat_map)
@@ -246,7 +246,7 @@ class TestEnv(TestMap, CarModel):
         try:
             # raise Exception
             self.wpts = np.load(self.path_name)
-            print(f"Path Loaded")
+            # print(f"Path Loaded")
         except:
             path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
             path = path_finder.run_search(2)
@@ -257,14 +257,15 @@ class TestEnv(TestMap, CarModel):
 
         self.wpts = np.append(self.wpts, self.end)
         self.wpts = np.reshape(self.wpts, (-1, 2))
-        print(f"Wpts including end")
+        # print(f"Wpts including end")
 
         new_pts = []
         for wpt in self.wpts:
             if not self._check_location(wpt):
                 new_pts.append(wpt)
             else:
-                print(f"Wpt removed: {wpt}")
+                pass
+                # print(f"Wpt removed: {wpt}")
         self.wpts = np.asarray(new_pts)    
 
         # self.show_map(self.wpts)
@@ -419,7 +420,7 @@ class TestEnv(TestMap, CarModel):
             plt.plot(x, y)
 
         
-        plt.pause(0.001)
+        plt.pause(0.01)
         # plt.show()
 
     def full_render(self):
@@ -445,7 +446,7 @@ class TestEnv(TestMap, CarModel):
             plt.plot(x, y)
 
         
-        plt.pause(0.001)
+        plt.pause(0.01)
 
     def render_snapshot(self):
         fig = plt.figure(8)
