@@ -41,9 +41,10 @@ class ReplayBuffer():
 
 """Single Evals"""
 def single_rep_eval(agent, show=True):
-    map_name = 'TestTrack1000'
-    # map_name = 'TestTrack1020'
-    env = TestEnv(map_name)
+    env = TestEnv()
+    # env.map_1000()
+    # env.map_1010()
+    env.map_1020()
 
     score, done, state = 0, False, env.reset()
     while not done:

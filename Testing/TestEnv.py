@@ -42,10 +42,52 @@ class CarModel:
 
         return new_x, new_theta
     
+class MapSetUp:
+    def __init__(self):
+        self.obs_locs = None
 
-class TestMap:
-    def __init__(self, name='DataRecords/TrainTrack1000.npy'):
-        self.name = name
+    def map_1000(self):
+        self.name = 'TestTrack1000'
+
+        self.start = [100, 900]
+        self.end = [900, 100]
+
+        self.obs_locs = [[200, 250], [550, 450], [700, 700], [700, 400]]
+        self.set_up_map()
+        
+
+    def map_1010(self):
+        self.name = 'TestTrack1010'
+
+        self.start = [530, 50]
+        self.end = [900, 200]
+
+        self.obs_locs = [[200, 200], [600, 600]]
+        self.set_up_map()
+
+    def map_1020(self):
+        self.name = 'TestTrack1020'
+
+        self.start = [700, 180]
+        self.end = [750, 800]
+
+        self.obs_locs = [[580, 200], [250, 360], [280, 560], [450, 300], [370, 680], [600, 680]]
+        self.set_up_map()
+
+    def set_up_map(self):
+        self.hm_name = 'DataRecords/' + self.name + '_heatmap.npy'
+        self.path_name = "DataRecords/" + self.name + "_path.npy" # move to setup call
+
+
+        self.create_race_map()
+        self._place_obs()
+        self.run_path_finder()
+
+
+class TestMap(MapSetUp):
+    def __init__(self):
+        MapSetUp.__init__(self)
+        self.name = None
         self.map_dim = 1000
 
         self.race_map = None
@@ -55,11 +97,9 @@ class TestMap:
 
         self.x_bound = [1, 999]
         self.y_bound = [1, 999]
-        self.hm_name = 'DataRecords/' + self.name + '_heatmap.npy'
+        self.hm_name = None
 
-        self.set_start_end()
-        self.create_race_map()
-        # self.race_map = np.flip(self.race_map)
+        # self.create_race_map()
 
     def create_race_map(self):
         race_map_name = 'DataRecords/' + self.name + '.npy'
@@ -82,18 +122,8 @@ class TestMap:
 
         # self.show_hm()
 
-        self._add_obstacles()
-
-    def _add_obstacles(self):
-        # map 1
-        obs_locs = [[200, 250], [550, 450], [700, 700], [700, 400]]
-
-        # map2 
-        # obs_locs = [[200, 200], [600, 600]]
-
-        # map3
-        # obs_locs = [[580, 200], [250, 360], [280, 560], [450, 300], [370, 680], [600, 680]]
-
+    def _place_obs(self):
+        obs_locs = self.obs_locs
         obs_size = [40, 60]
         for obs in obs_locs:
             for i in range(obs_size[0]):
@@ -101,7 +131,6 @@ class TestMap:
                     x = i + obs[0]
                     y = j + obs[1]
                     self.race_map[x, y] = 2
-
 
     def _check_location(self, x):
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
@@ -151,33 +180,6 @@ class TestMap:
         plt.show()
         # plt.pause(0.001)
 
-    def set_start_end(self):
-        # self.start = [36, 80]
-        # self.end = [948, 700] 
-
-        # self.start = [180, 970]
-        # self.end = [680, 100]
-
-        # map 00
-        self.start = [100, 900]
-        self.end = [900, 100]
-
-        # map 10
-        # self.start = [530, 50]
-        # self.end = [900, 200]
-
-        # map 10
-        # self.start = [700, 180]
-        # self.end = [750, 800]
-
-        # # map 10
-        # self.start = []
-        # self.end = []
-
-        # # map 10
-        # self.start = []
-        # self.end = []
-
     def _set_up_heat_map(self):
         print(f"Starting heatmap production")
         track_map = self.race_map
@@ -224,8 +226,10 @@ class TestMap:
         return False
 
 
+
+
 class TestEnv(TestMap, CarModel):
-    def __init__(self, name):
+    def __init__(self):
         self.steps = 0
         self.memory = []
         self.eps = 0
@@ -233,18 +237,16 @@ class TestEnv(TestMap, CarModel):
         self.n_ranges = 10 
         self.state_space = 2 + self.n_ranges
 
-        TestMap.__init__(self, name)
+        TestMap.__init__(self)
         CarModel.__init__(self, self.n_ranges)
 
         self.wpts = None
         self.pind = None
-        self.path_name = "DataRecords/" + self.name + "_path.npy" 
+        self.path_name = None
         self.target = None
 
         self.step_size = 3
         self.n_searches = 15
-
-        self.run_path_finder()
 
     def run_path_finder(self):
         # self.show_map()
