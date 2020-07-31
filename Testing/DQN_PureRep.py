@@ -320,8 +320,8 @@ if __name__ == "__main__":
     # rep_name = "RepTestDqnSquare"
     # rep_name = "RepOpt1"
     # rep_name = "RepBasicTrain2"
-    # rep_name = "RepSR"
-    rep_name = "Testing"
+    rep_name = "RepSR"
+    # rep_name = "Testing"
     # rep_name = "RepTest"
 
     # RunSuperLearn(rep_name, True)

@@ -49,7 +49,7 @@ class MapSetUp:
         self.end = [90, 10]
 
         if add_obs:
-            self.obs_locs = [[15, 50], [32, 26], [50, 45], [70, 74], [88, 40]]
+            self.obs_locs = [[13, 50], [32, 24], [50, 45], [70, 74], [88, 40]]
         self.set_up_map()
         
     def map_1010(self):
@@ -464,14 +464,14 @@ class TestEnv(TestMap, CarModel):
             xs.append(x[0])
             ys.append(x[1])
         plt.plot(xs, ys, '+', markersize=12)
-        plt.plot(xs, ys)
+        plt.plot(xs, ys, linewidth=3)
 
         xs, ys = [], []
         for pt in self.wpts:
             xs.append(pt[0])
             ys.append(pt[1])
         
-        plt.plot(xs, ys)
+        # plt.plot(xs, ys)
         plt.plot(xs, ys, 'x', markersize=20)
             
         plt.pause(0.001)

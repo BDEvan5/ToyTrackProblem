@@ -63,7 +63,7 @@ class TestSwitchRep:
     
 if __name__ == "__main__":
     switch_name = "SwitchSR"
-    rep_name = "RepSW"
+    rep_name = "RepSR"
 
     agent = TestSwitchRep(12, 10, switch_name, rep_name)
     agent.load()

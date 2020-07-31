@@ -101,6 +101,6 @@ class PurePursuit:
         else:
             angle = - angle
         dth = np.pi / (self.act_space - 1)
-        action = int(angle / dth)
+        action = round(angle / dth)
 
         return action

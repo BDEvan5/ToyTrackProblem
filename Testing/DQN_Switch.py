@@ -249,10 +249,10 @@ if __name__ == "__main__":
     # switch_name = "SwitchSR"
 
 
-    # agent = TestModDQN(12, 10, mod_name)
-    # single_evaluation(agent, True)
+    agent = TestModDQN(12, 10, mod_name)
+    single_evaluation(agent, True)
     #  
-    RunSuperLearn(switch_name)
+    # RunSuperLearn(switch_name)
 
     # RunDecDQNTraining(dec_name, 0, 5, True)
     # RunDecDQNTraining(dec_name, 5, 5, False)

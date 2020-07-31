@@ -274,10 +274,10 @@ def RunPureModTraining(agent_name, start=0, n_runs=5, create=False):
     buffer = ReplayBuffer()
     total_rewards = []
 
-    collect_pure_mod_observations(buffer, 5000)
     evals = []
 
     if create:
+        collect_pure_mod_observations(buffer, 5000)
         rewards = TrainPureModAgent(agent_name, buffer, 0, False)
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)

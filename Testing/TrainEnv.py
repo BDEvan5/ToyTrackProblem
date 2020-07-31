@@ -29,7 +29,9 @@ class RewardFunctions:
         if action_dif == 0:
             r = 1
         else:
-            r = 0.8 - action_dif * 0.2 
+            r = 0.8 - action_dif * 0.1
+
+        r = np.clip(r, 0.2, 1)
 
         return r, False
 
@@ -100,7 +102,7 @@ class TrainEnv(RewardFunctions):
 
     def reset(self):
         self.theta = 0
-        self.start = [np.random.random() * 30 + 35 , np.random.random() * 40 + 20]
+        self.start = [np.random.random() * 30 + 35 , np.random.random() * 60 + 20]
         self.car_x = self.start
         self.race_map = np.zeros((100, 100))
         self._update_target()
@@ -116,8 +118,7 @@ class TrainEnv(RewardFunctions):
         rand = np.random.random()
         target_theta = rand * np.pi - np.pi/ 2# randome angle [-np.ip/2, pi/2]
         self.target = [np.sin(target_theta) , np.cos(target_theta)]
-        fs = 3
-        0
+        fs = 30
         mod = [self.target[0] * fs, self.target[1] * fs]
         end = lib.add_locations(mod, self.car_x)
         self.end = end
