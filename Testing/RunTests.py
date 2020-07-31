@@ -52,7 +52,8 @@ def evaluate_agent(env, agent, show=True):
 
 """Run Tests"""
 def RunPureRepDQNTest():
-    rep_name = "RepTest"
+    # rep_name = "RepTest"
+    rep_name = "Testing"
 
     agent = TestRepDQN(12, 10, rep_name)
     single_evaluation(agent, True, True)

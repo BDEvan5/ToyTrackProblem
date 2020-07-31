@@ -40,15 +40,16 @@ class CarModel:
     
 class MapSetUp:
     def __init__(self):
-        self.obs_locs = None
+        self.obs_locs = []
 
-    def map_1000(self):
+    def map_1000(self, add_obs=True):
         self.name = 'TestTrack1000'
 
         self.start = [10, 90]
         self.end = [90, 10]
 
-        self.obs_locs = [[18, 50], [22, 22], [55, 45], [70, 74], [70, 40]]
+        if add_obs:
+            self.obs_locs = [[15, 50], [32, 26], [50, 45], [70, 74], [88, 40]]
         self.set_up_map()
         
     def map_1010(self):
@@ -362,7 +363,10 @@ class TestEnv(TestMap, CarModel):
     def _get_target(self):
         dis_last_pt = lib.get_distance(self.wpts[self.pind-1], self.car_x)
         dis_next_pt = lib.get_distance(self.car_x, self.wpts[self.pind+1])
-        while dis_next_pt < dis_last_pt and self.pind < len(self.wpts)-2:
+        max_update_dis = 20 # must be this close to got to next pt
+        while dis_next_pt < dis_last_pt and \
+            self.pind < len(self.wpts)-2 and  \
+            dis_next_pt < max_update_dis:
             self.pind += 1
 
             dis_last_pt = lib.get_distance(self.wpts[self.pind-1], self.car_x)

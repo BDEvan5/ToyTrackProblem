@@ -61,7 +61,7 @@ class RewardFunctions:
         else:
             angle = - angle
         dth = np.pi / (self.action_space - 1)
-        pp_action = int(angle / dth)
+        pp_action = round(angle / dth)
 
         return pp_action
 
@@ -100,7 +100,7 @@ class TrainEnv(RewardFunctions):
 
     def reset(self):
         self.theta = 0
-        self.start = [np.random.random() * 30 + 35 , 20]
+        self.start = [np.random.random() * 30 + 35 , np.random.random() * 40 + 20]
         self.car_x = self.start
         self.race_map = np.zeros((100, 100))
         self._update_target()
@@ -116,7 +116,8 @@ class TrainEnv(RewardFunctions):
         rand = np.random.random()
         target_theta = rand * np.pi - np.pi/ 2# randome angle [-np.ip/2, pi/2]
         self.target = [np.sin(target_theta) , np.cos(target_theta)]
-        fs = 50
+        fs = 3
+        0
         mod = [self.target[0] * fs, self.target[1] * fs]
         end = lib.add_locations(mod, self.car_x)
         self.end = end
@@ -124,9 +125,9 @@ class TrainEnv(RewardFunctions):
     def _locate_obstacles(self):
         n_obs = 2
         xs = np.random.randint(30, 70, (n_obs, 1))
-        ys = np.random.randint(21, 40, (n_obs, 1))
+        ys = np.random.randint(20, 80, (n_obs, 1))
         obs_locs = np.concatenate([xs, ys], axis=1)
-        obs_size = [6, 8]
+        obs_size = [10, 14]
 
         for obs in obs_locs:
             for i in range(obs_size[0]):
@@ -135,36 +136,10 @@ class TrainEnv(RewardFunctions):
                     y = j + obs[1]
                     self.race_map[x, y] = 1
 
-        # left
-        n_obs = 1
-        xs = np.random.randint(30, 49, (n_obs, 1))
-        ys = np.random.randint(10, 30, (n_obs, 1))
-        obs_locs = np.concatenate([xs, ys], axis=1)
-        obs_size = [6, 8]
 
-        for obs in obs_locs:
-            for i in range(obs_size[0]):
-                for j in range(obs_size[1]):
-                    x = i + obs[0]
-                    y = j + obs[1]
-                    self.race_map[x, y] = 1
-
-        # right
-        n_obs = 1
-        xs = np.random.randint(51, 70, (n_obs, 1))
-        ys = np.random.randint(10, 30, (n_obs, 1))
-        obs_locs = np.concatenate([xs, ys], axis=1)
-        obs_size = [6, 8]
-
-        for obs in obs_locs:
-            for i in range(obs_size[0]):
-                for j in range(obs_size[1]):
-                    x = i + obs[0]
-                    y = j + obs[1]
-                    self.race_map[x, y] = 1
-
-        obs_size = [20, 100]
-        obs_locs = [[15, 0], [65, 0]]
+        # wall boundaries
+        obs_size = [20, 60]
+        obs_locs = [[15, 0], [65, 40]]
 
         for obs in obs_locs:
             for i in range(obs_size[0]):
