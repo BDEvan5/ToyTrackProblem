@@ -49,7 +49,7 @@ class MapSetUp:
         self.end = [90, 10]
 
         if add_obs:
-            self.obs_locs = [[13, 50], [32, 24], [50, 45], [70, 74], [88, 40]]
+            self.obs_locs = [[15, 50], [32, 24], [50, 45], [70, 74], [88, 40]]
         self.set_up_map()
         
     def map_1010(self):
@@ -76,7 +76,7 @@ class MapSetUp:
 
 
         self.create_race_map()
-        self._place_obs()
+        # self._place_obs()
         self.run_path_finder()
 
 

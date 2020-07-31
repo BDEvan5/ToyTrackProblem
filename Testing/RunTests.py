@@ -13,7 +13,7 @@ from CommonTestUtils import CorridorAgent, PurePursuit, single_evaluation
 
 from DQN_PureRep import TestRepDQN, Qnet
 from DQN_PureMod import TestPureModDQN
-from DQN_SwitchRep import TestSwitchRep
+from DQN_SwitchRep import TestSwitchRep, ValueNet
 
 """Final group Evals"""
 def evaluate_agent(env, agent, show=True):
@@ -91,6 +91,7 @@ if __name__ == "__main__":
     # RunPurePursuitTest()
 
     RunPureRepDQNTest()
-    # RunPureModDQNTest()
+    RunPureModDQNTest()
+    RunSwitchRepDQNTest()
 
     # single_rep_eval(rep_name, test00, True)
