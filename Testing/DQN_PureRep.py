@@ -88,29 +88,17 @@ class TrainRepDQN:
             s, a, r, s_p, done = buffer.memory_sample(BATCH_SIZE)
 
             target = r.detach().squeeze(dim=-1)
-            angle_target = target[:, :, 0]
-            vel_target = target[:, :, 1]
 
             q_vals = self.model.forward(s).double()
             q_angles = q_vals[:, :, 0]
             q_vels = q_vals[:, :, 1]
-            a_angles = a[:,:, 0]
-            a_vels = a[:, :, 1]
-            q_angles_a = q_angles.gather(1, a_angles)
-            q_vels_a = q_vels.gather(1, a_vels)
+            q_angles_a = q_angles.gather(1, a[:,:, 0])
+            q_vels_a = q_vels.gather(1, a[:, :, 1])
 
-            # q_a = torch.cat([q_angles_a, q_vels_a], dim=1)
-            # q_a = torch.gather(q_vals, 1)
-            # loss = F.mse_loss(q_a, q_update.detach())
-
-            # uses two seperate losses
-            loss = F.mse_loss(q_vels_a, vel_target) + F.mse_loss(q_angles_a, angle_target)
-            # loss = F.mse_loss(q_angles_a, target)
-            # angle_loss = F.mse_loss(q_angles_a, target)
-            # vel_loss = 
+            loss = F.mse_loss(q_vels_a, target[:, :, 1]) 
+            loss += F.mse_loss(q_angles_a, target[:, :, 0])
 
             self.model.optimizer.zero_grad()
-            loss.double()
             loss.backward()
             self.model.optimizer.step()
 
