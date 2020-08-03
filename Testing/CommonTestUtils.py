@@ -51,7 +51,7 @@ def single_evaluation(agent, show_snap=True, show_render=False):
         state = s_prime
         score += 1 # counts number of steps
         if show_render:
-            # env.box_render()
+            env.box_render()
             # env.full_render()
             pass
     if show_snap:

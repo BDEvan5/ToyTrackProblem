@@ -50,7 +50,10 @@ class RewardFunctions:
         else:
             reward = - 0.3 * d_action + 0.9
 
+        reward += action[1]  # incentivise big actions
+
         reward = np.clip(reward, -0.9, 1)
+
         return reward, False
 
     def _get_switch_reward(self, crash, action):
@@ -233,7 +236,7 @@ class TrainEnv(RewardFunctions):
         return False
 
     def random_action(self):
-        action = [np.random.randint(0, self.action_space-1), 1]
+        action = [np.random.randint(0, self.action_space-1), np.random.randint(0, self.action_space-1)]
         return action
 
     def render(self):

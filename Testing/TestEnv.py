@@ -24,8 +24,9 @@ class CarModel:
         # actions in range [0, n_acts) are a fan in front of vehicle
         # no backwards
         # fs = self.action_scale
-        fs = 2 * action[1]
         angle_action = action[0]
+        fs = 10 * (action[1] + 0.1) * 0.1 # the 0.1 converts range 0-9 into 0-0.9
+        # fs = 2
 
         dth = np.pi / (self.action_space-1)
         angle = -np.pi/2 + angle_action * dth 
