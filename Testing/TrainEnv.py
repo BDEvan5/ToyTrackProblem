@@ -37,7 +37,8 @@ class RewardFunctions:
 
     def _get_rep_reward(self, crash, action):
         if crash:
-            return -1, True
+            reward = np.array([-1, -1])[:, None]
+            return reward, True
 
         pp_action = self._get_pp_action()
 
@@ -50,9 +51,10 @@ class RewardFunctions:
         else:
             reward = - 0.3 * d_action + 0.9
 
-        reward += action[1]  # incentivise big actions
+        # reward += action[1]  # incentivise big actions
 
-        reward = np.clip(reward, -0.9, 1)
+        angle_reward = np.clip(reward, -0.9, 1)
+        reward = np.array([angle_reward, velocity * 0.1])[:, None]
 
         return reward, False
 

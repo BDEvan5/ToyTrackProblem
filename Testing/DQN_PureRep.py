@@ -87,8 +87,11 @@ class TrainRepDQN:
                 return 0
             s, a, r, s_p, done = buffer.memory_sample(BATCH_SIZE)
 
-            target = r.detach() 
-            q_vals = self.model.forward(s)
+            target = r.detach().squeeze(dim=-1)
+            angle_target = target[:, :, 0]
+            vel_target = target[:, :, 1]
+
+            q_vals = self.model.forward(s).double()
             q_angles = q_vals[:, :, 0]
             q_vels = q_vals[:, :, 1]
             a_angles = a[:,:, 0]
@@ -101,10 +104,13 @@ class TrainRepDQN:
             # loss = F.mse_loss(q_a, q_update.detach())
 
             # uses two seperate losses
-            loss = F.mse_loss(q_vels_a, target) + F.mse_loss(q_angles_a, target)
+            loss = F.mse_loss(q_vels_a, vel_target) + F.mse_loss(q_angles_a, angle_target)
             # loss = F.mse_loss(q_angles_a, target)
+            # angle_loss = F.mse_loss(q_angles_a, target)
+            # vel_loss = 
 
             self.model.optimizer.zero_grad()
+            loss.double()
             loss.backward()
             self.model.optimizer.step()
 
@@ -204,7 +210,7 @@ def TrainRepAgent(agent_name, buffer, i=0, load=True):
         buffer.put((state, a, r, s_prime, done_mask)) # never done
         l = agent.experience_replay(buffer)
         # score += l
-        score += r
+        score += np.mean(r)
 
         if n % print_n == 0 and n > 0:
             rewards.append(score)
