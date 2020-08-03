@@ -23,9 +23,12 @@ class CarModel:
     def _x_step_discrete(self, action):
         # actions in range [0, n_acts) are a fan in front of vehicle
         # no backwards
-        fs = self.action_scale
+        # fs = self.action_scale
+        fs = 2 * action[1]
+        angle_action = action[0]
+
         dth = np.pi / (self.action_space-1)
-        angle = -np.pi/2 + action * dth 
+        angle = -np.pi/2 + angle_action * dth 
         angle += self.theta # for the vehicle offset
         dx = [np.sin(angle)*fs, np.cos(angle)*fs] 
         

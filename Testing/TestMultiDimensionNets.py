@@ -31,22 +31,27 @@ class Qnet(nn.Module):
         super(Qnet, self).__init__()
         h_size = 512
         self.fc1 = nn.Linear(obs_space, h_size)
-        self.fc2 = nn.Linear(h_size, h_size)
-        self.fc3 = nn.Linear(h_size, action_space)
+        self.fc_angle1 = nn.Linear(h_size, h_size)
+        self.fc_angle2 = nn.Linear(h_size, action_space)
+        self.fc_vel1 = nn.Linear(h_size, h_size)
+        self.fc_vel2 = nn.Linear(h_size, action_space)
 
         self.optimizer = optim.Adam(self.parameters(), lr=LEARNING_RATE)
         self.exploration_rate = EXPLORATION_MAX
 
     def forward(self, obs):
         x = F.relu(self.fc1(obs))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        if torch.any(torch.isnan(x)):
-            print(f"Error in model values: nan detected")
-            print(f"Obs: {obs}")
-            print(f"Weights: {self.fc1.weight}")
-            # raise ValueError
-        return x
+
+        h_angle = F.relu(self.fc_angle1(x))
+        angle = self.fc_angle2(h_angle)
+
+        h_vel = F.relu(self.fc_vel1(x))
+        vel = self.fc_vel2(self.fc_vel2(h_vel))
+
+        # aim for a 10x2 dim
+        ret = torch.cat([angle, vel], dim=1)
+
+        return ret
       
 
 class TrainRepDQN:
@@ -61,14 +66,9 @@ class TrainRepDQN:
 
     def learning_act(self, obs):
         if random.random() < self.model.exploration_rate:
-            angle_return = random.randint(0, self.action_space-1)
+            return random.randint(0, self.action_space-1)
         else: 
-            angle_return = self.act(obs)
-
-        velocity_return = 1
-        action = np.array([angle_return, velocity_return])
-
-        return action
+            return self.act(obs)
 
     def act(self, obs):
         obs_t = torch.from_numpy(obs).float()
@@ -81,12 +81,10 @@ class TrainRepDQN:
             if buffer.size() < BATCH_SIZE:
                 return 0
             s, a, r, s_p, done = buffer.memory_sample(BATCH_SIZE)
-            a_angles = a[:, :, 0]
-            a_vels = a[:, :, 1]
 
             q_update = r 
             q_vals = self.model.forward(s)
-            q_a = q_vals.gather(1, a_angles)
+            q_a = q_vals.gather(1, a)
             loss = F.mse_loss(q_a, q_update.detach())
 
             self.model.optimizer.zero_grad()
@@ -149,9 +147,7 @@ class TestRepDQN:
         obs_t = torch.from_numpy(obs).float()
         out = self.model.forward(obs_t)
         a = out.argmax().item() 
-
-        action = np.array([a, 1])
-        return action
+        return a
 
 
 """Training functions"""
@@ -253,7 +249,7 @@ def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
     evals = []
 
     if create:
-        collect_rep_observations(buffer, 500)
+        collect_rep_observations(buffer, 5000)
         rewards = TrainRepAgent(agent_name, buffer, 0, False)
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
@@ -325,13 +321,19 @@ def RunSuperLearn(agent_name, create=True):
     
 
 if __name__ == "__main__":
-    # rep_name = "RepSR"
-    rep_name = "Testing"
+    # rep_name = "RepTestDqnStd"
+    # rep_name = "RepTestDqnSquare"
+    # rep_name = "RepOpt1"
+    # rep_name = "RepBasicTrain2"
+    rep_name = "RepSR"
+    # rep_name = "Testing"
     # rep_name = "RepTest"
 
+    # RunSuperLearn(rep_name, True)
+    # RunSuperLearn(rep_name, False)
 
-    RunRepDQNTraining(rep_name, 0, 5, create=True)
-    # RunRepDQNTraining(rep_name, 5, 5, False)
+    # RunRepDQNTraining(rep_name, 0, 5, create=True)
+    RunRepDQNTraining(rep_name, 5, 5, False)
     # RunRepDQNTraining(rep_name, 10, 5, create=False)
 
     # agent = TestRepDQN(12, 10, rep_name)

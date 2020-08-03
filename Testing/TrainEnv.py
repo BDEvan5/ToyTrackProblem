@@ -41,7 +41,10 @@ class RewardFunctions:
 
         pp_action = self._get_pp_action()
 
-        d_action = abs(pp_action - action)
+        angle = action[0]
+        velocity = action[1]
+
+        d_action = abs(pp_action - angle)
         if d_action == 0:
             reward = 1
         else:
@@ -74,7 +77,7 @@ class TrainEnv(RewardFunctions):
     def __init__(self):
         self.map_dim = 100
         self.n_ranges = 10
-        self.state_space = self.n_ranges + 2
+        self.state_space = self.n_ranges + 2 
         self.action_space = 10
         self.action_scale = self.map_dim / 20
 
@@ -182,11 +185,16 @@ class TrainEnv(RewardFunctions):
         return obs, r, done, None
 
     def _x_step_discrete(self, action):
+        angle_action = action[0]
+        velocity = action[1]
+
+        fs = 5 * velocity
+        # fs = self.action_scale
+
         # actions in range [0, n_acts) are a fan in front of vehicle
         # no backwards
-        fs = self.action_scale
         dth = np.pi / (self.action_space-1)
-        angle = -np.pi/2 + action * dth 
+        angle = -np.pi/2 + angle_action * dth 
         angle += self.theta # for the vehicle offset
         dx = [np.sin(angle)*fs, np.cos(angle)*fs] 
         
@@ -225,7 +233,8 @@ class TrainEnv(RewardFunctions):
         return False
 
     def random_action(self):
-        return np.random.randint(0, self.action_space-1)
+        action = [np.random.randint(0, self.action_space-1), 1]
+        return action
 
     def render(self):
         car_x = int(self.car_x[0])
