@@ -5,6 +5,8 @@ import sys
 import collections
 import random
 import torch
+
+from TestEnv import CarModel
 from CommonTestUtils import PurePursuit
 
 
@@ -75,7 +77,7 @@ class RewardFunctions:
 
 
 
-class TrainEnv(RewardFunctions):
+class TrainEnv(RewardFunctions, CarModel):
     def __init__(self):
         self.map_dim = 100
         self.n_ranges = 10
@@ -85,12 +87,8 @@ class TrainEnv(RewardFunctions):
         self.dth = np.pi / (self.action_space - 1)
 
         RewardFunctions.__init__(self)
+        CarModel.__init__(self, self.n_ranges)
 
-        self.car_x = None
-        self.theta = None
-        self.velocity = 0
-        self.steering = 0
-        self.max_velocity = 10
         self.start_theta = 0
         self.start_velocity = 0
         self.th_start_end = None
@@ -211,7 +209,7 @@ class TrainEnv(RewardFunctions):
     def step(self, action):
         self.action = action
         new_x, new_theta, new_v, new_w = self._x_step_discrete(action)
-        crash = self._check_line(self.car_x, new_x)
+        crash = self._check_crash(new_x, new_v, action[0])
         if not crash:
             self.car_x = new_x
             self.theta = new_theta
@@ -224,27 +222,21 @@ class TrainEnv(RewardFunctions):
 
         return obs, r, done, None
 
-    def _x_step_discrete(self, action):
-        dt = 2 # slower than for the actual system
-        v_max = 10
+    def _check_crash(self, new_x, new_v, angle_action):
+        new_v = new_v / self.max_velocity
+        if self._check_line(self.car_x, new_x):
+            return True
+        if (angle_action == 3 or angle_action == 6) and new_v >= 0.9:
+            return True
+        if (angle_action == 2 or angle_action == 7) and new_v >= 0.7:
+            return True
+        if (angle_action == 1 or angle_action == 8) and new_v >= 0.6:
+            return True
+        if (angle_action == 0 or angle_action == 9) and new_v >= 0.5:
+            return True
 
-        dth = np.pi / (self.action_space-1)
-
-        steering_action = action[0]
-        # assume w changes instantaneously
-        w_steering_ref = -np.pi/2 + steering_action * dth 
-        new_theta = self.theta + w_steering_ref # * dt add this in later
-
-        velocity_ref = action[1] * 0.1 * v_max # scales to [0, 1] to [0, vmax]
-        velocity = 0.5 * (self.velocity + velocity_ref) # v update provided by controller
-
-        x_i = np.sin(new_theta)*velocity * dt + self.car_x[0]
-        y_i = np.cos(new_theta)* velocity * dt + self.car_x[1]
+        return False
         
-        new_x = [x_i, y_i]
-
-        return new_x, new_theta, velocity, w_steering_ref
-
     def _check_location(self, x):
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
             return True

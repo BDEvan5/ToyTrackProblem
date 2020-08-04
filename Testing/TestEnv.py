@@ -45,6 +45,7 @@ class CarModel:
 
         return new_x, new_theta, velocity, w_steering_ref
     
+    
 class MapSetUp:
     def __init__(self):
         self.obs_locs = []
