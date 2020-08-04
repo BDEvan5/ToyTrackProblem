@@ -5,11 +5,13 @@ import sys
 import collections
 import random
 import torch
+from CommonTestUtils import PurePursuit
 
 
 class RewardFunctions:
     def __init__(self):
         self._get_reward = None
+        self.pp_action = None
 
     def pure_mod(self):
         self._get_reward = self._get_mod_reward
@@ -41,6 +43,7 @@ class RewardFunctions:
             return reward, True
 
         pp_action = self._get_pp_action()
+        self.pp_action = pp_action
 
         angle = action[0]
         velocity = action[1]
@@ -63,16 +66,11 @@ class RewardFunctions:
         return 1, False
 
     def _get_pp_action(self):
-        grad = lib.get_gradient(self.start, self.end)
-        angle = np.arctan(grad)
-        if angle > 0:
-            angle = np.pi - angle
-        else:
-            angle = - angle
-        dth = np.pi / (self.action_space - 1)
-        pp_action = round(angle / dth)
+        move_angle = self.th_start_end - self.start_theta + np.pi / 2
+        pp_action = round(move_angle / self.dth)
 
         return pp_action
+
 
 
 
@@ -84,6 +82,7 @@ class TrainEnv(RewardFunctions):
         self.state_space = self.n_ranges + 4
         self.action_space = 10
         self.action_scale = self.map_dim / 20
+        self.dth = np.pi / (self.action_space - 1)
 
         RewardFunctions.__init__(self)
 
@@ -94,9 +93,12 @@ class TrainEnv(RewardFunctions):
         self.max_velocity = 10
         self.start_theta = 0
         self.start_velocity = 0
+        self.th_start_end = None
 
         self.x_bound = [1, 99]
         self.y_bound = [1, 99]
+        self.reward = np.zeros((2, 1))
+        self.action = None
 
         self.step_size = int(1)
         self.n_searches = 30
@@ -140,6 +142,7 @@ class TrainEnv(RewardFunctions):
                 th_start_end = np.pi / 2 - th_start_end
             else:
                 th_start_end = - np.pi/2 - th_start_end
+        self.th_start_end = th_start_end
         self.start_theta = th_start_end + np.random.random() * np.pi/2 - np.pi/4
         self.theta = self.start_theta
 
@@ -147,6 +150,11 @@ class TrainEnv(RewardFunctions):
         self.velocity = self.start_velocity
 
         self.steering = 0
+
+        # text
+        self.reward = np.zeros((2, 1))
+        self.action = None
+        self.pp_action = None
 
         return self._get_state_obs()
 
@@ -201,6 +209,7 @@ class TrainEnv(RewardFunctions):
         return obs
 
     def step(self, action):
+        self.action = action
         new_x, new_theta, new_v, new_w = self._x_step_discrete(action)
         crash = self._check_line(self.car_x, new_x)
         if not crash:
@@ -209,6 +218,7 @@ class TrainEnv(RewardFunctions):
             self.velocity = new_v
             self.steering = new_w
         r, done = self._get_reward(crash, action)
+        self.reward = r
 
         obs = self._get_state_obs()
 
@@ -287,7 +297,13 @@ class TrainEnv(RewardFunctions):
             y = [car_y, range_val[1]]
             plt.plot(x, y)
 
-        
+        s = f"Reward: [{self.reward[0, 0]:.1f}, {self.reward[1, 0]:.1f}]" 
+        plt.text(100, 80, s)
+        s = f"Action: {self.action}"
+        plt.text(100, 70, s) 
+        s = f"PP Action: {self.pp_action}"
+        plt.text(100, 60, s) 
+
         plt.pause(0.001)
         if wait:
             plt.show()

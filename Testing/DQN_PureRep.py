@@ -204,7 +204,7 @@ def TrainRepAgent(agent_name, buffer, i=0, load=True):
 
         if n % print_n == 0 and n > 0:
             rewards.append(score)
-            env.render()    
+            env.render(False)    
             exp = agent.model.exploration_rate
             mean = np.mean(rewards)
             b = buffer.size()
@@ -229,7 +229,7 @@ def TrainRepAgentDebug(agent_name, buffer, i=0, load=True):
     score = 0.0
     for n in range(1000):
         state = env.reset()
-        env.render(True)
+        env.render(False)
 
         a = agent.learning_act(state)
         s_prime, r, done, _ = env.step(a)
@@ -301,48 +301,7 @@ def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
         pass
 
 
-"""Training loops - Super Learn"""
-def SuperLearn(agent_name, buffer, load=True):
-    agent = TrainRepDQN(12, 10, agent_name)
-    agent.try_load(load)
-    print_n = 100
-    rewards, score = [], 0.0
-    for n in range(2000):
-        loss = agent.experience_replay(buffer)
-        score += loss
 
-        if n % print_n == 0 and n > 0:
-            rewards.append(score)
-            mean = np.mean(rewards[-20:])
-            print(f"Run: {n} --> Score: {score:.4f} --> Mean: {mean:.4f}")
-            score = 0.0
-            lib.plot(rewards, figure_n=2)
-
-            
-
-    agent.save()
-
-    return rewards
-
-def RunSuperLearn(agent_name, create=True):
-    buffer = ReplayBuffer()
-    total_rewards = []
-
-    collect_rep_observations(buffer, 5000)
-    if create:
-        r = SuperLearn(agent_name, buffer, False)
-        total_rewards += r
-        lib.plot(total_rewards)
-
-    for i in range(100):
-        collect_rep_observations(buffer, 1000)
-        r = SuperLearn(agent_name, buffer, True)
-        total_rewards += r
-        lib.plot(total_rewards, figure_n=3)
-        agent = TestRepDQN(12, 10, agent_name)
-        single_evaluation(agent, True)
-
-    
 
 if __name__ == "__main__":
     # rep_name = "RepSR"
