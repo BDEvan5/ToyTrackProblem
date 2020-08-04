@@ -45,7 +45,7 @@ class CarModel:
 
         return new_x, new_theta, velocity, w_steering_ref
     
-    
+
 class MapSetUp:
     def __init__(self):
         self.obs_locs = []
@@ -233,6 +233,7 @@ class TestEnv(TestMap, CarModel):
     def __init__(self):
         self.steps = 0
         self.memory = []
+        self.speed_memory = []
         self.eps = 0
         
         self.n_ranges = 10 
@@ -310,6 +311,8 @@ class TestEnv(TestMap, CarModel):
             self.steering = new_w
         reward, done = self._get_reward(crash)
         obs = self._get_state_obs()
+
+        self.speed_memory.append(new_v)
 
         return obs, reward, done, None
 
@@ -488,6 +491,11 @@ class TestEnv(TestMap, CarModel):
         
         # plt.plot(xs, ys)
         plt.plot(xs, ys, 'x', markersize=20)
+
+        s = f"Steps: {self.steps}"
+        plt.text(100, 80, s)
+        s = f"Average speed: {np.mean(self.speed_memory)}"
+        plt.text(100, 70, s)
             
         plt.pause(0.001)
 

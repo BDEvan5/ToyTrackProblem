@@ -52,13 +52,17 @@ class RewardFunctions:
 
         d_action = abs(pp_action - angle)
         if d_action == 0:
-            reward = 1
+            angle_reward = 1
         else:
-            reward = - 0.3 * d_action + 0.9
+            angle_reward = - 0.3 * d_action + 0.9
 
-        angle_reward = np.clip(reward, -0.9, 1)
+        angle_reward = np.clip(angle_reward, -0.9, 1)
 
-        reward = np.array([angle_reward, velocity * 0.1])[:, None]
+        pp_velocity = self._get_pp_velocity(pp_action)
+        velocity_reward = 1 - 3 * abs(velocity * 0.1 - pp_velocity)
+        velocity_reward = np.clip(velocity_reward, -0.9, 1)
+
+        reward = np.array([angle_reward, velocity_reward])[:, None]
 
         return reward, False
 
@@ -73,7 +77,17 @@ class RewardFunctions:
 
         return pp_action
 
-
+    def _get_pp_velocity(self, pp_action):
+        if pp_action == 4 or pp_action == 5:
+            return 0.9
+        if pp_action == 3 or pp_action == 6:
+            return 0.8
+        if pp_action == 2 or pp_action == 7:
+            return 0.6
+        if pp_action == 1 or pp_action == 8:
+            return 0.5
+        if pp_action == 0 or pp_action == 9:
+            return 0.4
 
 
 
