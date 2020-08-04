@@ -7,9 +7,12 @@ from PathFinder import PathFinder, modify_path
 
 class CarModel:
     def __init__(self, n_ranges=10):
-        self.n_ranges = n_ranges
         self.car_x = [0, 0]
         self.theta = 0
+        self.velocity = 0
+        self.steering = 0
+
+        self.n_ranges = n_ranges
         self.ranges = np.zeros(self.n_ranges)
         self.range_angles = np.zeros(self.n_ranges)
         dth = np.pi/(self.n_ranges-1)
@@ -21,26 +24,25 @@ class CarModel:
         self.action_scale = self.map_dim / 50
 
     def _x_step_discrete(self, action):
-        # actions in range [0, n_acts) are a fan in front of vehicle
-        # no backwards
-        # fs = self.action_scale
-        angle_action = action[0]
-        fs = 10 * (action[1] + 0.1) * 0.1 # the 0.1 converts range 0-9 into 0-0.9
-        # fs = 2
+        dt = 1
+        v_max = 10
 
         dth = np.pi / (self.action_space-1)
-        angle = -np.pi/2 + angle_action * dth 
-        angle += self.theta # for the vehicle offset
-        dx = [np.sin(angle)*fs, np.cos(angle)*fs] 
-        
-        new_x = lib.add_locations(dx, self.car_x)
-        
-        new_grad = lib.get_gradient(new_x, self.car_x)
-        new_theta = np.pi / 2 - np.arctan(new_grad)
-        if dx[0] < 0:
-            new_theta += np.pi
 
-        return new_x, new_theta
+        steering_action = action[0]
+        # assume w changes instantaneously
+        w_steering_ref = -np.pi/2 + steering_action * dth 
+        new_theta = self.theta + w_steering_ref * dt
+
+        velocity_ref = (action[1] + 0.1) * 0.1 * v_max # scales to [0, 1] to [0, vmax]
+        velocity = 0.5 * (self.velocity + velocity_ref) # v update provided by controller
+
+        x_i = np.sin(new_theta)*velocity * dt + self.car_x[0]
+        y_i = np.cos(new_theta)* velocity * dt + self.car_x[1]
+        
+        new_x = [x_i, y_i]
+
+        return new_x, new_theta, velocity, w_steering_ref
     
 class MapSetUp:
     def __init__(self):
@@ -286,6 +288,8 @@ class TestEnv(TestMap, CarModel):
         
         self.last_distance = lib.get_distance(self.start, self.end)
         self.car_x = self.start
+        self.velocity = 0
+        self.steering = 0
         self._update_ranges()
         self.pind = 1 # first wpt
 
@@ -295,11 +299,13 @@ class TestEnv(TestMap, CarModel):
         self.memory.append(self.car_x)
         self.steps += 1
 
-        new_x, new_theta = self._x_step_discrete(action)
+        new_x, new_theta, new_v, new_w = self._x_step_discrete(action)
         crash = self._check_location(new_x) 
         if not crash:
             self.car_x = new_x
             self.theta = new_theta
+            self.velocity = new_v
+            self.steering = new_w
         reward, done = self._get_reward(crash)
         obs = self._get_state_obs()
 

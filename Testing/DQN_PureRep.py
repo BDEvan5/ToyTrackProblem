@@ -53,6 +53,7 @@ class Qnet(nn.Module):
 
         return ret
 
+
 class TrainRepDQN:
     def __init__(self, obs_space, action_space, name="best_avg"):
         self.obs_space = obs_space
@@ -139,6 +140,7 @@ class TrainRepDQN:
             self.model = Qnet(self.obs_space, self.action_space)
             self.target = Qnet(self.obs_space, self.action_space)
             print(f"Not loading - restarting training")
+
 
 class TestRepDQN:
     def __init__(self, obs_space, act_space, name="best_avg"):

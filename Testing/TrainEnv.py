@@ -51,9 +51,8 @@ class RewardFunctions:
         else:
             reward = - 0.3 * d_action + 0.9
 
-        # reward += action[1]  # incentivise big actions
-
         angle_reward = np.clip(reward, -0.9, 1)
+
         reward = np.array([angle_reward, velocity * 0.1])[:, None]
 
         return reward, False
@@ -90,6 +89,8 @@ class TrainEnv(RewardFunctions):
 
         self.car_x = None
         self.theta = None
+        self.velocity = 0
+        self.steering = 0
 
         self.x_bound = [1, 99]
         self.y_bound = [1, 99]
@@ -109,7 +110,9 @@ class TrainEnv(RewardFunctions):
             self.range_angles[i] = i * dth - np.pi/2
 
     def reset(self):
-        self.theta = 0
+        self.theta = 0 # todo, make random
+        self.velocity = np.random.random() # random starting velocity
+        self.steering = 0
         self.start = [np.random.random() * 30 + 35 , np.random.random() * 60 + 20]
         self.car_x = self.start
         self.race_map = np.zeros((100, 100))
@@ -178,11 +181,13 @@ class TrainEnv(RewardFunctions):
         return obs
 
     def step(self, action):
-        new_x, new_theta = self._x_step_discrete(action)
+        new_x, new_theta, new_v, new_w = self._x_step_discrete(action)
         crash = self._check_line(self.car_x, new_x)
         if not crash:
             self.car_x = new_x
             self.theta = new_theta
+            self.velocity = new_v
+            self.steering = new_w
         r, done = self._get_reward(crash, action)
 
         obs = self._get_state_obs()
@@ -190,29 +195,25 @@ class TrainEnv(RewardFunctions):
         return obs, r, done, None
 
     def _x_step_discrete(self, action):
-        angle_action = action[0]
-        velocity = action[1]
+        dt = 1
+        v_max = 10
 
-        fs = 5 * velocity
-        # fs = self.action_scale
-
-        # actions in range [0, n_acts) are a fan in front of vehicle
-        # no backwards
         dth = np.pi / (self.action_space-1)
-        angle = -np.pi/2 + angle_action * dth 
-        angle += self.theta # for the vehicle offset
-        dx = [np.sin(angle)*fs, np.cos(angle)*fs] 
-        
-        new_x = lib.add_locations(dx, self.car_x)
-        
-        new_grad = lib.get_gradient(new_x, self.car_x)
-        new_theta = np.pi / 2 - np.arctan(new_grad)
-        if dx[0] < 0:
-            new_theta += np.pi
-        if new_theta >= 2*np.pi:
-            new_theta = new_theta - 2*np.pi
 
-        return new_x, new_theta
+        steering_action = action[0]
+        # assume w changes instantaneously
+        w_steering_ref = -np.pi/2 + steering_action * dth 
+        new_theta = self.theta + w_steering_ref * dt
+
+        velocity_ref = action[1] * 0.1 * v_max # scales to [0, 1] to [0, vmax]
+        velocity = 0.5 * (self.velocity + velocity_ref) # v update provided by controller
+
+        x_i = np.sin(new_theta)*velocity * dt + self.car_x[0]
+        y_i = np.cos(new_theta)* velocity * dt + self.car_x[1]
+        
+        new_x = [x_i, y_i]
+
+        return new_x, new_theta, velocity, w_steering_ref
 
     def _check_location(self, x):
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
