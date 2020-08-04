@@ -12,6 +12,8 @@ class CarModel:
         self.velocity = 0
         self.steering = 0
 
+        self.max_velocity = 10
+
         self.n_ranges = n_ranges
         self.ranges = np.zeros(self.n_ranges)
         self.range_angles = np.zeros(self.n_ranges)
@@ -25,7 +27,6 @@ class CarModel:
 
     def _x_step_discrete(self, action):
         dt = 1
-        v_max = 10
 
         dth = np.pi / (self.action_space-1)
 
@@ -34,7 +35,7 @@ class CarModel:
         w_steering_ref = -np.pi/2 + steering_action * dth 
         new_theta = self.theta + w_steering_ref * dt
 
-        velocity_ref = (action[1] + 0.1) * 0.1 * v_max # scales to [0, 1] to [0, vmax]
+        velocity_ref = (action[1] + 0.1) * 0.1 * self.max_velocity # scales to [0, 1] to [0, vmax]
         velocity = 0.5 * (self.velocity + velocity_ref) # v update provided by controller
 
         x_i = np.sin(new_theta)*velocity * dt + self.car_x[0]
@@ -362,11 +363,14 @@ class TestEnv(TestMap, CarModel):
             self.pind += 1
             target = self._get_target()
 
+        rel_v = self.velocity / self.max_velocity
+        rel_th = self.theta / np.pi
+
         rel_target = lib.sub_locations(target, self.car_x)
         self.target = rel_target
         transformed_target = lib.transform_coords(rel_target, self.theta)
         normalised_target = lib.normalise_coords(transformed_target)
-        obs = np.concatenate([normalised_target, self.ranges])
+        obs = np.concatenate([normalised_target, [rel_v], [rel_th], self.ranges])
 
         return obs
 

@@ -229,6 +229,7 @@ def TrainRepAgentDebug(agent_name, buffer, i=0, load=True):
     score = 0.0
     for n in range(1000):
         state = env.reset()
+        env.render(True)
 
         a = agent.learning_act(state)
         s_prime, r, done, _ = env.step(a)
@@ -238,6 +239,8 @@ def TrainRepAgentDebug(agent_name, buffer, i=0, load=True):
         l = agent.experience_replay(buffer)
         # score += l
         score += r
+
+        env.render(True)
 
         if n % print_n == 0 and n > 0:
             rewards.append(score)
@@ -255,6 +258,12 @@ def TrainRepAgentDebug(agent_name, buffer, i=0, load=True):
 
     return rewards
 
+def RunDebugTraining(agent_name):
+    buffer = ReplayBuffer()
+    # collect_rep_observations(buffer, 500)
+
+    rewards = TrainRepAgentDebug(agent_name, buffer, 0, True)
+
 
 def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
     buffer = ReplayBuffer()
@@ -265,6 +274,7 @@ def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
     if create:
         collect_rep_observations(buffer, 500)
         rewards = TrainRepAgent(agent_name, buffer, 0, False)
+        # rewards = TrainRepAgentDebug(agent_name, buffer, 0, True)
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
         agent = TestRepDQN(12, 10, agent_name)
@@ -280,7 +290,7 @@ def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
         lib.plot(total_rewards, figure_n=3)
         plt.figure(2).savefig("PNGs/Training_DQN_rep" + str(i))
         np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
-        agent = TestRepDQN(12, 10, agent_name)
+        agent = TestRepDQN(14, 10, agent_name)
         s = single_evaluation(agent)
         evals.append(s)
 
@@ -339,6 +349,7 @@ if __name__ == "__main__":
     rep_name = "Testing"
     # rep_name = "RepTest"
 
+    # RunDebugTraining(rep_name)
 
     RunRepDQNTraining(rep_name, 0, 5, create=True)
     # RunRepDQNTraining(rep_name, 5, 5, False)

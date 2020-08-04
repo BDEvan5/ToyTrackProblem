@@ -81,7 +81,7 @@ class TrainEnv(RewardFunctions):
     def __init__(self):
         self.map_dim = 100
         self.n_ranges = 10
-        self.state_space = self.n_ranges + 2 
+        self.state_space = self.n_ranges + 4
         self.action_space = 10
         self.action_scale = self.map_dim / 20
 
@@ -91,6 +91,9 @@ class TrainEnv(RewardFunctions):
         self.theta = None
         self.velocity = 0
         self.steering = 0
+        self.max_velocity = 10
+        self.start_theta = 0
+        self.start_velocity = 0
 
         self.x_bound = [1, 99]
         self.y_bound = [1, 99]
@@ -110,29 +113,43 @@ class TrainEnv(RewardFunctions):
             self.range_angles[i] = i * dth - np.pi/2
 
     def reset(self):
-        self.theta = 0 # todo, make random
-        self.velocity = np.random.random() # random starting velocity
-        self.steering = 0
-        self.start = [np.random.random() * 30 + 35 , np.random.random() * 60 + 20]
-        self.car_x = self.start
         self.race_map = np.zeros((100, 100))
-        self._update_target()
-
         self._locate_obstacles()
+
+        self.start = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
         while self._check_location(self.start):
-            self.race_map = np.zeros((100, 100))
-            self._locate_obstacles()
+            self.start = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
+        self.car_x = self.start
+
+        self.end = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
+        while self._check_location(self.end) or \
+            lib.get_distance(self.start, self.end) < 20 or \
+                lib.get_distance(self.start, self.end) > 60:
+            self.end = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
+
+        grad = lib.get_gradient(self.start, self.end)
+        dx = self.end[0] - self.start[0]
+        th_start_end = np.arctan(grad)
+        if th_start_end > 0:
+            if dx > 0:
+                th_start_end = np.pi / 2 - th_start_end
+            else:
+                th_start_end = -np.pi/2 - th_start_end
+        else:
+            if dx > 0:
+                th_start_end = np.pi / 2 - th_start_end
+            else:
+                th_start_end = - np.pi/2 - th_start_end
+        self.start_theta = th_start_end + np.random.random() * np.pi/2 - np.pi/4
+        self.theta = self.start_theta
+
+        self.start_velocity = np.random.random() * self.max_velocity
+        self.velocity = self.start_velocity
+
+        self.steering = 0
 
         return self._get_state_obs()
 
-    def _update_target(self):
-        rand = np.random.random()
-        target_theta = rand * np.pi - np.pi/ 2# randome angle [-np.ip/2, pi/2]
-        self.target = [np.sin(target_theta) , np.cos(target_theta)]
-        fs = 30
-        mod = [self.target[0] * fs, self.target[1] * fs]
-        end = lib.add_locations(mod, self.car_x)
-        self.end = end
 
     def _locate_obstacles(self):
         n_obs = 2
@@ -172,11 +189,14 @@ class TrainEnv(RewardFunctions):
             self.ranges[i] = (j) / (self.n_searches) # gives a scaled val to 1 
 
     def _get_state_obs(self):
+        rel_v = self.velocity / self.max_velocity
+        rel_th = self.theta / np.pi
+
         self._update_ranges()
         rel_target = lib.sub_locations(self.end, self.car_x)
         transformed_target = lib.transform_coords(rel_target, self.theta)
         normalised_target = lib.normalise_coords(transformed_target)
-        obs = np.concatenate([normalised_target, self.ranges])
+        obs = np.concatenate([normalised_target, [rel_v], [rel_th], self.ranges])
 
         return obs
 
@@ -195,7 +215,7 @@ class TrainEnv(RewardFunctions):
         return obs, r, done, None
 
     def _x_step_discrete(self, action):
-        dt = 1
+        dt = 2 # slower than for the actual system
         v_max = 10
 
         dth = np.pi / (self.action_space-1)
@@ -203,7 +223,7 @@ class TrainEnv(RewardFunctions):
         steering_action = action[0]
         # assume w changes instantaneously
         w_steering_ref = -np.pi/2 + steering_action * dth 
-        new_theta = self.theta + w_steering_ref * dt
+        new_theta = self.theta + w_steering_ref # * dt add this in later
 
         velocity_ref = action[1] * 0.1 * v_max # scales to [0, 1] to [0, vmax]
         velocity = 0.5 * (self.velocity + velocity_ref) # v update provided by controller
@@ -221,7 +241,8 @@ class TrainEnv(RewardFunctions):
         if x[1] > self.y_bound[1]:
             return True 
         if x[1] < 0:
-            return False # represents the area below the zero line. Done for ranges
+            # return False # represents the area below the zero line. Done for ranges
+            return True
 
         if self.race_map[int(x[0]), int(x[1])]:
             return True
@@ -242,7 +263,7 @@ class TrainEnv(RewardFunctions):
         action = [np.random.randint(0, self.action_space-1), np.random.randint(0, self.action_space-1)]
         return action
 
-    def render(self):
+    def render(self, wait=False):
         car_x = int(self.car_x[0])
         car_y = int(self.car_x[1])
         fig = plt.figure(4)
@@ -251,6 +272,9 @@ class TrainEnv(RewardFunctions):
         plt.xlim(0, self.map_dim)
         plt.ylim(-10, self.map_dim)
         plt.plot(self.start[0], self.start[1], '*', markersize=12)
+        x_start_v = [self.start[0], self.start[0] + 15*np.sin(self.start_theta)]
+        y_start_v = [self.start[1], self.start[1] + 15*np.cos(self.start_theta)]
+        plt.plot(x_start_v, y_start_v, linewidth=2)
         plt.plot(self.end[0], self.end[1], '*', markersize=12)
         plt.plot(self.car_x[0], self.car_x[1], '+', markersize=16)
 
@@ -265,4 +289,6 @@ class TrainEnv(RewardFunctions):
 
         
         plt.pause(0.001)
+        if wait:
+            plt.show()
 
