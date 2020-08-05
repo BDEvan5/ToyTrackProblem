@@ -40,8 +40,8 @@ class ReplayBuffer():
 """Single Evals"""
 def single_evaluation(agent, show_snap=True, show_render=False):
     env = TestEnv()
-    env.map_1000(True)
-    # env.map_1010()
+    # env.map_1000(True)
+    env.map_1010()
     # env.map_1020()
 
     score, done, state = 0, False, env.reset()
@@ -51,7 +51,7 @@ def single_evaluation(agent, show_snap=True, show_render=False):
         state = s_prime
         score += 1 # counts number of steps
         if show_render:
-            env.box_render()
+            # env.box_render()
             # env.full_render()
             pass
     if show_snap:
@@ -106,3 +106,41 @@ class PurePursuit:
         return action
 
         
+class TestOptimalSolution:
+    def __init__(self, obs_space, action_space):
+        self.obs_space = obs_space
+        self.act_space = action_space
+
+    def act(self, obs):
+        pp_action = self._get_pp_action(obs)
+        pp_velocity = self._get_pp_velocity(pp_action) * 10
+
+        return [pp_action, pp_velocity]
+        
+    def _get_pp_action(self, obs):
+        try:
+            grad = obs[1] / obs[0] # y/x
+        except:
+            grad = 10000
+        angle = np.arctan(grad)
+
+        if angle > 0:
+            angle = np.pi - angle
+        else:
+            angle = - angle
+        dth = np.pi / (self.act_space - 1)
+        pp_action = round(angle / dth)
+
+        return pp_action
+
+    def _get_pp_velocity(self, pp_action):
+        if pp_action == 4 or pp_action == 5:
+            return 0.9
+        if pp_action == 3 or pp_action == 6:
+            return 0.8
+        if pp_action == 2 or pp_action == 7:
+            return 0.6
+        if pp_action == 1 or pp_action == 8:
+            return 0.5
+        if pp_action == 0 or pp_action == 9:
+            return 0.4

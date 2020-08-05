@@ -9,7 +9,7 @@ import torch
 
 import LibFunctions as lib
 from TestEnv import TestEnv
-from CommonTestUtils import CorridorAgent, PurePursuit, single_evaluation
+from CommonTestUtils import CorridorAgent, PurePursuit, single_evaluation, TestOptimalSolution
 
 from DQN_PureRep import TestRepDQN, Qnet
 from DQN_PureMod import TestPureModDQN
@@ -83,15 +83,21 @@ def RunPurePursuitTest():
 
     single_evaluation(agent, True, True)
 
+def RunPerfectTest():
+    agent = TestOptimalSolution(12, 10)
+
+    single_evaluation(agent, True, True)
+
 
 if __name__ == "__main__":
 
 
     # RunCorridorTest()
     # RunPurePursuitTest()
+    RunPerfectTest()
 
-    RunPureRepDQNTest()
-    RunPureModDQNTest()
-    RunSwitchRepDQNTest()
+    # RunPureRepDQNTest()
+    # RunPureModDQNTest()
+    # RunSwitchRepDQNTest()
 
     # single_rep_eval(rep_name, test00, True)
