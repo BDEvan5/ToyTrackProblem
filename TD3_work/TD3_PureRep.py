@@ -32,6 +32,7 @@ class Actor(nn.Module):
         self.l3 = nn.Linear(300, action_dim)
 
         self.max_action = max_action
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
 
     def forward(self, x):
         x = F.relu(self.l1(x))
@@ -39,6 +40,7 @@ class Actor(nn.Module):
         z = self.l3(y)
         a = self.max_action * torch.tanh(z) 
         return a
+
 
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -54,6 +56,7 @@ class Critic(nn.Module):
         self.l5 = nn.Linear(400, 300)
         self.l6 = nn.Linear(300, 1)
 
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
 
     def forward(self, x, u):
         xu = torch.cat([x, u], 1)
@@ -75,25 +78,22 @@ class Critic(nn.Module):
         x1 = self.l3(x1)
         return x1
 
+
 class TrainRepTD3(object):
     def __init__(self, state_dim, action_dim, max_action, agent_name):
         self.agent_name = agent_name
-        self.actor = Actor(state_dim, action_dim, max_action)
-        self.actor_target = Actor(state_dim, action_dim, max_action)
-        self.actor_target.load_state_dict(self.actor.state_dict())
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-3)
+        self.actor = None
+        self.actor_target = None
 
-        self.critic = Critic(state_dim, action_dim)
-        self.critic_target = Critic(state_dim, action_dim)
-        self.critic_target.load_state_dict(self.critic.state_dict())
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-3)
+        self.critic = None
+        self.critic_target = None
 
         self.max_action = max_action
         self.act_dim = action_dim
+        self.state_dim = state_dim
         self.last_action = None
-        self.filename = "DataRecords/buffer"
 
-    def select_action(self, state, noise=0.1):
+    def act(self, state, noise=0.1):
         state = torch.FloatTensor(state.reshape(1, -1))
 
         action = self.actor(state).data.numpy().flatten()
@@ -101,23 +101,6 @@ class TrainRepTD3(object):
             action = (action + np.random.normal(0, noise, size=self.act_dim))
             
         return action.clip(-self.max_action, self.max_action)
-
-    def get_new_target(self, state, noise=0.1):
-        state = torch.FloatTensor(state.reshape(1, -1))
-
-        action = self.actor(state).data.numpy().flatten()
-        if noise != 0: 
-            action = (action + np.random.normal(0, noise, size=self.act_dim))
-            
-        a = action.clip(-self.max_action, self.max_action)
-
-        self.last_action = a
-
-        return a
-
-    def add_data(self, obs, new_obs, reward, done):
-        data = (obs, new_obs, self.last_action, reward, done)
-        self.replay_buffer.add(data)
 
     def train(self, replay_buffer, iterations=1):
         # iterations = 1 # number of times to train per step
@@ -154,16 +137,16 @@ class TrainRepTD3(object):
         critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(current_Q2, target_Q) 
 
         # Optimize the critic
-        self.critic_optimizer.zero_grad()
+        self.critic.optimizer.zero_grad()
         critic_loss.backward()
-        self.critic_optimizer.step()
+        self.critic.optimizer.step()
 
     def update_actor(self, state):
         actor_loss = -self.critic.Q1(state, self.actor(state)).mean()
 
-        self.actor_optimizer.zero_grad()
+        self.actor.optimizer.zero_grad()
         actor_loss.backward()
-        self.actor_optimizer.step()
+        self.actor.optimizer.step()
 
         # Update the frozen target models
         for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
@@ -173,29 +156,44 @@ class TrainRepTD3(object):
             target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
     def save(self, directory="./td3_saves"):
-        torch.save(self.actor.state_dict(), '%s/%s_actor.pth' % (directory, self.agent_name))
-        torch.save(self.critic.state_dict(), '%s/%s_critic.pth' % (directory, self.agent_name))
+        filename = self.agent_name
+
+        torch.save(self.actor, '%s/%s_actor.pth' % (directory, filename))
+        torch.save(self.actor_target, '%s/%s_actor_target.pth' % (directory, filename))
+        torch.save(self.critic, '%s/%s_critic.pth' % (directory, filename))
+        torch.save(self.critic_target, '%s/%s_critic_target.pth' % (directory, filename))
 
     def load(self, directory="./td3_saves"):
-        self.actor.load_state_dict(torch.load('%s/%s_actor.pth' % (directory, self.agent_name)))
-        self.critic.load_state_dict(torch.load('%s/%s_critic.pth' % (directory, self.agent_name)))
+        filename = self.agent_name
 
-    # def try_load(self, load=True):
-    #     if load:
-    #         try:
-    #             self.load()
-    #         except:
-    #             print(f"Unable to load model")
-    #             pass
-    #     else:
-    #         self.actor = Actor(state_dim, action_dim, max_action)
-    #         self.actor_target = Actor(state_dim, action_dim, max_action) 
+        self.actor = torch.load('%s/%s_actor.pth' % (directory, filename))
+        self.actor_target = torch.load('%s/%s_actor_target.pth' % (directory, filename))
+        self.critic = torch.load('%s/%s_critic.pth' % (directory, filename))
+        self.critic_target = torch.load('%s/%s_critic_target.pth' % (directory, filename))
 
+    def try_load(self, load=True):
+        if load:
+            try:
+                self.load()
+            except:
+                print(f"Unable to load model")
+                pass
+        else:
+            self.create_agent()
+            print(f"Not loading - restarting training")
 
-    #         self.model = Qnet(self.obs_space, self.action_space)
-    #         self.target = Qnet(self.obs_space, self.action_space)
-            # print(f"Not loading - restarting training")
+    def create_agent(self):
+        state_dim = self.state_dim
+        action_dim = self.act_dim
+        max_action = self.max_action
 
+        self.actor = Actor(state_dim, action_dim, max_action)
+        self.actor_target = Actor(state_dim, action_dim, max_action)
+        self.actor_target.load_state_dict(self.actor.state_dict())
+
+        self.critic = Critic(state_dim, action_dim)
+        self.critic_target = Critic(state_dim, action_dim)
+        self.critic_target.load_state_dict(self.critic.state_dict())
 
 class TestRepTD3(object):
     def __init__(self, state_dim, action_dim, max_action, agent_name):
@@ -215,7 +213,7 @@ class TestRepTD3(object):
         self.last_action = None
         self.filename = "DataRecords/buffer"
 
-    def act(self, state, noise=0.1):
+    def act(self, state, noise=0.0):
         state = torch.FloatTensor(state.reshape(1, -1))
 
         action = self.actor(state).data.numpy().flatten()
@@ -225,25 +223,12 @@ class TestRepTD3(object):
         return action.clip(-self.max_action, self.max_action)
 
     def load(self, directory="./td3_saves"):
-        self.actor.load_state_dict(torch.load('%s/%s_actor.pth' % (directory, self.agent_name)))
-        self.critic.load_state_dict(torch.load('%s/%s_critic.pth' % (directory, self.agent_name)))
+        filename = self.agent_name
 
-    # def try_load(self, load=True):
-    #     if load:
-    #         try:
-    #             self.load()
-    #         except:
-    #             print(f"Unable to load model")
-    #             pass
-    #     else:
-    #         self.actor = Actor(state_dim, action_dim, max_action)
-    #         self.actor_target = Actor(state_dim, action_dim, max_action) 
-
-
-    #         self.model = Qnet(self.obs_space, self.action_space)
-    #         self.target = Qnet(self.obs_space, self.action_space)
-            # print(f"Not loading - restarting training")
-
+        self.actor = torch.load('%s/%s_actor.pth' % (directory, filename))
+        self.actor_target = torch.load('%s/%s_actor_target.pth' % (directory, filename))
+        self.critic = torch.load('%s/%s_critic.pth' % (directory, filename))
+        self.critic_target = torch.load('%s/%s_critic_target.pth' % (directory, filename))
 
 
 
@@ -367,7 +352,7 @@ def TrainRepAgent(agent_name, buffer, load=True):
     max_action = 1 # scale in env
 
     agent = TrainRepTD3(state_dim, action_dim, max_action, agent_name)
-    # agent.try_load(load)
+    agent.try_load(load)
 
     rewards, score = [], 0.0
     print_n = 100
@@ -375,7 +360,7 @@ def TrainRepAgent(agent_name, buffer, load=True):
     for n in range(1000):
         state = env.reset()
 
-        a = agent.select_action(np.array(state), noise=0.1)
+        a = agent.act(np.array(state), noise=0.1)
         s_prime, r, done, _ = env.step(a)
         # done_mask = 0.0 if done else 1.0
         done_mask = True
