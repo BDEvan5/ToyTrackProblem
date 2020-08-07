@@ -39,15 +39,21 @@ class RewardFunctions:
         if crash:
             return -1, True
 
-        pp_action = self._get_pp_action() / (np.pi /2) # range [-1, 1]
+        action_angle = action[0] * 90 # degrees for debugg
+        self.action = action_angle
+
+        pp_action_deg = self._get_pp_action() * 90 / (np.pi / 2)
+        self.pp_action = pp_action_deg
+        pp_action = pp_action_deg / 90 # range [-1, 1]
 
         d_action_angle = abs(pp_action - action[0])
         if d_action_angle < 0.01:
             reward = 1
         else:
-            reward = - 1 * d_action_angle + 0.9
+            reward = - 1.5 * d_action_angle + 0.9
 
         reward = np.clip(reward, -0.9, 1)
+        self.reward = reward
 
         return reward, False
 
@@ -64,6 +70,8 @@ class RewardFunctions:
         else:
             angle = - angle
         
+        angle = angle - np.pi / 2 # offset to +-
+
         return angle
 
 
@@ -82,6 +90,10 @@ class TrainEnvCont(RewardFunctions):
 
         self.car_x = None
         self.theta = None
+
+        self.reward = None
+        self.pp_action_deg = 0
+        self.action = [0, 0]
 
         self.x_bound = [1, 99]
         self.y_bound = [1, 99]
@@ -249,6 +261,12 @@ class TrainEnvCont(RewardFunctions):
             y = [car_y, range_val[1]]
             plt.plot(x, y)
 
+        s = f"Reward: [{self.reward:.2f}]" 
+        plt.text(100, 80, s)
+        s = f"Action: {self.action:.2f}"
+        plt.text(100, 70, s) 
+        s = f"PP Action: {self.pp_action:.2f}"
+        plt.text(100, 60, s) 
         
         plt.pause(0.001)
 

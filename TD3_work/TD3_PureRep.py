@@ -231,79 +231,6 @@ class TestRepTD3(object):
         self.critic_target = torch.load('%s/%s_critic_target.pth' % (directory, filename))
 
 
-
-
-"""Cartpole loops"""
-def observe(env,replay_buffer, observation_steps):
-    time_steps = 0
-    obs = env.reset()
-    done = False
-
-    while time_steps < observation_steps:
-        action = env.action_space.sample()
-        new_obs, reward, done, _ = env.step(action)
-
-        replay_buffer.add((obs, new_obs, action, reward, done))
-
-        obs = new_obs
-        time_steps += 1
-
-        if done:
-            obs = env.reset()
-            done = False
-
-        print("\rPopulating Buffer {}/{}.".format(time_steps, observation_steps), end="")
-        sys.stdout.flush()
-
-def evaluate_policy(policy, env, eval_episodes=100,render=False):
-    avg_reward = 0.
-    for i in range(eval_episodes):
-        obs = env.reset()
-        done = False
-        while not done:
-            if render:
-                env.render()
-            action = policy.select_action(np.array(obs), noise=0)
-            obs, reward, done, _ = env.step(action)
-            avg_reward += reward
-
-    avg_reward /= eval_episodes
-
-    print("\n---------------------------------------")
-    print("Evaluation over {:d} episodes: {:f}" .format(eval_episodes, avg_reward))
-    print("---------------------------------------")
-    return avg_reward
-
-def test_pendulum():
-    env = gym.make("Pendulum-v0")
-    state_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0] 
-    max_action = env.action_space.high[0]
-
-    agent = TrainRepTD3(state_dim, action_dim, max_action)
-    replay_buffer = ReplayBufferTD3()
-
-    rewards = []
-    observe(env, replay_buffer, 10000)
-    for episode in range(500):
-        score, done, obs, ep_steps = 0, False, env.reset(), 0
-        while not done:
-            action = agent.select_action(np.array(obs), noise=0.1)
-
-            new_obs, reward, done, _ = env.step(action) 
-            done_bool = 0 if ep_steps + 1 == 200 else float(done)
-        
-            replay_buffer.add((obs, new_obs, action, reward, done_bool))          
-            obs = new_obs
-            score += reward
-            ep_steps += 1
-
-            agent.train(replay_buffer, 2) # number is of itterations
-
-        rewards.append(score)
-        print(f"Ep: {episode} -> score: {score}")
-
-
 """My env loops"""
 def collect_observations(buffer, observation_steps=5000):
     env = TrainEnvCont()
@@ -343,7 +270,7 @@ def evaluate_policy(policy, env, eval_episodes=100,render=False):
     print("---------------------------------------")
     return avg_reward
 
-def TrainRepAgent(agent_name, buffer, load=True):
+def TrainRepTD3Agent(agent_name, buffer, load=True):
     env = TrainEnvCont()
     env.pure_rep()
 
@@ -362,6 +289,7 @@ def TrainRepAgent(agent_name, buffer, load=True):
 
         a = agent.act(np.array(state), noise=0.1)
         s_prime, r, done, _ = env.step(a)
+        # env.render()
         # done_mask = 0.0 if done else 1.0
         done_mask = True
         buffer.add((state, s_prime, a, r, done_mask)) # never done
@@ -385,7 +313,6 @@ def TrainRepAgent(agent_name, buffer, load=True):
 
     return rewards
 
-
 def RunRepTD3Training(agent_name, start, n_runs, create=False):
     buffer = ReplayBufferTD3()
     total_rewards = []
@@ -394,7 +321,7 @@ def RunRepTD3Training(agent_name, start, n_runs, create=False):
 
     if create:
         collect_observations(buffer, 50)
-        rewards = TrainRepAgent(agent_name, buffer, False)
+        rewards = TrainRepTD3Agent(agent_name, buffer, False)
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
         # agent = TestRepDQN(12, 10, agent_name)
@@ -403,7 +330,7 @@ def RunRepTD3Training(agent_name, start, n_runs, create=False):
 
     for i in range(start, start + n_runs):
         print(f"Running batch: {i}")
-        rewards = TrainRepAgent(agent_name, buffer, True)
+        rewards = TrainRepTD3Agent(agent_name, buffer, True)
         total_rewards += rewards
 
         lib.plot(total_rewards, figure_n=3)
