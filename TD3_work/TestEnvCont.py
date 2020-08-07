@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 from PathFinder import PathFinder, modify_path
 
 
-class CarModel:
+class CarModelCont:
     def __init__(self, n_ranges=10):
         self.n_ranges = n_ranges
         self.car_x = [0, 0]
@@ -221,7 +221,7 @@ class TestMap(MapSetUp):
         return False
 
 
-class TestEnv(TestMap, CarModel):
+class TestEnvCont(TestMap, CarModelCont):
     def __init__(self):
         self.steps = 0
         self.memory = []
@@ -231,7 +231,7 @@ class TestEnv(TestMap, CarModel):
         self.state_space = 2 + self.n_ranges
 
         TestMap.__init__(self)
-        CarModel.__init__(self, self.n_ranges)
+        CarModelCont.__init__(self, self.n_ranges)
 
         self.wpts = None
         self.pind = None

@@ -9,7 +9,7 @@ import pickle
 import matplotlib.pyplot as plt 
 
 import LibFunctions as lib 
-from TrainEnv import TrainEnv
+from TrainEnvCont import TrainEnvCont
 
 
 # hyper parameters
