@@ -13,8 +13,8 @@ import torch.optim as optim
 
 
 import LibFunctions as lib
-from CommonTestUtils import single_evaluation, ReplayBuffer
-from TrainEnv import TrainEnv
+from CommonTestUtilsDQN import single_evaluationDQN, ReplayBufferDQN
+from TrainEnvDQN import TrainEnvDQN
 
 
 #Hyperparameters
@@ -218,7 +218,7 @@ class TestPureModDQN:
 
 """Training functions"""
 def collect_pure_mod_observations(buffer, n_itterations=5000):
-    env = TrainEnv()
+    env = TrainEnvDQN()
     env.pure_mod()
     s, done = env.reset(), False
     for i in range(n_itterations):
@@ -271,7 +271,7 @@ def TrainPureModAgent(agent_name, buffer, i=0, load=True):
     return rewards
 
 def RunPureModTraining(agent_name, start=0, n_runs=5, create=False):
-    buffer = ReplayBuffer()
+    buffer = ReplayBufferDQN()
     total_rewards = []
 
     evals = []

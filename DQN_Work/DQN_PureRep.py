@@ -10,8 +10,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 import LibFunctions as lib
-from TrainEnv import TrainEnv
-from CommonTestUtils import single_evaluation, ReplayBuffer
+from TrainEnvDQN import TrainEnvDQN
+from CommonTestUtilsDQN import single_evaluationDQN, ReplayBufferDQN
 
 #Hyperparameters
 GAMMA = 0.95
@@ -166,7 +166,7 @@ class TestRepDQN:
 
 """Training functions"""
 def collect_rep_observations(buffer, n_itterations=5000):
-    env = TrainEnv()
+    env = TrainEnvDQN()
     env.pure_rep()
     s, done = env.reset(), False
     for i in range(n_itterations):
@@ -183,7 +183,7 @@ def collect_rep_observations(buffer, n_itterations=5000):
     print(" ")
 
 def TrainRepAgent(agent_name, buffer, i=0, load=True):
-    env = TrainEnv()
+    env = TrainEnvDQN()
     env.pure_rep()
     agent = TrainRepDQN(env.state_space, env.action_space, agent_name)
     agent.try_load(load)
@@ -214,12 +214,12 @@ def TrainRepAgent(agent_name, buffer, i=0, load=True):
 
             agent.save()
             test_agent = TestRepDQN(12, 10, agent_name)
-            single_evaluation(test_agent, True, False)
+            single_evaluationDQN(test_agent, True, False)
 
     return rewards
 
 def TrainRepAgentDebug(agent_name, buffer, i=0, load=True):
-    env = TrainEnv()
+    env = TrainEnvDQN()
     env.pure_rep()
     agent = TrainRepDQN(env.state_space, env.action_space, agent_name)
     agent.try_load(load)
@@ -254,19 +254,19 @@ def TrainRepAgentDebug(agent_name, buffer, i=0, load=True):
 
             agent.save()
             test_agent = TestRepDQN(12, 10, agent_name)
-            single_evaluation(test_agent, True)
+            single_evaluationDQN(test_agent, True)
 
     return rewards
 
 def RunDebugTraining(agent_name):
-    buffer = ReplayBuffer()
+    buffer = ReplayBufferDQN()
     # collect_rep_observations(buffer, 500)
 
     rewards = TrainRepAgentDebug(agent_name, buffer, 0, True)
 
 
 def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
-    buffer = ReplayBuffer()
+    buffer = ReplayBufferDQN()
     total_rewards = []
 
     evals = []
@@ -278,7 +278,7 @@ def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
         agent = TestRepDQN(12, 10, agent_name)
-        s = single_evaluation(agent)
+        s = single_evaluationDQN(agent)
         evals.append(s)
 
     for i in range(start, start + n_runs):
@@ -291,7 +291,7 @@ def RunRepDQNTraining(agent_name, start=0, n_runs=5, create=False):
         plt.figure(2).savefig("PNGs/Training_DQN_rep" + str(i))
         np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
         agent = TestRepDQN(14, 10, agent_name)
-        s = single_evaluation(agent)
+        s = single_evaluationDQN(agent)
         evals.append(s)
 
     try:
@@ -315,4 +315,4 @@ if __name__ == "__main__":
     # RunRepDQNTraining(rep_name, 10, 5, create=False)
 
     # agent = TestRepDQN(12, 10, rep_name)
-    # single_evaluation(agent, True)
+    # single_evaluationDQN(agent, True)

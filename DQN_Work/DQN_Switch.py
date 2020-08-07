@@ -13,8 +13,8 @@ import torch.optim as optim
 
 
 import LibFunctions as lib
-from TrainEnv import TrainEnv
-from CommonTestUtils import ReplayBuffer, single_evaluation, PurePursuit
+from TrainEnvDQN import TrainEnvDQN
+from CommonTestUtilsDQN import single_evaluationDQN, ReplayBufferDQN, PurePursuit
 
 
 #Hyperparameters
@@ -155,7 +155,7 @@ class DecisionDQN:
 
 """Collect obs"""
 def collect_mod_observations(buffer, n_itterations=10000):
-    env = TrainEnv()
+    env = TrainEnvDQN()
     env.switch()
     pp = PurePursuit(env.state_space, env.action_space)
     s, done = env.reset(), False
@@ -195,7 +195,7 @@ def SuperLearn(agent_name, buffer, load=True):
     return rewards
 
 def RunSuperLearn(agent_name, create=True):
-    buffer = ReplayBuffer()
+    buffer = ReplayBufferDQN()
     total_rewards = []
 
     collect_mod_observations(buffer, 2000)
@@ -218,7 +218,7 @@ def RunSuperLearn(agent_name, create=True):
 """Run Training sets"""
 
 def RunDecDQNTraining(agent_name, start=1, n_runs=5, create=False):
-    buffer = ReplayBuffer()
+    buffer = ReplayBufferDQN()
     total_rewards = []
 
     # collect_mod_observations(buffer, 5000)
@@ -243,16 +243,15 @@ def RunDecDQNTraining(agent_name, start=1, n_runs=5, create=False):
 
 
 if __name__ == "__main__":
-    # mod_name = "ModTestDqnIntermediate"
     switch_name = "DecBuild"
     switch_name = "TestingSR"
     # switch_name = "SwitchSR"
 
 
-    agent = TestModDQN(12, 10, mod_name)
-    single_evaluation(agent, True)
+    # agent = TestDecDQN(12, 10, mod_name)
+    # single_evaluationDQN(agent, True)
     #  
-    # RunSuperLearn(switch_name)
+    RunSuperLearn(switch_name)
 
     # RunDecDQNTraining(dec_name, 0, 5, True)
     # RunDecDQNTraining(dec_name, 5, 5, False)

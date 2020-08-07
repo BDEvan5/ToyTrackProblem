@@ -2,13 +2,13 @@ import numpy as np
 import torch
 from collections import deque
 import random
-from TestEnv import TestEnv
+from TestEnvDQN import TestEnvDQN
 from matplotlib import pyplot as plt
 
 
 MEMORY_SIZE = 100000
 
-class ReplayBuffer():
+class ReplayBufferDQN():
     def __init__(self):
         self.buffer = deque(maxlen=MEMORY_SIZE)
     
@@ -38,8 +38,8 @@ class ReplayBuffer():
 
 
 """Single Evals"""
-def single_evaluation(agent, show_snap=True, show_render=False):
-    env = TestEnv()
+def single_evaluationDQN(agent, show_snap=True, show_render=False):
+    env = TestEnvDQN()
     # env.map_1000(True)
     env.map_1010()
     # env.map_1020()

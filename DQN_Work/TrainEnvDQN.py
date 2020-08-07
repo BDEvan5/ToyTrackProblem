@@ -6,8 +6,8 @@ import collections
 import random
 import torch
 
-from TestEnv import CarModel
-from CommonTestUtils import PurePursuit
+from TestEnvDQN import CarModelDQN
+from CommonTestUtilsDQN import PurePursuit
 
 
 class RewardFunctions:
@@ -91,7 +91,7 @@ class RewardFunctions:
 
 
 
-class TrainEnv(RewardFunctions, CarModel):
+class TrainEnvDQN(RewardFunctions, CarModelDQN):
     def __init__(self):
         self.map_dim = 100
         self.n_ranges = 10
@@ -101,7 +101,7 @@ class TrainEnv(RewardFunctions, CarModel):
         self.dth = np.pi / (self.action_space - 1)
 
         RewardFunctions.__init__(self)
-        CarModel.__init__(self, self.n_ranges)
+        CarModelDQN.__init__(self, self.n_ranges)
 
         self.start_theta = 0
         self.start_velocity = 0
