@@ -21,13 +21,12 @@ class CarModelCont:
         self.action_scale = self.map_dim / 50
 
     def _x_step_discrete(self, action):
+        action_angle = action[0] * np.pi / 2 # range [-1, 1] to [-pi/2, pi/2]
         # actions in range [0, n_acts) are a fan in front of vehicle
         # no backwards
         fs = self.action_scale
-        dth = np.pi / (self.action_space-1)
-        angle = -np.pi/2 + action * dth 
-        angle += self.theta # for the vehicle offset
-        dx = [np.sin(angle)*fs, np.cos(angle)*fs] 
+        action_angle += self.theta # for the vehicle offset
+        dx = [np.sin(action_angle)*fs, np.cos(action_angle)*fs] 
         
         new_x = lib.add_locations(dx, self.car_x)
         
@@ -35,6 +34,8 @@ class CarModelCont:
         new_theta = np.pi / 2 - np.arctan(new_grad)
         if dx[0] < 0:
             new_theta += np.pi
+        if new_theta >= 2*np.pi:
+            new_theta = new_theta - 2*np.pi
 
         return new_x, new_theta
     

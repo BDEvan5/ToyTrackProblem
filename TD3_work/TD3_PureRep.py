@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 import LibFunctions as lib 
 from TrainEnvCont import TrainEnvCont
+from CommonTestUtilsTD3 import ReplayBufferTD3, single_evaluationCont
 
 
 # hyper parameters
@@ -74,37 +75,7 @@ class Critic(nn.Module):
         x1 = self.l3(x1)
         return x1
 
-class ReplayBufferTD3(object):
-    def __init__(self, max_size=100000):     
-        self.storage = []
-        self.max_size = max_size
-        self.ptr = 0
-        self.filename = "DataRecords/buffer"
-
-    def add(self, data):        
-        if len(self.storage) == self.max_size:
-            self.storage[int(self.ptr)] = data
-            self.ptr = (self.ptr + 1) % self.max_size
-        else:
-            self.storage.append(data)
-
-    def sample(self, batch_size):
-        ind = np.random.randint(0, len(self.storage), size=batch_size)
-        states, actions, next_states, rewards, dones = [], [], [], [], []
-
-        for i in ind: 
-            s, a, s_, r, d = self.storage[i]
-            states.append(np.array(s, copy=False))
-            actions.append(np.array(a, copy=False))
-            next_states.append(np.array(s_, copy=False))
-            rewards.append(np.array(r, copy=False))
-            dones.append(np.array(d, copy=False))
-
-        return np.array(states), np.array(actions), np.array(next_states), np.array(rewards).reshape(-1, 1), np.array(dones).reshape(-1, 1)
-
-
-
-class TD3(object):
+class TrainRepTD3(object):
     def __init__(self, state_dim, action_dim, max_action, agent_name):
         self.agent_name = agent_name
         self.actor = Actor(state_dim, action_dim, max_action)
@@ -201,11 +172,11 @@ class TD3(object):
         for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
             target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
-    def save(self, directory="./saves"):
+    def save(self, directory="./td3_saves"):
         torch.save(self.actor.state_dict(), '%s/%s_actor.pth' % (directory, self.agent_name))
         torch.save(self.critic.state_dict(), '%s/%s_critic.pth' % (directory, self.agent_name))
 
-    def load(self, directory="./saves"):
+    def load(self, directory="./td3_saves"):
         self.actor.load_state_dict(torch.load('%s/%s_actor.pth' % (directory, self.agent_name)))
         self.critic.load_state_dict(torch.load('%s/%s_critic.pth' % (directory, self.agent_name)))
 
@@ -224,6 +195,58 @@ class TD3(object):
     #         self.model = Qnet(self.obs_space, self.action_space)
     #         self.target = Qnet(self.obs_space, self.action_space)
             # print(f"Not loading - restarting training")
+
+
+class TestRepTD3(object):
+    def __init__(self, state_dim, action_dim, max_action, agent_name):
+        self.agent_name = agent_name
+        self.actor = Actor(state_dim, action_dim, max_action)
+        self.actor_target = Actor(state_dim, action_dim, max_action)
+        self.actor_target.load_state_dict(self.actor.state_dict())
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-3)
+
+        self.critic = Critic(state_dim, action_dim)
+        self.critic_target = Critic(state_dim, action_dim)
+        self.critic_target.load_state_dict(self.critic.state_dict())
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-3)
+
+        self.max_action = max_action
+        self.act_dim = action_dim
+        self.last_action = None
+        self.filename = "DataRecords/buffer"
+
+    def act(self, state, noise=0.1):
+        state = torch.FloatTensor(state.reshape(1, -1))
+
+        action = self.actor(state).data.numpy().flatten()
+        if noise != 0: 
+            action = (action + np.random.normal(0, noise, size=self.act_dim))
+            
+        return action.clip(-self.max_action, self.max_action)
+
+    def load(self, directory="./td3_saves"):
+        self.actor.load_state_dict(torch.load('%s/%s_actor.pth' % (directory, self.agent_name)))
+        self.critic.load_state_dict(torch.load('%s/%s_critic.pth' % (directory, self.agent_name)))
+
+    # def try_load(self, load=True):
+    #     if load:
+    #         try:
+    #             self.load()
+    #         except:
+    #             print(f"Unable to load model")
+    #             pass
+    #     else:
+    #         self.actor = Actor(state_dim, action_dim, max_action)
+    #         self.actor_target = Actor(state_dim, action_dim, max_action) 
+
+
+    #         self.model = Qnet(self.obs_space, self.action_space)
+    #         self.target = Qnet(self.obs_space, self.action_space)
+            # print(f"Not loading - restarting training")
+
+
+
+
 
 """Cartpole loops"""
 def observe(env,replay_buffer, observation_steps):
@@ -266,13 +289,13 @@ def evaluate_policy(policy, env, eval_episodes=100,render=False):
     print("---------------------------------------")
     return avg_reward
 
-def test():
+def test_pendulum():
     env = gym.make("Pendulum-v0")
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0] 
     max_action = env.action_space.high[0]
 
-    agent = TD3(state_dim, action_dim, max_action)
+    agent = TrainRepTD3(state_dim, action_dim, max_action)
     replay_buffer = ReplayBufferTD3()
 
     rewards = []
@@ -316,7 +339,6 @@ def collect_observations(buffer, observation_steps=5000):
         sys.stdout.flush()
     print(" ")
 
-
 def evaluate_policy(policy, env, eval_episodes=100,render=False):
     avg_reward = 0.
     for i in range(eval_episodes):
@@ -344,7 +366,7 @@ def TrainRepAgent(agent_name, buffer, load=True):
     action_dim = env.action_dim
     max_action = 1 # scale in env
 
-    agent = TD3(state_dim, action_dim, max_action, agent_name)
+    agent = TrainRepTD3(state_dim, action_dim, max_action, agent_name)
     # agent.try_load(load)
 
     rewards, score = [], 0.0
@@ -372,8 +394,9 @@ def TrainRepAgent(agent_name, buffer, load=True):
             lib.plot(rewards, figure_n=2)
 
             agent.save()
-            # test_agent = TestRepDQN(12, 10, agent_name)
-            # single_evaluation(test_agent, True)
+            test_agent = TestRepTD3(12, 1, 1, agent_name)
+            test_agent.load()
+            single_evaluationCont(test_agent, True)
 
     return rewards
 
