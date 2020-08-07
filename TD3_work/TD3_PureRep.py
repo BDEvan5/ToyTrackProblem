@@ -298,7 +298,7 @@ def test():
 
 """My env loops"""
 def collect_observations(buffer, observation_steps=5000):
-    env = TrainEnv()
+    env = TrainEnvCont()
     env.pure_rep()
 
     s, done = env.reset(), False
@@ -337,7 +337,7 @@ def evaluate_policy(policy, env, eval_episodes=100,render=False):
     return avg_reward
 
 def TrainRepAgent(agent_name, buffer, load=True):
-    env = TrainEnv()
+    env = TrainEnvCont()
     env.pure_rep()
 
     state_dim = env.state_space
