@@ -10,6 +10,11 @@ class CarModelCont:
         self.n_ranges = n_ranges
         self.car_x = [0, 0]
         self.theta = 0
+        self.velocity = 0
+        self.steering = 0
+
+        self.max_velocity = 10
+
         self.ranges = np.zeros(self.n_ranges)
         self.range_angles = np.zeros(self.n_ranges)
         dth = np.pi/(self.n_ranges-1)
@@ -20,25 +25,68 @@ class CarModelCont:
         self.action_space = 10
         self.action_scale = self.map_dim / 50
 
-    def _x_step_discrete(self, action):
-        action_angle = action[0] * np.pi / 2 # range [-1, 1] to [-pi/2, pi/2]
-        # actions in range [0, n_acts) are a fan in front of vehicle
-        # no backwards
-        fs = self.action_scale
-        action_angle += self.theta # for the vehicle offset
-        dx = [np.sin(action_angle)*fs, np.cos(action_angle)*fs] 
-        
-        new_x = lib.add_locations(dx, self.car_x)
-        
-        new_grad = lib.get_gradient(new_x, self.car_x)
-        new_theta = np.pi / 2 - np.arctan(new_grad)
-        if dx[0] < 0:
-            new_theta += np.pi
-        if new_theta >= 2*np.pi:
-            new_theta = new_theta - 2*np.pi
+    # def _x_step(self, action):
+    #     dt = 1
 
-        return new_x, new_theta
+        
+
+    #     velocity_ref = action[1] * self.max_velocity
+    #     velocity = 0.5 * (self.velocity + velocity_ref) # gives some lag but not much
+
+    #     # instant change in heading
+    #     heading_angle = action[0] * np.pi / 2 # range [-1, 1] to [-pi/2, pi/2]
+    #     new_theta = heading_angle + self.theta # for the vehicle offset
+
+    #     x_i = np.sin(new_theta)* self.velocity * dt + self.car_x[0]
+    #     y_i = np.cos(new_theta)* self.velocity * dt + self.car_x[1]
+        
+    #     new_x = [x_i, y_i]
+
+    #     return new_x, new_theta, velocity
+
+    def _x_step(self, action):
+        dt = 1
+
+        x_i = np.sin(self.theta)* self.velocity * dt + self.car_x[0]
+        y_i = np.cos(self.theta)* self.velocity * dt + self.car_x[1]
+        
+        return [x_i, y_i]
+
+
+    def update_state(self, action):
+        a, d_dot = self.get_integrals(action) 
+
+        dt = 1
+        WB = 0.5
+
+        x_i = np.sin(self.theta)* self.velocity * dt + self.car_x[0]
+        y_i = np.cos(self.theta)* self.velocity * dt + self.car_x[1]
+        
+        self.car_x = [x_i, y_i]
+
+        # self.steering = action[0] * np.pi / 2
+        self.theta = self.theta + action[0] * np.pi / 2
+        # self.velocity = (action[1] +1)* self.max_velocity / 2
+        # self.theta = self.theta + self.velocity / WB * np.tan(self.steering) * dt
+        self.velocity = self.velocity + a * dt
+        
     
+    def get_integrals(self, action):
+        d_ref = action[0] * np.pi / 2
+        v_ref = (action[1] +1)* self.max_velocity / 2 # shift it up
+
+        k_v = 1 # proportional control
+        k_d = 1
+
+        e_v = v_ref - self.velocity
+        a = e_v * k_v
+
+        e_d = d_ref - self.steering
+        d_dot = k_d * e_d
+
+        return a, d_dot
+
+
 class MapSetUp:
     def __init__(self):
         self.obs_locs = []
@@ -77,7 +125,7 @@ class MapSetUp:
 
 
         self.create_race_map()
-        # self._place_obs()
+        self._place_obs()
         self.run_path_finder()
 
 
@@ -292,11 +340,10 @@ class TestEnvCont(TestMap, CarModelCont):
         self.memory.append(self.car_x)
         self.steps += 1
 
-        new_x, new_theta = self._x_step_discrete(action)
+        new_x = self._x_step(action)
         crash = self._check_location(new_x) 
         if not crash:
-            self.car_x = new_x
-            self.theta = new_theta
+            self.update_state(action)
         reward, done = self._get_reward(crash)
         obs = self._get_state_obs()
 
@@ -353,11 +400,14 @@ class TestEnvCont(TestMap, CarModelCont):
             self.pind += 1
             target = self._get_target()
 
+        rel_v = self.velocity / self.max_velocity
+        rel_th = self.theta / np.pi
+
         rel_target = lib.sub_locations(target, self.car_x)
         self.target = rel_target
         transformed_target = lib.transform_coords(rel_target, self.theta)
         normalised_target = lib.normalise_coords(transformed_target)
-        obs = np.concatenate([normalised_target, self.ranges])
+        obs = np.concatenate([normalised_target, [rel_v], [rel_th], self.ranges])
 
         return obs
 

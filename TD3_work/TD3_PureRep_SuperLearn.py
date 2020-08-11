@@ -49,10 +49,8 @@ class SuperLearnBufferTD3(object):
         return np.array(states), np.array(right_actions)
 
         
-
-
 class Actor(nn.Module):   
-    def __init__(self, state_dim, action_dim, max_action):
+    def __init__(self, state_dim, action_dim, max_action=1):
         super(Actor, self).__init__()
 
         self.l1 = nn.Linear(state_dim, 400)
@@ -91,6 +89,8 @@ class SuperTrainRep(object):
         actor_loss.backward()
         self.model.optimizer.step()
 
+        return actor_loss
+
     def save(self, directory='./td3_saves'):
         torch.save(self.model, '%s/%s_model.pth' % (directory, self.agent_name))
 
@@ -119,42 +119,6 @@ class SuperTrainRep(object):
         return action
 
 
-class TestRepTD3(object):
-    def __init__(self, state_dim, action_dim, max_action, agent_name):
-        self.agent_name = agent_name
-        self.actor = Actor(state_dim, action_dim, max_action)
-        self.actor_target = Actor(state_dim, action_dim, max_action)
-        self.actor_target.load_state_dict(self.actor.state_dict())
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-3)
-
-        self.critic = Critic(state_dim, action_dim)
-        self.critic_target = Critic(state_dim, action_dim)
-        self.critic_target.load_state_dict(self.critic.state_dict())
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-3)
-
-        self.max_action = max_action
-        self.act_dim = action_dim
-        self.last_action = None
-        self.filename = "DataRecords/buffer"
-
-    def act(self, state, noise=0.0):
-        state = torch.FloatTensor(state.reshape(1, -1))
-
-        action = self.actor(state).data.numpy().flatten()
-        if noise != 0: 
-            action = (action + np.random.normal(0, noise, size=self.act_dim))
-            
-        return action.clip(-self.max_action, self.max_action)
-
-    def load(self, directory="./td3_saves"):
-        filename = self.agent_name
-
-        self.actor = torch.load('%s/%s_actor.pth' % (directory, filename))
-        self.actor_target = torch.load('%s/%s_actor_target.pth' % (directory, filename))
-        self.critic = torch.load('%s/%s_critic.pth' % (directory, filename))
-        self.critic_target = torch.load('%s/%s_critic_target.pth' % (directory, filename))
-
-
 def build_data_set(observation_steps=1000):
     buffer = SuperLearnBufferTD3()
 
@@ -174,8 +138,7 @@ def build_data_set(observation_steps=1000):
 def RunSuperLearn(agent_name, load=True):
     buffer = build_data_set(100)
 
-
-    state_dim = 12
+    state_dim = 14
     action_dim = 2
     agent = SuperTrainRep(state_dim, action_dim, agent_name)
     agent.try_load(load)

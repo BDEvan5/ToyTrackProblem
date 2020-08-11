@@ -39,7 +39,7 @@ class ReplayBufferTD3(object):
 """Single Evals"""
 def single_evaluationCont(agent, show_snap=True, show_render=False):
     env = TestEnvCont()
-    env.map_1000(True)
+    env.map_1000(False)
     # env.map_1010()
     # env.map_1020()
 

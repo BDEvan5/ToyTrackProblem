@@ -6,74 +6,9 @@ import collections
 import random
 import torch
 
+from TestEnvCont import CarModelCont
 
-class RewardFunctions:
-    def __init__(self):
-        self._get_reward = None
-
-    def pure_mod(self):
-        self._get_reward = self._get_mod_reward
-
-    def switch(self):
-        self._get_reward = self._get_switch_reward
-
-    def pure_rep(self):
-        self._get_reward = self._get_rep_reward
-
-    def _get_mod_reward(self, crash, action):
-        if crash:
-            return -1, True
-
-        pp_action = self._get_optimal_direction()
-        action_dif = abs(action - pp_action)
-        if action_dif == 0:
-            r = 1
-        else:
-            r = 0.8 - action_dif * 0.1
-
-        r = np.clip(r, 0.2, 1)
-
-        return r, False
-
-    def _get_rep_reward(self, crash, action):
-        if crash:
-            return -1, True
-
-        action_angle = action[0] * 90 # degrees for debugg
-        self.action = action_angle
-
-        self.pp_action = self._get_optimal_direction() * 90 / (np.pi / 2)
-        pp_action = pp_action_deg / 90 # range [-1, 1]
-
-        d_action_angle = abs(pp_action - action[0])
-        if d_action_angle < 0.01:
-            reward = 1
-        else:
-            reward = - 1.5 * d_action_angle + 0.9
-
-        reward = np.clip(reward, -0.9, 1)
-        self.reward = reward
-
-        return reward, False
-
-    def _get_switch_reward(self, crash, action):
-        if crash:
-            return -1, True
-        return 1, False
-
-    def _get_optimal_direction(self):
-        move_angle = self.th_start_end - self.start_theta 
-
-        return move_angle
-
-    def _get_optimal_velocity(self, optimal_heading):
-        # heading in range [-1, 1]
-        vel = 1 - abs(optimal_heading) 
-
-        return vel
-
-
-class TrainEnvCont():
+class TrainEnvCont(CarModelCont):
     def __init__(self):
         self.map_dim = 100
         self.n_ranges = 10
@@ -83,10 +18,11 @@ class TrainEnvCont():
 
         self.action_dim = 1
 
-        self.car_x = None
-        self.theta = None
+        CarModelCont.__init__(self, self.n_ranges)
+
         self.th_start_end = None
         self.start_theta = None
+        self.start_velocity = 0
 
         self.reward = None
         self.pp_action_deg = 0
@@ -102,12 +38,6 @@ class TrainEnvCont():
         self.end = None
         self.start = [50, 0]
         self.race_map = np.zeros((100, 100))
-
-        self.ranges = np.zeros(self.n_ranges)
-        self.range_angles = np.zeros(self.n_ranges)
-        dth = np.pi/(self.n_ranges-1)
-        for i in range(self.n_ranges):
-            self.range_angles[i] = i * dth - np.pi/2
 
     def reset(self):
         self.race_map = np.zeros((100, 100))
@@ -140,6 +70,11 @@ class TrainEnvCont():
         self.th_start_end = th_start_end
         self.start_theta = th_start_end + np.random.random() * np.pi/2 - np.pi/4
         self.theta = self.start_theta
+
+        self.start_velocity = np.random.random() * self.max_velocity
+        self.velocity = self.start_velocity
+
+        # self.steering = 0
 
         # text
         self.reward = None
@@ -187,21 +122,26 @@ class TrainEnvCont():
 
     def _get_state_obs(self):
         self._update_ranges()
+
+        rel_v = self.velocity / self.max_velocity
+        rel_th = self.theta / np.pi
+
         rel_target = lib.sub_locations(self.end, self.car_x)
         transformed_target = lib.transform_coords(rel_target, self.theta)
         normalised_target = lib.normalise_coords(transformed_target)
         normalised_target = np.asarray(normalised_target)
         normalised_target = np.reshape(normalised_target, (2))
-        obs = np.concatenate([normalised_target, self.ranges])
+        obs = np.concatenate([normalised_target, [rel_v], [rel_th], self.ranges])
 
         return obs
 
     def step(self, action):
-        new_x, new_theta = self._x_step_discrete(action[0])
+        new_x, new_theta, new_v = self._x_step(action)
         crash = self._check_line(self.car_x, new_x)
         if not crash:
             self.car_x = new_x
             self.theta = new_theta
+            self.velocity = new_v
         r, done = self._get_reward(crash, action)
 
         obs = self._get_state_obs()
@@ -213,25 +153,6 @@ class TrainEnvCont():
         velocity = self._get_optimal_velocity(direction)
 
         return [direction, velocity]
-
-    def _x_step_discrete(self, action):
-        action_angle = action[0] * np.pi / 2 # range [-1, 1] to [-pi/2, pi/2]
-        # actions in range [0, n_acts) are a fan in front of vehicle
-        # no backwards
-        fs = self.action_scale
-        action_angle += self.theta # for the vehicle offset
-        dx = [np.sin(action_angle)*fs, np.cos(action_angle)*fs] 
-        
-        new_x = lib.add_locations(dx, self.car_x)
-        
-        new_grad = lib.get_gradient(new_x, self.car_x)
-        new_theta = np.pi / 2 - np.arctan(new_grad)
-        if dx[0] < 0:
-            new_theta += np.pi
-        if new_theta >= 2*np.pi:
-            new_theta = new_theta - 2*np.pi
-
-        return new_x, new_theta
 
     def _check_location(self, x):
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
@@ -294,6 +215,9 @@ class TrainEnvCont():
 
     def _get_optimal_direction(self):
         move_angle = self.th_start_end - self.start_theta 
+        
+        # WB = 0.5
+        # delta = np.arctan(move_angle * WB / self.velocity)
 
         return move_angle
 
