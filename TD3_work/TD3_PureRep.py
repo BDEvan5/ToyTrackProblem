@@ -276,7 +276,7 @@ def TrainRepTD3Agent(agent_name, buffer, load=True):
 
     state_dim = env.state_space
     action_dim = env.action_dim
-    max_action = 1 # scale in env
+    max_action = 1 # scale in env 
 
     agent = TrainRepTD3(state_dim, action_dim, max_action, agent_name)
     agent.try_load(load)
