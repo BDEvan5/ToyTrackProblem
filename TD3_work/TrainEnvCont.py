@@ -63,16 +63,9 @@ class RewardFunctions:
         return 1, False
 
     def _get_pp_action(self):
-        grad = lib.get_gradient(self.start, self.end)
-        angle = np.arctan(grad)
-        if angle > 0:
-            angle = np.pi - angle
-        else:
-            angle = - angle
-        
-        angle = angle - np.pi / 2 # offset to +-
+        move_angle = self.th_start_end - self.start_theta 
 
-        return angle
+        return move_angle
 
 
 
@@ -90,6 +83,8 @@ class TrainEnvCont(RewardFunctions):
 
         self.car_x = None
         self.theta = None
+        self.th_start_end = None
+        self.start_theta = None
 
         self.reward = None
         self.pp_action_deg = 0
@@ -113,16 +108,41 @@ class TrainEnvCont(RewardFunctions):
             self.range_angles[i] = i * dth - np.pi/2
 
     def reset(self):
-        self.theta = 0
-        self.start = [np.random.random() * 30 + 35 , np.random.random() * 60 + 20]
-        self.car_x = self.start
         self.race_map = np.zeros((100, 100))
-        self._update_target()
-
         self._locate_obstacles()
+
+        self.start = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
         while self._check_location(self.start):
-            self.race_map = np.zeros((100, 100))
-            self._locate_obstacles()
+            self.start = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
+        self.car_x = self.start
+
+        self.end = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
+        while self._check_location(self.end) or \
+            lib.get_distance(self.start, self.end) < 20 or \
+                lib.get_distance(self.start, self.end) > 60:
+            self.end = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
+
+        grad = lib.get_gradient(self.start, self.end)
+        dx = self.end[0] - self.start[0]
+        th_start_end = np.arctan(grad)
+        if th_start_end > 0:
+            if dx > 0:
+                th_start_end = np.pi / 2 - th_start_end
+            else:
+                th_start_end = -np.pi/2 - th_start_end
+        else:
+            if dx > 0:
+                th_start_end = np.pi / 2 - th_start_end
+            else:
+                th_start_end = - np.pi/2 - th_start_end
+        self.th_start_end = th_start_end
+        self.start_theta = th_start_end + np.random.random() * np.pi/2 - np.pi/4
+        self.theta = self.start_theta
+
+        # text
+        self.reward = None
+        self.action = None
+        self.pp_action = None
 
         return self._get_state_obs()
 
@@ -251,6 +271,9 @@ class TrainEnvCont(RewardFunctions):
         plt.plot(self.start[0], self.start[1], '*', markersize=12)
         plt.plot(self.end[0], self.end[1], '*', markersize=12)
         plt.plot(self.car_x[0], self.car_x[1], '+', markersize=16)
+        x_start_v = [self.start[0], self.start[0] + 15*np.sin(self.start_theta)]
+        y_start_v = [self.start[1], self.start[1] + 15*np.cos(self.start_theta)]
+        plt.plot(x_start_v, y_start_v, linewidth=2)
 
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta
