@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 import LibFunctions as lib 
 from TrainEnvCont import TrainEnvCont
-from CommonTestUtilsTD3 import ReplayBufferTD3, single_evaluationCont
+from CommonTestUtilsTD3 import single_evaluationCont
 
 
 # hyper parameters
@@ -22,6 +22,34 @@ NOISE_CLIP = 0.5
 EXPLORE_NOISE = 0.1
 POLICY_FREQUENCY = 2
 POLICY_NOISE = 0.2
+
+
+class SuperLearnBufferTD3(object):
+    def __init__(self, max_size=100000):     
+        self.storage = []
+        self.max_size = max_size
+        self.ptr = 0
+
+    def add(self, data):        
+        if len(self.storage) == self.max_size:
+            self.storage[int(self.ptr)] = data
+            self.ptr = (self.ptr + 1) % self.max_size
+        else:
+            self.storage.append(data)
+
+    def sample(self, batch_size):
+        ind = np.random.randint(0, len(self.storage), size=batch_size)
+        states, right_actions = [], []
+
+        for i in ind: 
+            s, a_r = self.storage[i]
+            states.append(np.array(s, copy=False))
+            right_actions.append(np.array(a_r, copy=False))
+
+        return np.array(states), np.array(right_actions)
+
+        
+
 
 class Actor(nn.Module):   
     def __init__(self, state_dim, action_dim, max_action):
@@ -108,20 +136,15 @@ class TrainRepTD3(object):
         # iterations = 1 # number of times to train per step
         for it in range(iterations):
             # Sample replay buffer 
-            x, y, u, r, d = replay_buffer.sample(BATCH_SIZE)
-            state = torch.FloatTensor(x)
-            action = torch.FloatTensor(u)
-            next_state = torch.FloatTensor(y)
-            done = torch.FloatTensor(1 - d)
-            reward = torch.FloatTensor(r)
+            s, a_r = replay_buffer.sample(BATCH_SIZE)
+            state = torch.FloatTensor(s)
+            right_action = torch.FloatTensor(a_r)
 
-            self.update_critic(state, action, u, reward, done, next_state)
-            # print(f"Train number {self.train_counter}")
-            # self.train_counter += 1
+            # self.update_critic(state, right_action)
 
             # Delayed policy updates
             if it % POLICY_FREQUENCY == 0:
-                self.update_actor(state)
+                self.update_actor(state, right_action)
 
     def update_critic(self, state, action, u, reward, done, next_state):
         # Select action according to policy and add clipped noise 
@@ -199,6 +222,55 @@ class TrainRepTD3(object):
         self.critic_target = Critic(state_dim, action_dim)
         self.critic_target.load_state_dict(self.critic.state_dict())
 
+
+class SuperTrainRep(object):
+    def __init__(self, state_dim, action_dim, agent_name):
+        self.model = None
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.agent_name = agent_name
+
+    def train(self, replay_buffer):
+        s, a_r = replay_buffer.sample(BATCH_SIZE)
+        states = torch.FloatTensor(s)
+        right_actions = torch.FloatTensor(a_r)
+
+        actions = self.model(states)
+
+        actor_loss = F.mse_loss(actions, right_actions)
+
+        self.model.optimizer.zero_grad()
+        actor_loss.backward()
+        self.model.optimizer.step()
+
+    def save(self, directory='./td3_saves'):
+        torch.save(self.model, '%s/%s_model.pth' % (directory, self.agent_name))
+
+    def load(self, directory='./td3_saves'):
+        self.model = torch.load('%s/%s_model.pth' % (directory, self.agent_name))
+
+    def create_agent(self):
+        self.model = Actor(self.state_dim, self.action_dim, 1)
+
+    def try_load(self, load=True):
+        if load:
+            try:
+                self.load()
+            except:
+                print(f"Unable to load model")
+                pass
+        else:
+            self.create_agent()
+            print(f"Not loading - restarting training")
+
+    def act(self, state):
+        state = torch.FloatTensor(state.reshape(1, -1))
+
+        action = self.model(state).data.numpy().flatten()
+
+        return action
+
+
 class TestRepTD3(object):
     def __init__(self, state_dim, action_dim, max_action, agent_name):
         self.agent_name = agent_name
@@ -235,130 +307,48 @@ class TestRepTD3(object):
         self.critic_target = torch.load('%s/%s_critic_target.pth' % (directory, filename))
 
 
-"""My env loops"""
-def collect_observations(buffer, observation_steps=5000):
-    env = TrainEnvCont()
-    env.pure_rep()
+def build_data_set(observation_steps=1000):
+    buffer = SuperLearnBufferTD3()
 
-    s, done = env.reset(), False
+    env = TrainEnvCont()
 
     for i in range(observation_steps):
-        action = env.random_action()
-        s_p, r, done, _ = env.step(action)
-        done_mask = 0.0 if done else 1.0
-        buffer.add((s, s_p, action, r, done_mask))
-        s = s_p
-        if done:
-            s = env.reset()
+        s = env.reset()
+        a_r = env.super_step()
+        buffer.add((s, a_r))
 
         print("\rPopulating Buffer {}/{}.".format(i, observation_steps), end="")
         sys.stdout.flush()
     print(" ")
 
-def evaluate_policy(policy, env, eval_episodes=100,render=False):
-    avg_reward = 0.
-    for i in range(eval_episodes):
-        obs = env.reset()
-        done = False
-        while not done:
-            if render:
-                env.render()
-            action = policy.select_action(np.array(obs), noise=0)
-            obs, reward, done, _ = env.step(action)
-            avg_reward += reward
+    return buffer
 
-    avg_reward /= eval_episodes
+def RunSuperLearn(agent_name, load=True):
+    buffer = build_data_set(100)
 
-    print("\n---------------------------------------")
-    print("Evaluation over {:d} episodes: {:f}" .format(eval_episodes, avg_reward))
-    print("---------------------------------------")
-    return avg_reward
 
-def TrainRepTD3Agent(agent_name, buffer, load=True):
-    env = TrainEnvCont()
-    env.pure_rep()
-
-    state_dim = env.state_space
-    action_dim = env.action_dim
-    max_action = 1 # scale in env 
-
-    agent = TrainRepTD3(state_dim, action_dim, max_action, agent_name)
+    state_dim = 12
+    action_dim = 2
+    agent = SuperTrainRep(state_dim, action_dim, agent_name)
     agent.try_load(load)
 
-    rewards, score = [], 0.0
-    print_n = 100
+    training_loops = 1000
+    show_n = 100
+    for i in range(training_loops):
+        agent.train(buffer)
 
-    for n in range(1000):
-        state = env.reset()
-
-        a = agent.act(np.array(state), noise=0.1)
-        s_prime, r, done, _ = env.step(a)
-        # env.render()
-        # done_mask = 0.0 if done else 1.0
-        done_mask = True
-        buffer.add((state, s_prime, a, r, done_mask)) # never done
-        agent.train(buffer, 2)
-        # score += l
-        score += r
-
-        if n % print_n == 0 and n > 0:
-            rewards.append(score)
-            env.render()    
-            mean = np.mean(rewards)
-            b = buffer.ptr
-            print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> Buf: {b}")
-            score = 0
-            lib.plot(rewards, figure_n=2)
-
+        if i % show_n == 1:
             agent.save()
-            test_agent = TestRepTD3(12, 1, 1, agent_name)
-            test_agent.load()
-            single_evaluationCont(test_agent, True)
+            single_evaluationCont(agent, True)
 
-    return rewards
-
-def RunRepTD3Training(agent_name, start, n_runs, create=False):
-    buffer = ReplayBufferTD3()
-    total_rewards = []
-
-    evals = []
-
-    if create:
-        collect_observations(buffer, 50)
-        rewards = TrainRepTD3Agent(agent_name, buffer, False)
-        total_rewards += rewards
-        lib.plot(total_rewards, figure_n=3)
-        # agent = TestRepDQN(12, 10, agent_name)
-        # s = single_evaluation(agent)
-        # evals.append(s)
-
-    for i in range(start, start + n_runs):
-        print(f"Running batch: {i}")
-        rewards = TrainRepTD3Agent(agent_name, buffer, True)
-        total_rewards += rewards
-
-        lib.plot(total_rewards, figure_n=3)
-        plt.figure(2).savefig("PNGs/Training_DQN_rep" + str(i))
-        np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
-        # agent = TestRepDQN(12, 10, agent_name)
-        # s = single_evaluation(agent)
-        # evals.append(s)
-
-    # try:
-    #     print(evals)
-    #     print(f"Max: {max(evals)}")
-    # except:
-    #     pass
+    agent.save()
+    single_evaluationCont(agent, True)
 
 
 if __name__ == "__main__":
-    # test()
+    agent_name = "testing_super"
 
-    agent_name = "TestingTD3"
-
-    RunRepTD3Training(agent_name, 0, 5, True)
-    # RunRepTD3Training(agent_name, 5, 5, False)
+    RunSuperLearn(agent_name, False)
+    # RunSuperLearn(agent_name, True)
 
 
- 
-    

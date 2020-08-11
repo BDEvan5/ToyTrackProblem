@@ -24,7 +24,7 @@ class RewardFunctions:
         if crash:
             return -1, True
 
-        pp_action = self._get_pp_action()
+        pp_action = self._get_optimal_direction()
         action_dif = abs(action - pp_action)
         if action_dif == 0:
             r = 1
@@ -42,8 +42,7 @@ class RewardFunctions:
         action_angle = action[0] * 90 # degrees for debugg
         self.action = action_angle
 
-        pp_action_deg = self._get_pp_action() * 90 / (np.pi / 2)
-        self.pp_action = pp_action_deg
+        self.pp_action = self._get_optimal_direction() * 90 / (np.pi / 2)
         pp_action = pp_action_deg / 90 # range [-1, 1]
 
         d_action_angle = abs(pp_action - action[0])
@@ -62,11 +61,16 @@ class RewardFunctions:
             return -1, True
         return 1, False
 
-    def _get_pp_action(self):
+    def _get_optimal_direction(self):
         move_angle = self.th_start_end - self.start_theta 
 
         return move_angle
 
+    def _get_optimal_velocity(self, optimal_heading):
+        # heading in range [-1, 1]
+        vel = 1 - abs(optimal_heading) 
+
+        return vel
 
 
 class TrainEnvCont(RewardFunctions):
@@ -146,15 +150,6 @@ class TrainEnvCont(RewardFunctions):
 
         return self._get_state_obs()
 
-    def _update_target(self):
-        rand = np.random.random()
-        target_theta = rand * np.pi - np.pi/ 2# randome angle [-np.ip/2, pi/2]
-        self.target = [np.sin(target_theta) , np.cos(target_theta)]
-        fs = 30
-        mod = [self.target[0] * fs, self.target[1] * fs]
-        end = lib.add_locations(mod, self.car_x)
-        self.end = end
-
     def _locate_obstacles(self):
         n_obs = 2
         xs = np.random.randint(30, 70, (n_obs, 1))
@@ -204,7 +199,7 @@ class TrainEnvCont(RewardFunctions):
         return obs
 
     def step(self, action):
-        new_x, new_theta = self._x_step_discrete(action)
+        new_x, new_theta = self._x_step_discrete(action[0])
         crash = self._check_line(self.car_x, new_x)
         if not crash:
             self.car_x = new_x
@@ -214,6 +209,12 @@ class TrainEnvCont(RewardFunctions):
         obs = self._get_state_obs()
 
         return obs, r, done, None
+
+    def super_step(self):
+        direction = self._get_optimal_direction()
+        velocity = self._get_optimal_velocity(direction)
+
+        return [direction, velocity]
 
     def _x_step_discrete(self, action):
         action_angle = action[0] * np.pi / 2 # range [-1, 1] to [-pi/2, pi/2]

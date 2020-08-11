@@ -45,7 +45,7 @@ def single_evaluationCont(agent, show_snap=True, show_render=False):
 
     score, done, state = 0, False, env.reset()
     while not done:
-        a = agent.act(state, 0)
+        a = agent.act(state)
         s_prime, _, done, _ = env.step(a)
         state = s_prime
         score += 1 # counts number of steps
