@@ -73,7 +73,7 @@ class RewardFunctions:
         return vel
 
 
-class TrainEnvCont(RewardFunctions):
+class TrainEnvCont():
     def __init__(self):
         self.map_dim = 100
         self.n_ranges = 10
@@ -82,8 +82,6 @@ class TrainEnvCont(RewardFunctions):
         self.action_scale = self.map_dim / 20
 
         self.action_dim = 1
-
-        RewardFunctions.__init__(self)
 
         self.car_x = None
         self.theta = None
@@ -293,4 +291,15 @@ class TrainEnvCont(RewardFunctions):
         plt.text(100, 60, s) 
         
         plt.pause(0.001)
+
+    def _get_optimal_direction(self):
+        move_angle = self.th_start_end - self.start_theta 
+
+        return move_angle
+
+    def _get_optimal_velocity(self, optimal_heading):
+        # heading in range [-1, 1]
+        vel = 1 - abs(optimal_heading) 
+
+        return vel
 
