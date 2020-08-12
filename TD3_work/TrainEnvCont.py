@@ -7,6 +7,7 @@ import random
 import torch
 
 from TestEnvCont import CarModelCont
+from PathFinder import PathFinder
 
 class TrainEnvCont(CarModelCont):
     def __init__(self):
@@ -36,7 +37,8 @@ class TrainEnvCont(CarModelCont):
         
         self.target = None
         self.end = None
-        self.start = [50, 0]
+        self.start = None
+        self.path = []
         self.race_map = np.zeros((100, 100))
 
     def reset(self):
@@ -227,3 +229,123 @@ class TrainEnvCont(CarModelCont):
 
         return vel
 
+    def plan_optimal_path(self):
+        # self.show_path()
+        path_finder = PathFinder(self._check_location, self.start, self.end)
+        self.path = path_finder.run_search(5)
+
+        self.show_path()
+
+        self.optimise_path()
+
+    def optimise_path(self):
+        Q = self.path
+
+        alpha_init = 0.1
+        alpha = alpha_init
+        minReached = False
+        noCollision = self.compute_path_collision(Q)
+
+        while not (noCollision and minReached):
+            P = self.compute_optimal_step(Q)
+            if alpha == 1 or np.linalg.norm(P) < 1e-2:
+                minReached = True
+            # Q_next = Q + alpha * P
+            Q_next = self.get_q_next(Q, alpha, P)
+            if not self.compute_path_collision(Q_next):
+                noCollision = False
+                if alpha != 1:
+                    print(f"Adding constraint")
+                    self.compute_collision_constraint(Q, Q_next)
+                    # compute collision constraint
+                    # find new constarint
+                    # add new constraint
+                    alpha = 1
+                else:
+                    alpha = alpha_init
+            else:
+                Q = Q_next
+                noCollision = True
+
+        self.path = Q
+
+    def compute_optimal_step(self, Q):
+        d_cs = []
+        for k in range(len(Q)-2):
+            # d_c = (Q[k+1] - Q[k]) - (Q[k+2] - Q[k+1])
+            d_1 = lib.sub_locations(Q[k+1], Q[k])
+            d_2 = lib.sub_locations(Q[k+2], Q[k+1])
+            d_c = lib.sub_locations(d_1, d_2)
+            d_cs.append(d_c)
+
+        return d_cs
+            
+    def get_q_next(self, Q, alpha, P):
+        Q_next = []
+        Q_next.append(Q[0]) # start doesn't change
+        for k in range(len(Q) - 2):
+            # q_k = Q[k+1] + alpha * P[k]
+            q_k = lib.add_locations(Q[k+1], P[k], alpha)
+            Q_next.append(q_k)
+        Q_next.append(Q[-1]) # unchanged end point
+
+        return Q_next
+
+    def compute_path_collision(self, Q):
+        for i in range(len(Q) - 1):
+            if self._check_line(Q[i], Q[i+1]):
+                return True
+        return False
+
+    # def compute_collision_constraint(self, Q, Q_next):
+        #leave this out for the moment
+        # it is used to get x_free and x_col
+
+    def find_new_constraint(self, x_free, x_coll, p, alpha):
+        # x is used for q
+        solved = False
+        while not solved:
+            alpha = 0.5 * alpha
+            x = self.get_q_next(x_free, alpha, p)
+            if not self.compute_path_collision(x):
+                x_free = x
+            else:
+                x_coll = x
+            
+
+
+    def show_path(self):
+        car_x = int(self.car_x[0])
+        car_y = int(self.car_x[1])
+        fig = plt.figure(4)
+        plt.clf()  
+        plt.imshow(self.race_map.T, origin='lower')
+        plt.xlim(0, self.map_dim)
+        plt.ylim(-10, self.map_dim)
+        plt.plot(self.start[0], self.start[1], '*', markersize=12)
+        plt.plot(self.end[0], self.end[1], '*', markersize=12)
+        plt.plot(self.car_x[0], self.car_x[1], '+', markersize=16)
+        x_start_v = [self.start[0], self.start[0] + 15*np.sin(self.start_theta)]
+        y_start_v = [self.start[1], self.start[1] + 15*np.cos(self.start_theta)]
+        plt.plot(x_start_v, y_start_v, linewidth=2)
+
+        # write code here to show the path, for pt i self.path
+        for pt in self.path:
+            plt.plot(pt[0], pt[1], 'x', markersize=10)
+
+        plt.show()
+
+
+
+
+
+def path_optimiser_driver():
+    env = TrainEnvCont()
+    s = env.reset()
+    env.plan_optimal_path()
+    env.show_path()
+
+
+
+if __name__ == "__main__":
+    path_optimiser_driver()
