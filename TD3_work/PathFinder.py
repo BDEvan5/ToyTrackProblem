@@ -106,7 +106,7 @@ class PathFinder:
         for direction in self.position_list:
             new_position = f.add_locations(self.current_node.position, direction)
 
-            if self.obstacle_function(new_position): 
+            if self.obstacle_function(new_position, self.current_node.position): 
                 continue 
             new_node = Node(self.current_node, np.array(new_position))
 

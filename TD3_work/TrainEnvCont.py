@@ -231,7 +231,7 @@ class TrainEnvCont(CarModelCont):
 
     def plan_optimal_path(self):
         # self.show_path()
-        path_finder = PathFinder(self._check_location, self.start, self.end)
+        path_finder = PathFinder(self._check_line, self.start, self.end)
         self.path = path_finder.run_search(5)
 
         self.show_path()
@@ -240,42 +240,55 @@ class TrainEnvCont(CarModelCont):
 
     def optimise_path(self):
         Q = self.path
+        phi = np.ones((len(Q)))
 
         alpha_init = 0.1
         alpha = alpha_init
-        minReached = False
-        noCollision = self.compute_path_collision(Q)
+        solved = False
 
-        while not (noCollision and minReached):
-            P = self.compute_optimal_step(Q)
-            if alpha == 1 or np.linalg.norm(P) < 1e-2:
-                minReached = True
-            # Q_next = Q + alpha * P
+        minReached = False
+        Collision = self.compute_path_collision(Q)
+        if Collision:
+            print(f"bad path - wont work")
+            self.path = []
+            return
+
+        for i in range(1000):
+            P = self.compute_optimal_step(Q, phi)
+            print(np.linalg.norm(P, axis=1))
+            if np.mean(np.linalg.norm(P, axis=1)) < 1e-1:
+                print(f"Found Optimal Path")
+                solved = True
+                break
             Q_next = self.get_q_next(Q, alpha, P)
-            if not self.compute_path_collision(Q_next):
+            if self.compute_path_collision(Q_next):
                 noCollision = False
-                if alpha != 1:
-                    print(f"Adding constraint")
-                    self.compute_collision_constraint(Q, Q_next)
-                    # compute collision constraint
-                    # find new constarint
-                    # add new constraint
-                    alpha = 1
+                new_phi = self.find_new_phi(Q_next, phi)
+                print(f"New phi: {new_phi}")
+                if new_phi.all() ==  phi.all():
+                    print(f"Problem: phi didn't change")
+                    break
                 else:
-                    alpha = alpha_init
+                    phi = new_phi
             else:
                 Q = Q_next
                 noCollision = True
 
         self.path = Q
+        if solved is False:
+            print(f"Problem optimising path")
+        # self.show_path()
+        
 
-    def compute_optimal_step(self, Q):
+    def compute_optimal_step(self, Q, phi):
         d_cs = []
         for k in range(len(Q)-2):
             # d_c = (Q[k+1] - Q[k]) - (Q[k+2] - Q[k+1])
             d_1 = lib.sub_locations(Q[k+1], Q[k])
             d_2 = lib.sub_locations(Q[k+2], Q[k+1])
             d_c = lib.sub_locations(d_1, d_2)
+            phi_k = phi[k+1]
+            d_c = [-d_c[0] * phi_k, -d_c[1] * phi_k]
             d_cs.append(d_c)
 
         return d_cs
@@ -294,12 +307,24 @@ class TrainEnvCont(CarModelCont):
     def compute_path_collision(self, Q):
         for i in range(len(Q) - 1):
             if self._check_line(Q[i], Q[i+1]):
+                print(f"Coll at {i}")
                 return True
         return False
 
-    # def compute_collision_constraint(self, Q, Q_next):
-        #leave this out for the moment
-        # it is used to get x_free and x_col
+    def find_new_phi(self, Q_next, phi):
+        new_phi = phi.copy()
+        # for i in range(1, len(Q_next) - 1):
+        #     if self._check_line(Q_next[i-1], Q_next[i]) or self._check_line(Q_next[i], Q_next[i+1]):
+        #         new_phi[i] = 0
+
+        # return new_phi
+
+        for i in range(1, len(Q_next) - 1):
+            if self._check_line(Q_next[i-1], Q_next[i]) or self._check_line(Q_next[i], Q_next[i+1]):
+                print(f"Coll at {i}: changing phi")
+                new_phi[i] = 0
+        return new_phi
+
 
     def find_new_constraint(self, x_free, x_coll, p, alpha):
         # x is used for q
@@ -340,10 +365,11 @@ class TrainEnvCont(CarModelCont):
 
 
 def path_optimiser_driver():
-    env = TrainEnvCont()
-    s = env.reset()
-    env.plan_optimal_path()
-    env.show_path()
+    for i in range(100):
+        env = TrainEnvCont()
+        s = env.reset()
+        env.plan_optimal_path()
+        env.show_path()
 
 
 
