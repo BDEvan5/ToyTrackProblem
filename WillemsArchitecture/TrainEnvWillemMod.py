@@ -40,16 +40,22 @@ class TrainEnvWillem(CarModelDQN):
         self.race_map = np.zeros((100, 100))
         self._locate_obstacles()
 
-        self.start = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
-        while self._check_location(self.start):
-            self.start = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
-        self.car_x = self.start
+        # self.start = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
+        # while self._check_location(self.start):
+        #     self.start = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
+        # self.car_x = self.start
 
-        self.end = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
-        while self._check_location(self.end) or \
-            lib.get_distance(self.start, self.end) < 20 or \
-                lib.get_distance(self.start, self.end) > 60:
-            self.end = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
+        # self.end = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
+        # while self._check_location(self.end) or \
+        #     lib.get_distance(self.start, self.end) < 20 or \
+        #         lib.get_distance(self.start, self.end) > 60:
+        #     self.end = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
+
+        rand_x = np.random.random() * 30 + 35
+        self.start = [rand_x, 20]
+        self.car_x = self.start
+        rand_x = np.random.random() * 30 + 35
+        self.end = [rand_x, 60]
 
         grad = lib.get_gradient(self.start, self.end)
         dx = self.end[0] - self.start[0]
@@ -111,17 +117,18 @@ class TrainEnvWillem(CarModelDQN):
         if crash:
             self.reward = -1
             return 
-        self.reward = 1.0
+        # self.reward = 1.0
         
-        # alpha = 0.1
-        # self.reward = 1 - alpha * abs(action[0] - self.center_act)
+        alpha = 0.1
+        self.reward = 1 - alpha * abs(action[0] - self.center_act)
       
     def _locate_obstacles(self):
-        n_obs = 0
-        # xs = np.random.randint(30, 70, (n_obs, 1))
+        n_obs = 2
+        xs = np.random.randint(30, 62, (n_obs, 1))
+        ys = np.ones_like(xs) * 22
         # ys = np.random.randint(20, 80, (n_obs, 1))
-        # obs_locs = np.concatenate([xs, ys], axis=1)
-        obs_locs = [[45, 40], [25, 68], [35, 20], [53, 70], [70, 10]]
+        obs_locs = np.concatenate([xs, ys], axis=1)
+        # obs_locs = [[45, 40], [25, 68], [35, 20], [53, 70], [70, 10]]
         obs_size = [8, 14]
 
         for obs in obs_locs:
@@ -133,8 +140,8 @@ class TrainEnvWillem(CarModelDQN):
 
 
         # wall boundaries
-        obs_size = [30, 70]
-        obs_locs = [[5, 0], [65, 30]]
+        obs_size = [30, 100]
+        obs_locs = [[5, 0], [65, 0]]
 
         for obs in obs_locs:
             for i in range(obs_size[0]):

@@ -82,7 +82,7 @@ class TrainWillemModDQN:
                 return
             s, a, r, s_p, done = buffer.memory_sample(BATCH_SIZE)
 
-            target = r.detach()
+            target = r.detach().float()
             a = torch.squeeze(a, dim=-1)
 
             q_vals = self.model.forward(s)
@@ -186,7 +186,7 @@ def TrainWillemModAgent(agent_name, buffer, i=0, load=True):
         score += r
         agent.train_modification(buffer)
 
-        env.render(True)
+        # env.render(True)
         
 
         if n % print_n == 0 and n > 0:
