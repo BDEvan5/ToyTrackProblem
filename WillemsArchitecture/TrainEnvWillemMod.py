@@ -116,7 +116,7 @@ class TrainEnvWillem(CarModelDQN):
         self.reward = 1 - alpha * abs(action[0] - 2)
       
     def _locate_obstacles(self):
-        n_obs = 2
+        n_obs = 3
         xs = np.random.randint(30, 70, (n_obs, 1))
         ys = np.random.randint(20, 80, (n_obs, 1))
         obs_locs = np.concatenate([xs, ys], axis=1)

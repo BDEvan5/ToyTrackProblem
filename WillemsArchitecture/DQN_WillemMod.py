@@ -202,7 +202,7 @@ def TrainWillemModAgent(agent_name, buffer, i=0, load=True):
 
             agent.save()
             test_agent = TestWillemModDQN(agent_name)
-            s = single_evaluation(test_agent, True)
+            s = single_evaluation(test_agent, True, True)
             
     agent.save()
 
@@ -248,8 +248,8 @@ if __name__ == "__main__":
     # agent = TestWillemModDQN(12, 5, agent_name)
     # single_evaluation(agent, True, True)
 
-    RunWillemModTraining(agent_name, 0, 5, create=True)
-    # RunWillemModTraining(agent_name, 5, 5, False)
+    # RunWillemModTraining(agent_name, 0, 5, create=True)
+    RunWillemModTraining(agent_name, 5, 5, False)
     # RunWillemModTraining(agent_name, 10, 5, create=False)
 
     # agent = TestWillemModDQN(12, 10, agent_name)
