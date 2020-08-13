@@ -106,7 +106,7 @@ class PathFinder:
         for direction in self.position_list:
             new_position = f.add_locations(self.current_node.position, direction)
 
-            if self.obstacle_function(new_position): 
+            if self.obstacle_function(new_position, self.current_node.position): 
                 continue 
             new_node = Node(self.current_node, np.array(new_position))
 
@@ -242,26 +242,29 @@ def reduce_diagons(path):
 def modify_path(path):
     path = reduce_path_diag(path)
 
-    n_pts = 10
-    new_path = []
-    for i in range(len(path)-1):
-        new_path.append(path[i])
-        dx = (path[i+1][0] - path[i][0]) / n_pts
-        dy = (path[i+1][1] - path[i][1]) / n_pts
-        for j in range(n_pts): # add 10 points between each point
-            x = path[i][0] + j*dx
-            y = path[i][1] + j*dy
-            new_path.append([x, y])
-    new_path.append(path[-1]) # last point
-    path = new_path
+    return path
 
-    new_path = []
-    ds = 10
-    new_path.append(path[0])
-    for pt in path:
-        dis = f.get_distance(new_path[-1], pt)
-        if dis > ds:
-            new_path.append(pt)
+    # n_pts = 10
+    # new_path = []
+    # for i in range(len(path)-1):
+    #     new_path.append(path[i])
+    #     n_pts = int(round(min(f.get_distance(path[i], path[i+1]) / 10, 1)))
+    #     dx = (path[i+1][0] - path[i][0]) / n_pts
+    #     dy = (path[i+1][1] - path[i][1]) / n_pts
+    #     for j in range(n_pts): # add 10 points between each point
+    #         x = path[i][0] + j*dx
+    #         y = path[i][1] + j*dy
+    #         new_path.append([x, y])
+    # new_path.append(path[-1]) # last point
+    # path = new_path
 
-    return new_path
+    # new_path = []
+    # ds = 10
+    # new_path.append(path[0])
+    # for pt in path:
+    #     dis = f.get_distance(new_path[-1], pt)
+    #     if dis > ds:
+    #         new_path.append(pt)
+
+    # return new_path
 

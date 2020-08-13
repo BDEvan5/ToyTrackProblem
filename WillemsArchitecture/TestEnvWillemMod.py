@@ -12,8 +12,8 @@ class CarModelDQN:
         self.velocity = 0
         self.steering = 0
 
-        self.max_velocity = 20
-        self.dth_action = 0.25 # amount of rad to swerve with each action 
+        self.max_velocity = 10
+        self.dth_action = 0.2 # amount of rad to swerve with each action 
 
         self.n_ranges = n_ranges
         self.ranges = np.zeros(self.n_ranges)
@@ -68,7 +68,7 @@ class MapSetUp:
         self.name = 'TestTrack1000'
 
         self.start = [10, 90]
-        self.end = [90, 10]
+        self.end = [90, 25]
 
         if add_obs:
             self.obs_locs = [[15, 50], [32, 24], [50, 45], [70, 74], [88, 40]]
@@ -223,7 +223,9 @@ class TestMap(MapSetUp):
                         new_map[i, j] = 1
 
             track_map = new_map
+        new_map[:, 98:] = np.ones_like(new_map[:, 98:])
         self.heat_map = new_map
+        
 
         # fig = plt.figure(1)
         # plt.imshow(self.heat_map.T, origin='lower')
@@ -232,14 +234,24 @@ class TestMap(MapSetUp):
         # plt.show()
 
     def _path_finder_collision(self, x):
-        if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
+        if self.x_bound[0] >= x[0] or x[0] > self.x_bound[1]:
             return True
-        if self.y_bound[0] > x[1] or x[1] > self.y_bound[1]:
+        if self.y_bound[0] >= x[1] or x[1] > self.y_bound[1]:
             return True 
 
         if self.heat_map[int(x[0]), int(x[1])]:
             return True
 
+        return False
+
+    def _check_line_path(self, start, end):
+        n_checks = 5
+        dif = lib.sub_locations(end, start)
+        diff = [dif[0] / (n_checks), dif[1] / n_checks]
+        for i in range(5):
+            search_val = lib.add_locations(start, diff, i + 1)
+            if self._path_finder_collision(search_val):
+                return True
         return False
 
 
@@ -276,12 +288,14 @@ class TestEnvDQN(TestMap, CarModelDQN):
             self.wpts = np.load(self.path_name)
             # print(f"Path Loaded")
         except:
-            path_finder = PathFinder(self._path_finder_collision, self.start, self.end)
+            path_finder = PathFinder(self._check_line_path, self.start, self.end)
             path = path_finder.run_search(2)
+            # self.show_map(path)
             path = modify_path(path)
             self.wpts = path
             np.save(self.path_name, self.wpts)
             print("Path Generated")
+            # self.show_map(path)
 
         self.wpts = np.append(self.wpts, self.end)
         self.wpts = np.reshape(self.wpts, (-1, 2))
@@ -314,25 +328,30 @@ class TestEnvDQN(TestMap, CarModelDQN):
         self._update_ranges()
         self.pind = 1 # first wpt
 
+        self.memory.append(self.car_x)
         return self._get_state_obs()
 
     def step(self, action):
-        self.memory.append(self.car_x)
         self.steps += 1
 
         th_mod = (action[0] - 2) * self.dth_action
         self.action = [self.lp_th + th_mod, self.lp_sp]
 
         new_x = self._x_step(self.action)
-        crash = self._check_location(new_x)
+        crash = self._check_location(new_x) or (self.steps > 200)
         if not crash:
             self.update_state(self.action)
 
         self.calculate_reward(crash, action)
         r = self.reward
         obs = self._get_state_obs()
+        done = self.check_done() or crash
 
-        return obs, r, crash, None
+        self.speed_memory.append(self.velocity)
+        self.memory.append(self.car_x)
+
+
+        return obs, r, done, None
 
     def calculate_reward(self, crash, action):
         if crash:
@@ -341,6 +360,11 @@ class TestEnvDQN(TestMap, CarModelDQN):
         
         alpha = 0.5
         self.reward = 1 - alpha * abs(action[0])
+
+    def check_done(self):
+        if lib.get_distance(self.car_x, self.end) < 5:
+            return True
+        return False
    
     def render(self):
         x, y = [], []
@@ -397,22 +421,11 @@ class TestEnvDQN(TestMap, CarModelDQN):
         self.lp_sp = 1
 
     def _set_target(self):
-        dis_last_pt = lib.get_distance(self.wpts[self.pind-1], self.car_x)
-        dis_next_pt = lib.get_distance(self.car_x, self.wpts[self.pind+1])
-        max_update_dis = 20 # must be this close to got to next pt
-        while dis_next_pt < dis_last_pt and \
-            self.pind < len(self.wpts)-2 and  \
-            dis_next_pt < max_update_dis:
+        dis_cur_target = lib.get_distance(self.wpts[self.pind], self.car_x)
+        if dis_cur_target < 10 and self.pind < len(self.wpts)-2: # how close to say you were there
             self.pind += 1
-
-            dis_last_pt = lib.get_distance(self.wpts[self.pind-1], self.car_x)
-            dis_next_pt = lib.get_distance(self.car_x, self.wpts[self.pind+1])
-        # use pind and pind +1 to get a 5 unit distance vector 
-        next_pt = self.wpts[self.pind]
-        next_next_pt = self.wpts[self.pind+1]
-
-        target = lib.add_locations(next_pt, next_next_pt)
-        target = [target[0]/2, target[1]/2]
+        
+        target = self.wpts[self.pind]
 
         self.target = target
 

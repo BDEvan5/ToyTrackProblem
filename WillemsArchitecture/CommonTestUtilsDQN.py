@@ -47,13 +47,14 @@ def single_evaluation(agent, show_snap=True, show_render=False):
 
     score, done, state = 0, False, env.reset()
     while not done:
-        a = agent.act(state)
+        # a = agent.act(state)
+        a = [2]
         s_prime, _, done, _ = env.step(a)
         state = s_prime
         score += 1 # counts number of steps
         if show_render:
             # env.box_render()
-            env.full_render()
+            # env.full_render()
             pass
     if show_snap:
         env.render_snapshot()
