@@ -186,7 +186,7 @@ def TrainWillemModAgent(agent_name, buffer, i=0, load=True):
         score += r
         agent.train_modification(buffer)
 
-        # env.render(True)
+        env.render(True)
         
 
         if n % print_n == 0 and n > 0:
@@ -231,7 +231,7 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
 
         lib.plot(total_rewards, figure_n=3)
         plt.figure(2).savefig("PNGs/Training_DQN_rep" + str(i))
-        np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
+        # np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
         agent = TestWillemModDQN(agent_name)
         s = single_evaluation(agent)
         evals.append(s)
@@ -249,8 +249,8 @@ if __name__ == "__main__":
     # agent = TestWillemModDQN(12, 5, agent_name)
     # single_evaluation(agent, True, True)
 
-    # RunWillemModTraining(agent_name, 0, 5, create=True)
-    RunWillemModTraining(agent_name, 5, 5, False)
+    RunWillemModTraining(agent_name, 0, 5, create=True)
+    # RunWillemModTraining(agent_name, 5, 5, False)
     # RunWillemModTraining(agent_name, 10, 5, create=False)
 
     # agent = TestWillemModDQN(12, 10, agent_name)

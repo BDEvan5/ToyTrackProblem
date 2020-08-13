@@ -287,6 +287,8 @@ class TestEnvDQN(TestMap, CarModelDQN):
         
         self.n_ranges = 10 
         self.state_space = 2 + self.n_ranges
+        self.action_space = 9
+        self.center_act = 4
 
         TestMap.__init__(self)
         CarModelDQN.__init__(self, self.n_ranges)
@@ -353,7 +355,7 @@ class TestEnvDQN(TestMap, CarModelDQN):
     def step(self, action):
         self.steps += 1
 
-        th_mod = (action[0] - 2) * self.dth_action
+        th_mod = (action[0] - self.center_act) * self.dth_action
         self.action = [self.lp_th + th_mod, self.lp_sp]
 
         new_x = self._x_step(self.action)

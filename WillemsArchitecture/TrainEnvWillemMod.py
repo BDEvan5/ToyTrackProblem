@@ -15,6 +15,7 @@ class TrainEnvWillem(CarModelDQN):
         self.n_ranges = 10
         self.state_space = self.n_ranges + 2
         self.action_space = 9
+        self.center_act = 4
         
         CarModelDQN.__init__(self, self.n_ranges)
 
@@ -87,7 +88,7 @@ class TrainEnvWillem(CarModelDQN):
 
     def step(self, action):
         self.action = action # mod action
-        th_mod = (action[0] - 2) * self.dth_action
+        th_mod = (action[0] - self.center_act) * self.dth_action
         # x2 so that it can "look ahead further"
         modified_action = [self.lp_th + th_mod, self.lp_sp]
 
@@ -95,7 +96,7 @@ class TrainEnvWillem(CarModelDQN):
         self.modified_action = modified_action[0] * 180 / np.pi
 
         new_x = self._x_step(modified_action)
-        crash = self._check_location(new_x)
+        crash = self._check_line(new_x, self.car_x)
         self.done = crash
         if not crash:
             self.update_state(modified_action)
@@ -110,29 +111,30 @@ class TrainEnvWillem(CarModelDQN):
         if crash:
             self.reward = -1
             return 
-        # self.reward = 1.0
+        self.reward = 1.0
         
-        alpha = 0.1
-        self.reward = 1 - alpha * abs(action[0] - 2)
+        # alpha = 0.1
+        # self.reward = 1 - alpha * abs(action[0] - self.center_act)
       
     def _locate_obstacles(self):
-        n_obs = 3
-        xs = np.random.randint(30, 70, (n_obs, 1))
-        ys = np.random.randint(20, 80, (n_obs, 1))
-        obs_locs = np.concatenate([xs, ys], axis=1)
-        obs_size = [10, 14]
+        n_obs = 0
+        # xs = np.random.randint(30, 70, (n_obs, 1))
+        # ys = np.random.randint(20, 80, (n_obs, 1))
+        # obs_locs = np.concatenate([xs, ys], axis=1)
+        obs_locs = [[45, 40], [25, 68], [35, 20], [53, 70], [70, 10]]
+        obs_size = [8, 14]
 
         for obs in obs_locs:
             for i in range(obs_size[0]):
                 for j in range(obs_size[1]):
                     x = i + obs[0]
                     y = j + obs[1]
-                    self.race_map[x, y] = 1
+                    self.race_map[x, y] = 2
 
 
         # wall boundaries
-        obs_size = [20, 60]
-        obs_locs = [[15, 0], [65, 40]]
+        obs_size = [30, 70]
+        obs_locs = [[5, 0], [65, 30]]
 
         for obs in obs_locs:
             for i in range(obs_size[0]):
