@@ -2,7 +2,8 @@ import numpy as np
 import torch
 from collections import deque
 import random
-from TestEnvDQN import TestEnvDQN
+
+from TestEnvWillemMod import TestEnvDQN
 from matplotlib import pyplot as plt
 
 
@@ -38,10 +39,10 @@ class ReplayBufferDQN():
 
 
 """Single Evals"""
-def single_evaluationDQN(agent, show_snap=True, show_render=False):
+def single_evaluation(agent, show_snap=True, show_render=False):
     env = TestEnvDQN()
-    # env.map_1000(True)
-    env.map_1010()
+    env.map_1000(True)
+    # env.map_1010()
     # env.map_1020()
 
     score, done, state = 0, False, env.reset()

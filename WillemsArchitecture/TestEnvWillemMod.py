@@ -12,7 +12,8 @@ class CarModelDQN:
         self.velocity = 0
         self.steering = 0
 
-        self.max_velocity = 10
+        self.max_velocity = 20
+        self.dth_action = 0.25 # amount of rad to swerve with each action 
 
         self.n_ranges = n_ranges
         self.ranges = np.zeros(self.n_ranges)
@@ -21,30 +22,43 @@ class CarModelDQN:
         for i in range(self.n_ranges):
             self.range_angles[i] = i * dth - np.pi/2
 
-        # parameters
-        self.action_space = 10
-        self.action_scale = self.map_dim / 50
-
-    def _x_step_discrete(self, action):
+    def _x_step(self, action):
         dt = 1
 
-        dth = np.pi / (self.action_space-1)
-
-        steering_action = action[0]
-        # assume w changes instantaneously
-        w_steering_ref = -np.pi/2 + steering_action * dth 
-        new_theta = self.theta + w_steering_ref * dt
-
-        velocity_ref = (action[1] + 0.1) * 0.1 * self.max_velocity # scales to [0, 1] to [0, vmax]
-        velocity = 0.5 * (self.velocity + velocity_ref) # v update provided by controller
-
-        x_i = np.sin(new_theta)*velocity * dt + self.car_x[0]
-        y_i = np.cos(new_theta)* velocity * dt + self.car_x[1]
+        theta = self.theta + action[0]
+        x_i = np.sin(theta)* self.velocity * dt + self.car_x[0]
+        y_i = np.cos(theta)* self.velocity * dt + self.car_x[1]
         
-        new_x = [x_i, y_i]
+        return [x_i, y_i]
 
-        return new_x, new_theta, velocity, w_steering_ref
-    
+    def update_state(self, action):
+        a, d_dot = self.get_integrals(action) 
+
+        dt = 1
+
+        self.theta = self.theta + action[0] 
+        x_i = np.sin(self.theta)* self.velocity * dt + self.car_x[0]
+        y_i = np.cos(self.theta)* self.velocity * dt + self.car_x[1]
+        
+        self.car_x = [x_i, y_i]
+
+        self.velocity = self.velocity + a * dt
+           
+    def get_integrals(self, action):
+        d_ref = action[0] 
+        v_ref = (action[1])* self.max_velocity 
+
+        k_v = 1 # proportional control
+        k_d = 1
+
+        e_v = v_ref - self.velocity
+        a = e_v * k_v
+
+        e_d = d_ref - self.steering
+        d_dot = k_d * e_d
+
+        return a, d_dot
+
 
 class MapSetUp:
     def __init__(self):
@@ -238,6 +252,7 @@ class TestEnvDQN(TestMap, CarModelDQN):
         
         self.n_ranges = 10 
         self.state_space = 2 + self.n_ranges
+        self.dth_action = 0.4
 
         TestMap.__init__(self)
         CarModelDQN.__init__(self, self.n_ranges)
@@ -246,6 +261,9 @@ class TestEnvDQN(TestMap, CarModelDQN):
         self.pind = None
         self.path_name = None
         self.target = None
+
+        self.lp_th = None
+        self.lp_sp = None
 
         self.step_size = 1
         self.n_searches = 30
@@ -299,45 +317,28 @@ class TestEnvDQN(TestMap, CarModelDQN):
         return self._get_state_obs()
 
     def step(self, action):
-        self.memory.append(self.car_x)
-        self.steps += 1
+        th_mod = (action[0] - 2) * self.dth_action
+        self.action = [self.lp_th + th_mod, self.lp_sp]
 
-        new_x, new_theta, new_v, new_w = self._x_step_discrete(action)
-        crash = self._check_location(new_x) 
+        new_x = self._x_step(self.action)
+        crash = self._check_location(new_x)
         if not crash:
-            self.car_x = new_x
-            self.theta = new_theta
-            self.velocity = new_v
-            self.steering = new_w
-        reward, done = self._get_reward(crash)
+            self.update_state(self.action)
+
+        self.calculate_reward(crash, action)
+        r = self.reward
         obs = self._get_state_obs()
 
-        self.speed_memory.append(new_v)
+        return obs, r, crash, None
 
-        return obs, reward, done, None
-
-    def _get_reward(self, crash):
+    def calculate_reward(self, crash, action):
         if crash:
-            r_crash = -100
-            return r_crash, True
-
-        beta = 0.5 # scale to 
-        r_done = 100
-        # step_penalty = 5
-        max_steps = 400
-
-        cur_distance = lib.get_distance(self.car_x, self.end)
-        if cur_distance < 2* self.action_scale:
-            return r_done, True
-        d_dis = self.last_distance - cur_distance
-        reward = 0
-        if abs(d_dis) > 0.01:
-            reward = beta * (d_dis**2 * d_dis/abs(d_dis)) # - step_penalty
-        self.last_distance = cur_distance
-        done = True if self.steps > max_steps else False
-
-        return reward, done
-
+            self.reward = -1
+            return 
+        
+        alpha = 0.5
+        self.reward = 1 - alpha * abs(action[0])
+   
     def render(self):
         x, y = [], []
         for step in self.memory:
@@ -367,16 +368,27 @@ class TestEnvDQN(TestMap, CarModelDQN):
             self.pind += 1
             target = self._get_target()
 
-        rel_v = self.velocity / self.max_velocity
-        rel_th = self.theta / np.pi
+        self.set_lp_action()
 
-        rel_target = lib.sub_locations(target, self.car_x)
-        self.target = rel_target
-        transformed_target = lib.transform_coords(rel_target, self.theta)
-        normalised_target = lib.normalise_coords(transformed_target)
-        obs = np.concatenate([normalised_target, [rel_v], [rel_th], self.ranges])
+        lp_sp = self.lp_sp / self.max_velocity
+        lp_th = self.lp_th / np.pi
+
+        self._update_ranges()
+
+        obs = np.concatenate([[lp_th], [lp_sp], self.ranges])
 
         return obs
+
+    def set_lp_action(self):
+        # called in the reset
+        rel_target = lib.sub_locations(self.end, self.car_x)
+        transformed_target = lib.transform_coords(rel_target, self.theta)
+        normalised_target = lib.normalise_coords(transformed_target)
+        self.lp_th = np.arctan(lib.get_gradient([0, 0], normalised_target))
+
+        # speed between 1 and 0.4
+        # self.lp_sp = (1 - abs(self.lp_th)/(np.pi/2) * 0.6) * self.max_velocity
+        self.lp_sp = 1
 
     def _get_target(self):
         dis_last_pt = lib.get_distance(self.wpts[self.pind-1], self.car_x)
