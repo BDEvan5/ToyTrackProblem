@@ -12,8 +12,11 @@ class CarModelDQN:
         self.velocity = 0
         self.steering = 0
 
-        self.max_velocity = 10
-        self.dth_action = 0.2 # amount of rad to swerve with each action 
+        self.lp_th = None
+        self.lp_sp = None
+
+        self.max_velocity = 5
+        self.dth_action = 0.3 # amount of rad to swerve with each action 
 
         self.n_ranges = n_ranges
         self.ranges = np.zeros(self.n_ranges)
@@ -23,11 +26,13 @@ class CarModelDQN:
             self.range_angles[i] = i * dth - np.pi/2
 
     def _x_step(self, action):
+        a, d_dot = self.get_integrals(action) 
         dt = 1
 
         theta = self.theta + action[0]
-        x_i = np.sin(theta)* self.velocity * dt + self.car_x[0]
-        y_i = np.cos(theta)* self.velocity * dt + self.car_x[1]
+        velocity = self.velocity + a * dt
+        x_i = np.sin(theta)* velocity * dt + self.car_x[0]
+        y_i = np.cos(theta)* velocity * dt + self.car_x[1]
         
         return [x_i, y_i]
 
@@ -37,13 +42,13 @@ class CarModelDQN:
         dt = 1
 
         self.theta = self.theta + action[0] 
+        self.velocity = self.velocity + a * dt
+
         x_i = np.sin(self.theta)* self.velocity * dt + self.car_x[0]
         y_i = np.cos(self.theta)* self.velocity * dt + self.car_x[1]
         
         self.car_x = [x_i, y_i]
-
-        self.velocity = self.velocity + a * dt
-           
+        
     def get_integrals(self, action):
         d_ref = action[0] 
         v_ref = (action[1])* self.max_velocity 
@@ -59,6 +64,14 @@ class CarModelDQN:
 
         return a, d_dot
 
+    def set_lp_action(self, target):
+        th_target = lib.get_bearing(self.car_x, target) 
+        self.lp_th = th_target - self.theta
+
+        # speed between 1 and 0.4
+        # self.lp_sp = (1 - abs(self.lp_th)/(np.pi/2) * 0.6) * self.max_velocity
+        self.lp_sp = 1
+
 
 class MapSetUp:
     def __init__(self):
@@ -71,7 +84,7 @@ class MapSetUp:
         self.end = [90, 25]
 
         if add_obs:
-            self.obs_locs = [[15, 50], [32, 24], [50, 45], [70, 74], [88, 40]]
+            self.obs_locs = [[15, 50], [30, 25], [50, 45], [70, 74], [88, 40]]
         self.set_up_map()
         
     def map_1010(self):
@@ -98,7 +111,7 @@ class MapSetUp:
 
 
         self.create_race_map()
-        # self._place_obs()
+        self._place_obs()
         self.run_path_finder()
 
 
@@ -159,6 +172,16 @@ class TestMap(MapSetUp):
         # if self.race_map[int(x[1]), int(x[0])]:
             return True
 
+        return False
+
+    def _check_line(self, start, end):
+        n_checks = 5
+        dif = lib.sub_locations(end, start)
+        diff = [dif[0] / (n_checks), dif[1] / n_checks]
+        for i in range(5):
+            search_val = lib.add_locations(start, diff, i + 1)
+            if self._check_location(search_val):
+                return True
         return False
 
     def show_map(self, path=None):
@@ -264,7 +287,6 @@ class TestEnvDQN(TestMap, CarModelDQN):
         
         self.n_ranges = 10 
         self.state_space = 2 + self.n_ranges
-        self.dth_action = 0.4
 
         TestMap.__init__(self)
         CarModelDQN.__init__(self, self.n_ranges)
@@ -273,9 +295,6 @@ class TestEnvDQN(TestMap, CarModelDQN):
         self.pind = None
         self.path_name = None
         self.target = None
-
-        self.lp_th = None
-        self.lp_sp = None
 
         self.step_size = 1
         self.n_searches = 30
@@ -338,7 +357,7 @@ class TestEnvDQN(TestMap, CarModelDQN):
         self.action = [self.lp_th + th_mod, self.lp_sp]
 
         new_x = self._x_step(self.action)
-        crash = self._check_location(new_x) or (self.steps > 200)
+        crash = self._check_line(new_x, self.car_x) or (self.steps > 200)
         if not crash:
             self.update_state(self.action)
 
@@ -389,36 +408,15 @@ class TestEnvDQN(TestMap, CarModelDQN):
 
     def _get_state_obs(self):
         self._update_ranges()
-
         self._set_target()
-        if self._check_location(self.target):
-            self.pind += 1
-            self._set_target()
-
-        self.set_lp_action()
+        self.set_lp_action(self.target)
 
         lp_sp = self.lp_sp / self.max_velocity
         lp_th = self.lp_th / np.pi
 
-        self._update_ranges()
-
         obs = np.concatenate([[lp_th], [lp_sp], self.ranges])
 
         return obs
-
-    def set_lp_action(self):
-        th_target = lib.get_bearing(self.car_x, self.target) 
-        self.lp_th = th_target - self.theta
-
-        # called in the reset
-        # rel_target = lib.sub_locations(self.end, self.car_x)
-        # transformed_target = lib.transform_coords(rel_target, self.theta)
-        # normalised_target = lib.normalise_coords(transformed_target)
-        # self.lp_th = np.arctan(lib.get_gradient([0, 0], normalised_target))
-
-        # speed between 1 and 0.4
-        # self.lp_sp = (1 - abs(self.lp_th)/(np.pi/2) * 0.6) * self.max_velocity
-        self.lp_sp = 1
 
     def _set_target(self):
         dis_cur_target = lib.get_distance(self.wpts[self.pind], self.car_x)

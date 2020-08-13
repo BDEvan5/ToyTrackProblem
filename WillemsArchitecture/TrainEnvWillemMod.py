@@ -14,29 +14,23 @@ class TrainEnvWillem(CarModelDQN):
         self.map_dim = 100
         self.n_ranges = 10
         self.state_space = self.n_ranges + 2
-        self.action_space = 5
-         
-
+        self.action_space = 9
+        
         CarModelDQN.__init__(self, self.n_ranges)
 
         self.start_theta = 0
         self.start_velocity = 0
         self.th_start_end = None
-
-        self.lp_th = None
-        self.lp_sp = None
-
-        self.x_bound = [1, 99]
-        self.y_bound = [1, 99]
         self.reward = np.zeros((2, 1))
         self.action = None
         self.done = None
         self.modified_action = None
 
+        self.x_bound = [1, 99]
+        self.y_bound = [1, 99]
         self.step_size = int(1)
         self.n_searches = 30
         
-        self.target = None
         self.end = None
         self.start = None
         self.race_map = None
@@ -94,6 +88,7 @@ class TrainEnvWillem(CarModelDQN):
     def step(self, action):
         self.action = action # mod action
         th_mod = (action[0] - 2) * self.dth_action
+        # x2 so that it can "look ahead further"
         modified_action = [self.lp_th + th_mod, self.lp_sp]
 
         self.pp_action = [self.lp_th *180/np.pi, self.lp_sp]
@@ -111,27 +106,13 @@ class TrainEnvWillem(CarModelDQN):
 
         return obs, r, crash, None
 
-    def set_lp_action(self):
-        # called in the reset
-        self.lp_th = self.th_start_end - self.theta
-
-        # rel_target = lib.sub_locations(self.end, self.car_x)
-        # transformed_target = lib.transform_coords(rel_target, self.theta)
-        # normalised_target = lib.normalise_coords(transformed_target)
-        # self.lp_th = np.arctan(lib.get_gradient([0, 0], normalised_target))
-
-        # speed between 1 and 0.4
-        self.lp_sp = 1 # const max speed
-        # self.lp_sp = (1 - abs(self.lp_th)/(np.pi/2) * 0.6) * self.max_velocity
-        
-        
-
     def calculate_reward(self, crash, action):
         if crash:
             self.reward = -1
             return 
+        # self.reward = 1.0
         
-        alpha = 0.5
+        alpha = 0.1
         self.reward = 1 - alpha * abs(action[0] - 2)
       
     def _locate_obstacles(self):
@@ -172,12 +153,11 @@ class TrainEnvWillem(CarModelDQN):
             self.ranges[i] = (j) / (self.n_searches) # gives a scaled val to 1 
 
     def _get_state_obs(self):
-        self.set_lp_action()
+        self.set_lp_action(self.end)
+        self._update_ranges()
 
         lp_sp = self.lp_sp / self.max_velocity
         lp_th = self.lp_th / np.pi
-
-        self._update_ranges()
 
         obs = np.concatenate([[lp_th], [lp_sp], self.ranges])
 
