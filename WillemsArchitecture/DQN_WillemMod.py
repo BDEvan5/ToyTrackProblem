@@ -179,15 +179,14 @@ def TrainWillemModAgent(agent_name, buffer, i=0, load=True):
     score = 0.0
     for n in range(1000):
         state = env.reset()
-        # a = agent.act(state)
-        a = [2]
+        a = agent.act(state)
         s_prime, r, done, _ = env.step(a)
         done_mask = 0.0 if done else 1.0
         buffer.put((state, a, r, s_prime, done_mask)) # never done
         score += r
         agent.train_modification(buffer)
 
-        env.render(True)
+        # env.render(True)
 
         if n % print_n == 0 and n > 0:
             rewards.append(score)
@@ -244,15 +243,15 @@ if __name__ == "__main__":
     agent_name = "TestingWillemMod"
     # agent_name = "ModTest"
 
-    # agent = TestWillemModDQN(12, 10, agent_name)
-    # single_evaluation(agent, True)
+    # agent = TestWillemModDQN(12, 5, agent_name)
+    # single_evaluation(agent, True, True)
 
     RunWillemModTraining(agent_name, 0, 5, create=True)
     # RunWillemModTraining(agent_name, 5, 5, False)
     # RunWillemModTraining(agent_name, 10, 5, create=False)
 
-    agent = TestWillemModDQN(12, 10, agent_name)
-    single_evaluation(agent, True)
+    # agent = TestWillemModDQN(12, 10, agent_name)
+    # single_evaluation(agent, True)
 
 
 

@@ -317,6 +317,9 @@ class TestEnvDQN(TestMap, CarModelDQN):
         return self._get_state_obs()
 
     def step(self, action):
+        self.memory.append(self.car_x)
+        self.steps += 1
+
         th_mod = (action[0] - 2) * self.dth_action
         self.action = [self.lp_th + th_mod, self.lp_sp]
 
@@ -363,10 +366,10 @@ class TestEnvDQN(TestMap, CarModelDQN):
     def _get_state_obs(self):
         self._update_ranges()
 
-        target = self._get_target()
-        if self._check_location(target):
+        self._set_target()
+        if self._check_location(self.target):
             self.pind += 1
-            target = self._get_target()
+            self._set_target()
 
         self.set_lp_action()
 
@@ -380,17 +383,20 @@ class TestEnvDQN(TestMap, CarModelDQN):
         return obs
 
     def set_lp_action(self):
+        th_target = lib.get_bearing(self.car_x, self.target) 
+        self.lp_th = th_target - self.theta
+
         # called in the reset
-        rel_target = lib.sub_locations(self.end, self.car_x)
-        transformed_target = lib.transform_coords(rel_target, self.theta)
-        normalised_target = lib.normalise_coords(transformed_target)
-        self.lp_th = np.arctan(lib.get_gradient([0, 0], normalised_target))
+        # rel_target = lib.sub_locations(self.end, self.car_x)
+        # transformed_target = lib.transform_coords(rel_target, self.theta)
+        # normalised_target = lib.normalise_coords(transformed_target)
+        # self.lp_th = np.arctan(lib.get_gradient([0, 0], normalised_target))
 
         # speed between 1 and 0.4
         # self.lp_sp = (1 - abs(self.lp_th)/(np.pi/2) * 0.6) * self.max_velocity
         self.lp_sp = 1
 
-    def _get_target(self):
+    def _set_target(self):
         dis_last_pt = lib.get_distance(self.wpts[self.pind-1], self.car_x)
         dis_next_pt = lib.get_distance(self.car_x, self.wpts[self.pind+1])
         max_update_dis = 20 # must be this close to got to next pt
@@ -408,7 +414,7 @@ class TestEnvDQN(TestMap, CarModelDQN):
         target = lib.add_locations(next_pt, next_next_pt)
         target = [target[0]/2, target[1]/2]
 
-        return target
+        self.target = target
 
     def _update_ranges(self):
         for i in range(self.n_ranges):
@@ -467,8 +473,7 @@ class TestEnvDQN(TestMap, CarModelDQN):
         plt.ylim(0, self.map_dim)
 
         plt.plot(car_pos[0], car_pos[1], '+', markersize=20)
-        targ = lib.add_locations(car_pos, self.target)
-        plt.plot(targ[0], targ[1], 'x', markersize=14)
+        plt.plot(self.target[0], self.target[1], 'x', markersize=14)
 
         for i in range(self.n_ranges):
             angle = self.range_angles[i] + self.theta

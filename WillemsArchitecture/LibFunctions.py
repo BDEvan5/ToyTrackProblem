@@ -49,6 +49,23 @@ def normalise_coords(x=[0, 0]):
     x = y * r
     return [x, y]
 
+def get_bearing(x1=[0, 0], x2=[0, 0]):
+    grad = get_gradient(x1, x2)
+    dx = x2[0] - x1[0]
+    th_start_end = np.arctan(grad)
+    if th_start_end > 0:
+        if dx > 0:
+            th_start_end = np.pi / 2 - th_start_end
+        else:
+            th_start_end = -np.pi/2 - th_start_end
+    else:
+        if dx > 0:
+            th_start_end = np.pi / 2 - th_start_end
+        else:
+            th_start_end = - np.pi/2 - th_start_end
+
+    return th_start_end
+
 
 def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     plt.figure(figure_n)
