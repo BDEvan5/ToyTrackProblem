@@ -15,7 +15,7 @@ import torch.optim as optim
 import LibFunctions as lib
 from CommonTestUtilsDQN import single_evaluation, ReplayBufferDQN
 from TrainEnvWillemMod import TrainEnvWillem
-
+from TestEnvWillemMod import TestEnvDQN
 
 #Hyperparameters
 GAMMA = 0.95
@@ -83,6 +83,27 @@ class TrainWillemModDQN:
             s, a, r, s_p, done = buffer.memory_sample(BATCH_SIZE)
 
             target = r.detach().float()
+            a = torch.squeeze(a, dim=-1)
+
+            q_vals = self.model.forward(s)
+            q_a = q_vals.gather(1, a)
+
+            loss = F.mse_loss(q_a, target)
+
+            self.model.optimizer.zero_grad()
+            loss.backward()
+            self.model.optimizer.step()
+        self.update_networks()
+
+    def train_episodes(self, buffer):
+        n_train = 1
+        for i in range(n_train):
+            if buffer.size() < BATCH_SIZE:
+                return
+            s, a, r, s_p, done = buffer.memory_sample(BATCH_SIZE)
+
+            next_val = torch.max(self.target.forward(s_p))
+            target = r.detach().float() + next_val.detach()
             a = torch.squeeze(a, dim=-1)
 
             q_vals = self.model.forward(s)
@@ -203,7 +224,58 @@ def TrainWillemModAgent(agent_name, buffer, i=0, load=True):
 
             agent.save()
             test_agent = TestWillemModDQN(agent_name)
-            s = single_evaluation(test_agent, True, True)
+            s = single_evaluation(test_agent, True)
+            
+    agent.save()
+
+    return rewards
+
+def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
+    env = TrainEnvWillem()
+    # env = TestEnvDQN()
+    # env.map_1000(True)
+    agent = TrainWillemModDQN(env.state_space, env.action_space, agent_name)
+    agent.try_load(load)
+
+    print_n = 100
+    rewards = []
+    score = 0.0
+    crashes = 0
+    state = env.reset()
+    for n in range(1000):
+        a = agent.act(state)
+        s_prime, r, done, _ = env.step(a)
+        crashes += done
+        done_mask = 0.0 if done else 1.0
+        buffer.put((state, a, r, s_prime, done_mask)) # never done
+        score += r
+        agent.train_modification(buffer)
+        # agent.train_episodes(buffer)
+
+        # env.render(False)
+        state = s_prime
+
+        if n % print_n == 0 and n > 0:
+            rewards.append(score)
+            # env.render()   
+            # env.render_snapshot() 
+            exp = agent.model.exploration_rate
+            mean = np.mean(rewards)
+            b = buffer.size()
+            print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
+            print(f"Crashes: {crashes}")
+            score = 0
+            crashes = 0
+            lib.plot(rewards, figure_n=2)
+
+            agent.save()
+            # test_agent = TestWillemModDQN(agent_name)
+            # s = single_evaluation(test_agent, True, False)
+            single_evaluation(agent, True)
+        
+        if done:
+            env.render_snapshot()
+            state = env.reset()
             
     agent.save()
 
@@ -217,7 +289,8 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
 
     if create:
         collect_willem_mod_observations(buffer, 50)
-        rewards = TrainWillemModAgent(agent_name, buffer, 0, False)
+        # rewards = TrainWillemModAgent(agent_name, buffer, 0, False)
+        rewards = TrainWillemModAgentEps(agent_name, buffer, 0, False)
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
         agent = TestWillemModDQN(agent_name)
@@ -226,14 +299,15 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
 
     for i in range(start, start + n_runs):
         print(f"Running batch: {i}")
-        rewards = TrainWillemModAgent(agent_name, buffer, i, True)
+        # rewards = TrainWillemModAgent(agent_name, buffer, i, True)
+        rewards = TrainWillemModAgentEps(agent_name, buffer, i, True)
         total_rewards += rewards
 
         lib.plot(total_rewards, figure_n=3)
         plt.figure(2).savefig("PNGs/Training_DQN_rep" + str(i))
         # np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
         agent = TestWillemModDQN(agent_name)
-        s = single_evaluation(agent)
+        s = single_evaluation(agent, True, True)
         evals.append(s)
 
     try:
@@ -249,7 +323,7 @@ if __name__ == "__main__":
     # agent = TestWillemModDQN(12, 5, agent_name)
     # single_evaluation(agent, True, True)
 
-    RunWillemModTraining(agent_name, 0, 5, create=True)
+    RunWillemModTraining(agent_name, 0, 50, create=True)
     # RunWillemModTraining(agent_name, 5, 5, False)
     # RunWillemModTraining(agent_name, 10, 5, create=False)
 

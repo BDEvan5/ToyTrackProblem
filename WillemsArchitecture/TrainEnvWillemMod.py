@@ -36,45 +36,34 @@ class TrainEnvWillem(CarModelDQN):
         self.start = None
         self.race_map = None
 
+        self.memory = []
+        self.steps = 0
+
     def reset(self):
+        self.memory.clear()
+        self.steps = 0
         self.race_map = np.zeros((100, 100))
         self._locate_obstacles()
-
-        # self.start = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
-        # while self._check_location(self.start):
-        #     self.start = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
-        # self.car_x = self.start
-
-        # self.end = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
-        # while self._check_location(self.end) or \
-        #     lib.get_distance(self.start, self.end) < 20 or \
-        #         lib.get_distance(self.start, self.end) > 60:
-        #     self.end = [np.random.random() * 60 + 20 , np.random.random() * 60 + 20]
-
-        rand_x = np.random.random() * 30 + 35
-        self.start = [rand_x, 20]
+        
+        self.start = self.get_rands()
+        while self._check_location(self.start):
+            self.start = self.get_rands()
         self.car_x = self.start
-        rand_x = np.random.random() * 30 + 35
-        self.end = [rand_x, 60]
 
-        grad = lib.get_gradient(self.start, self.end)
-        dx = self.end[0] - self.start[0]
-        th_start_end = np.arctan(grad)
-        if th_start_end > 0:
-            if dx > 0:
-                th_start_end = np.pi / 2 - th_start_end
-            else:
-                th_start_end = -np.pi/2 - th_start_end
-        else:
-            if dx > 0:
-                th_start_end = np.pi / 2 - th_start_end
-            else:
-                th_start_end = - np.pi/2 - th_start_end
+        self.end = self.get_rands()
+        while self._check_location(self.end) or \
+            lib.get_distance(self.start, self.end) < 30:
+            self.end = self.get_rands()
+
+
+        th_start_end = lib.get_bearing(self.start, self.end)
         self.th_start_end = th_start_end
         self.start_theta = th_start_end + np.random.random() * np.pi/2 - np.pi/4
         self.theta = self.start_theta
         # self.theta = th_start_end
         # self.start_theta = self.theta
+
+        self.memory.append(self.car_x)
 
 
         # self.start_velocity = np.random.random() * self.max_velocity
@@ -84,15 +73,20 @@ class TrainEnvWillem(CarModelDQN):
         self.steering = 0
 
         # text
-        self.reward = np.zeros((2, 1))
+        self.reward = None
         self.action = None
-        self.pp_action = None
+        self.pp_action = np.zeros((2))
 
         
 
         return self._get_state_obs()
 
+    def get_rands(self, a=100, b=0):
+        r = [np.random.random() * a + b, np.random.random() * a + b]
+        return r
+
     def step(self, action):
+        self.steps += 1
         self.action = action # mod action
         th_mod = (action[0] - self.center_act) * self.dth_action
         # x2 so that it can "look ahead further"
@@ -111,7 +105,12 @@ class TrainEnvWillem(CarModelDQN):
         r = self.reward
         obs = self._get_state_obs()
 
-        return obs, r, crash, None
+        if lib.get_distance(self.car_x, self.end) < 10:
+            self.done = True
+
+        self.memory.append(self.car_x)
+
+        return obs, r, self.done, None
 
     def calculate_reward(self, crash, action):
         if crash:
@@ -119,17 +118,41 @@ class TrainEnvWillem(CarModelDQN):
             return 
         # self.reward = 1.0
         
-        alpha = 0.1
-        self.reward = 1 - alpha * abs(action[0] - self.center_act)
+        alpha = 0.05
+        self.reward = 0.0 - alpha * abs(action[0] - self.center_act)
       
     def _locate_obstacles(self):
         n_obs = 2
-        xs = np.random.randint(30, 62, (n_obs, 1))
-        ys = np.ones_like(xs) * 22
+        # xs = np.random.randint(30, 62, (n_obs, 1))
+        # ys = np.ones_like(xs) * 22
         # ys = np.random.randint(20, 80, (n_obs, 1))
-        obs_locs = np.concatenate([xs, ys], axis=1)
+        # obs_locs = np.concatenate([xs, ys], axis=1)
         # obs_locs = [[45, 40], [25, 68], [35, 20], [53, 70], [70, 10]]
-        obs_size = [8, 14]
+        # obs_locs = [[35, 22], [55, 24]]
+        # obs_locs = [[int(self.start[0]) - 3, 24]]
+
+        obs_locs = [[20, 60], [60, 50]]
+        obs_size = [8, 20]
+
+        for obs in obs_locs:
+            for i in range(obs_size[0]):
+                for j in range(obs_size[1]):
+                    x = i + obs[0]
+                    y = j + obs[1]
+                    self.race_map[x, y] = 2
+
+        obs_locs = [[20, 60], [60, 10]]
+        obs_size = [20, 5]
+
+        for obs in obs_locs:
+            for i in range(obs_size[0]):
+                for j in range(obs_size[1]):
+                    x = i + obs[0]
+                    y = j + obs[1]
+                    self.race_map[x, y] = 2
+
+        obs_locs = [[20, 30], [50, 70]]
+        obs_size = [40, 6]
 
         for obs in obs_locs:
             for i in range(obs_size[0]):
@@ -140,15 +163,15 @@ class TrainEnvWillem(CarModelDQN):
 
 
         # wall boundaries
-        obs_size = [30, 100]
-        obs_locs = [[5, 0], [65, 0]]
+        # obs_size = [20, 100]
+        # obs_locs = [[5, 0], [75, 0]]
 
-        for obs in obs_locs:
-            for i in range(obs_size[0]):
-                for j in range(obs_size[1]):
-                    x = i + obs[0]
-                    y = j + obs[1]
-                    self.race_map[x, y] = 1
+        # for obs in obs_locs:
+        #     for i in range(obs_size[0]):
+        #         for j in range(obs_size[1]):
+        #             x = i + obs[0]
+        #             y = j + obs[1]
+        #             self.race_map[x, y] = 1
 
     def _update_ranges(self):
         for i in range(self.n_ranges):
@@ -165,7 +188,7 @@ class TrainEnvWillem(CarModelDQN):
         self.set_lp_action(self.end)
         self._update_ranges()
 
-        lp_sp = self.lp_sp / self.max_velocity
+        lp_sp = self.lp_sp 
         lp_th = self.lp_th / np.pi
 
         obs = np.concatenate([[lp_th], [lp_sp], self.ranges])
@@ -239,3 +262,39 @@ class TrainEnvWillem(CarModelDQN):
         if wait:
             plt.show()
 
+    def render_snapshot(self):
+        fig = plt.figure(9)
+        plt.clf()  
+        plt.imshow(self.race_map.T, origin='lower')
+        plt.xlim(0, self.map_dim)
+        plt.ylim(0, self.map_dim)
+
+        xs, ys = [], []
+        for x in self.memory:
+            xs.append(x[0])
+            ys.append(x[1])
+        plt.plot(xs, ys, '+', markersize=12)
+        plt.plot(xs, ys, linewidth=3)
+
+        plt.plot(self.start[0], self.start[1], '*', markersize=12)
+        x_start_v = [self.start[0], self.start[0] + 15*np.sin(self.start_theta)]
+        y_start_v = [self.start[1], self.start[1] + 15*np.cos(self.start_theta)]
+        plt.plot(x_start_v, y_start_v, linewidth=2)
+        plt.plot(self.end[0], self.end[1], '*', markersize=12)
+        plt.plot(self.car_x[0], self.car_x[1], '+', markersize=16)
+        
+
+        s = f"Steps: {self.steps}"
+        plt.text(100, 80, s)
+        s = f"Action: {self.action}"
+        plt.text(100, 70, s) 
+        s = f"PP Action: [{self.pp_action[0]:.2f}, {self.pp_action[1]:.2f}]"
+        plt.text(100, 60, s) 
+        s = f"Mod action: {self.modified_action:.2f}"
+        plt.text(100, 40, s) 
+        s = f"Done: {self.done}"
+        plt.text(100, 50, s) 
+        s = f"Reward: [{self.reward:.1f}]" 
+        plt.text(100, 80, s)
+
+        plt.pause(0.001)

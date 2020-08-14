@@ -15,7 +15,7 @@ class CarModelDQN:
         self.lp_th = None
         self.lp_sp = None
 
-        self.max_velocity = 5
+        self.max_velocity = 4
         self.dth_action = 0.3 # amount of rad to swerve with each action 
 
         self.n_ranges = n_ranges
@@ -84,7 +84,7 @@ class MapSetUp:
         self.end = [90, 25]
 
         if add_obs:
-            self.obs_locs = [[15, 50], [30, 25], [50, 45], [70, 74], [88, 40]]
+            self.obs_locs = [[15, 50], [28, 25], [44, 28], [70, 74], [88, 40]]
         self.set_up_map()
         
     def map_1010(self):
@@ -338,9 +338,10 @@ class TestEnvDQN(TestMap, CarModelDQN):
         self.steps = 0
         self.memory = []
 
-        self.theta = np.pi / 2 - np.arctan(lib.get_gradient(self.start, self.end))
-        if self.end[0] < self.start[0]:
-            self.theta += np.pi
+        # self.theta = np.pi / 2 - np.arctan(lib.get_gradient(self.start, self.end))
+        # if self.end[0] < self.start[0]:
+        #     self.theta += np.pi
+        self.theta = lib.get_bearing(self.start, self.wpts[1])
         
         self.last_distance = lib.get_distance(self.start, self.end)
         self.car_x = self.start
@@ -379,8 +380,8 @@ class TestEnvDQN(TestMap, CarModelDQN):
             self.reward = -1
             return 
         
-        alpha = 0.5
-        self.reward = 1 - alpha * abs(action[0])
+        alpha = 0.1
+        self.reward = 1 - alpha * abs(action[0] - self.center_act)
 
     def check_done(self):
         if lib.get_distance(self.car_x, self.end) < 5:
@@ -413,7 +414,7 @@ class TestEnvDQN(TestMap, CarModelDQN):
         self._set_target()
         self.set_lp_action(self.target)
 
-        lp_sp = self.lp_sp / self.max_velocity
+        lp_sp = self.lp_sp 
         lp_th = self.lp_th / np.pi
 
         obs = np.concatenate([[lp_th], [lp_sp], self.ranges])
@@ -473,7 +474,7 @@ class TestEnvDQN(TestMap, CarModelDQN):
             plt.plot(x, y)
 
         
-        plt.pause(0.01)
+        plt.pause(0.1)
         # plt.show()
 
     def full_render(self):
