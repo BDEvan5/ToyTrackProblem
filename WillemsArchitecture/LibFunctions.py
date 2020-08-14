@@ -66,6 +66,11 @@ def get_bearing(x1=[0, 0], x2=[0, 0]):
 
     return th_start_end
 
+def theta_to_xy(theta):
+    x = np.sin(theta)
+    y = np.cos(theta)
+
+    return [x, y]
 
 def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     plt.figure(figure_n)

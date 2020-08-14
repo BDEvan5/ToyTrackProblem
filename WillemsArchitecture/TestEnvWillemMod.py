@@ -6,7 +6,12 @@ from PathFinder import PathFinder, modify_path
 
 
 class CarModelDQN:
-    def __init__(self, n_ranges=10):
+    def __init__(self):
+        self.n_ranges = 5
+        self.state_space = self.n_ranges + 2
+        self.action_space = 5
+        self.center_act = 2
+
         self.car_x = [0, 0]
         self.theta = 0
         self.velocity = 0
@@ -16,9 +21,8 @@ class CarModelDQN:
         self.lp_sp = None
 
         self.max_velocity = 4
-        self.dth_action = 0.3 # amount of rad to swerve with each action 
+        self.dth_action = np.pi/5 # amount of rad to swerve with each action 
 
-        self.n_ranges = n_ranges
         self.ranges = np.zeros(self.n_ranges)
         self.range_angles = np.zeros(self.n_ranges)
         dth = np.pi/(self.n_ranges-1)
@@ -72,6 +76,18 @@ class CarModelDQN:
         # self.lp_sp = (1 - abs(self.lp_th)/(np.pi/2) * 0.6) * self.max_velocity
         self.lp_sp = 1
 
+    def _get_state_obs(self, target):
+        self._update_ranges()
+        self.set_lp_action(target)
+
+        lp_sp = self.lp_sp 
+        lp_th = self.lp_th #/ np.pi
+
+        xy = lib.theta_to_xy(lp_th)
+
+        obs = np.concatenate([xy, self.ranges])
+
+        return obs
 
 class MapSetUp:
     def __init__(self):
@@ -285,13 +301,8 @@ class TestEnvDQN(TestMap, CarModelDQN):
         self.speed_memory = []
         self.eps = 0
         
-        self.n_ranges = 10 
-        self.state_space = 2 + self.n_ranges
-        self.action_space = 9
-        self.center_act = 4
-
+        CarModelDQN.__init__(self)
         TestMap.__init__(self)
-        CarModelDQN.__init__(self, self.n_ranges)
 
         self.wpts = None
         self.pind = None
@@ -351,7 +362,8 @@ class TestEnvDQN(TestMap, CarModelDQN):
         self.pind = 1 # first wpt
 
         self.memory.append(self.car_x)
-        return self._get_state_obs()
+        self._set_target()
+        return self._get_state_obs(self.target)
 
     def step(self, action):
         self.steps += 1
@@ -366,7 +378,8 @@ class TestEnvDQN(TestMap, CarModelDQN):
 
         self.calculate_reward(crash, action)
         r = self.reward
-        obs = self._get_state_obs()
+        self._set_target()
+        obs = self._get_state_obs(self.target)
         done = self.check_done() or crash
 
         self.speed_memory.append(self.velocity)
@@ -409,17 +422,7 @@ class TestEnvDQN(TestMap, CarModelDQN):
         plt.pause(0.001)
         # fig.savefig(f"Renders/Rendering_{self.eps}")
 
-    def _get_state_obs(self):
-        self._update_ranges()
-        self._set_target()
-        self.set_lp_action(self.target)
 
-        lp_sp = self.lp_sp 
-        lp_th = self.lp_th / np.pi
-
-        obs = np.concatenate([[lp_th], [lp_sp], self.ranges])
-
-        return obs
 
     def _set_target(self):
         dis_cur_target = lib.get_distance(self.wpts[self.pind], self.car_x)

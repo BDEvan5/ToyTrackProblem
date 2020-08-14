@@ -76,7 +76,7 @@ class TrainWillemModDQN:
         return out.argmax().item()
 
     def train_modification(self, buffer):
-        n_train = 1
+        n_train = 5
         for i in range(n_train):
             if buffer.size() < BATCH_SIZE:
                 return
@@ -288,7 +288,7 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
     evals = []
 
     if create:
-        collect_willem_mod_observations(buffer, 50)
+        collect_willem_mod_observations(buffer, 100)
         # rewards = TrainWillemModAgent(agent_name, buffer, 0, False)
         rewards = TrainWillemModAgentEps(agent_name, buffer, 0, False)
         total_rewards += rewards

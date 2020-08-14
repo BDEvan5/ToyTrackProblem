@@ -12,12 +12,8 @@ from TestEnvWillemMod import CarModelDQN
 class TrainEnvWillem(CarModelDQN):
     def __init__(self):
         self.map_dim = 100
-        self.n_ranges = 10
-        self.state_space = self.n_ranges + 2
-        self.action_space = 9
-        self.center_act = 4
         
-        CarModelDQN.__init__(self, self.n_ranges)
+        CarModelDQN.__init__(self)
 
         self.start_theta = 0
         self.start_velocity = 0
@@ -79,7 +75,7 @@ class TrainEnvWillem(CarModelDQN):
 
         
 
-        return self._get_state_obs()
+        return self._get_state_obs(self.end)
 
     def get_rands(self, a=100, b=0):
         r = [np.random.random() * a + b, np.random.random() * a + b]
@@ -90,7 +86,8 @@ class TrainEnvWillem(CarModelDQN):
         self.action = action # mod action
         th_mod = (action[0] - self.center_act) * self.dth_action
         # x2 so that it can "look ahead further"
-        modified_action = [self.lp_th + th_mod, self.lp_sp]
+        # modified_action = [self.lp_th + th_mod, self.lp_sp]
+        modified_action = [th_mod, self.lp_sp]
 
         self.pp_action = [self.lp_th *180/np.pi, self.lp_sp]
         self.modified_action = modified_action[0] * 180 / np.pi
@@ -103,7 +100,7 @@ class TrainEnvWillem(CarModelDQN):
 
         self.calculate_reward(crash, action)
         r = self.reward
-        obs = self._get_state_obs()
+        obs = self._get_state_obs(self.end)
 
         if lib.get_distance(self.car_x, self.end) < 10:
             self.done = True
@@ -116,10 +113,10 @@ class TrainEnvWillem(CarModelDQN):
         if crash:
             self.reward = -1
             return 
-        # self.reward = 1.0
+        self.reward = 0
         
-        alpha = 0.05
-        self.reward = 0.0 - alpha * abs(action[0] - self.center_act)
+        # alpha = 0.05
+        # self.reward = 0.0 - alpha * abs(action[0] - self.center_act)
       
     def _locate_obstacles(self):
         n_obs = 2
@@ -131,8 +128,8 @@ class TrainEnvWillem(CarModelDQN):
         # obs_locs = [[35, 22], [55, 24]]
         # obs_locs = [[int(self.start[0]) - 3, 24]]
 
-        obs_locs = [[20, 60], [60, 50]]
-        obs_size = [8, 20]
+        obs_locs = [[40, 75], [60, 50], [50, 30], [10, 80], [20, 10]]
+        obs_size = [8, 14]
 
         for obs in obs_locs:
             for i in range(obs_size[0]):
@@ -141,8 +138,8 @@ class TrainEnvWillem(CarModelDQN):
                     y = j + obs[1]
                     self.race_map[x, y] = 2
 
-        obs_locs = [[20, 60], [60, 10]]
-        obs_size = [20, 5]
+        obs_locs = [[20, 60], [60, 10], [20, 40], [70, 80], [70, 30]]
+        obs_size = [14, 5]
 
         for obs in obs_locs:
             for i in range(obs_size[0]):
@@ -151,15 +148,15 @@ class TrainEnvWillem(CarModelDQN):
                     y = j + obs[1]
                     self.race_map[x, y] = 2
 
-        obs_locs = [[20, 30], [50, 70]]
-        obs_size = [40, 6]
+        # obs_locs = [[20, 30], [50, 70]]
+        # obs_size = [40, 6]
 
-        for obs in obs_locs:
-            for i in range(obs_size[0]):
-                for j in range(obs_size[1]):
-                    x = i + obs[0]
-                    y = j + obs[1]
-                    self.race_map[x, y] = 2
+        # for obs in obs_locs:
+        #     for i in range(obs_size[0]):
+        #         for j in range(obs_size[1]):
+        #             x = i + obs[0]
+        #             y = j + obs[1]
+        #             self.race_map[x, y] = 2
 
 
         # wall boundaries
@@ -184,16 +181,16 @@ class TrainEnvWillem(CarModelDQN):
                     break             
             self.ranges[i] = (j) / (self.n_searches) # gives a scaled val to 1 
 
-    def _get_state_obs(self):
-        self.set_lp_action(self.end)
-        self._update_ranges()
+    # def _get_state_obs(self):
+    #     self.set_lp_action(self.end)
+    #     self._update_ranges()
 
-        lp_sp = self.lp_sp 
-        lp_th = self.lp_th / np.pi
+    #     lp_sp = self.lp_sp 
+    #     lp_th = self.lp_th #/ np.pi
 
-        obs = np.concatenate([[lp_th], [lp_sp], self.ranges])
+    #     obs = np.concatenate([[lp_th], self.ranges])
 
-        return obs
+    #     return obs
         
     def _check_location(self, x):
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
