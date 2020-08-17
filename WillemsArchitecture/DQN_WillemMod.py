@@ -226,9 +226,9 @@ def TrainWillemModAgent(agent_name, buffer, i=0, load=True):
     return rewards
 
 def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
-    env = TrainEnvWillem()
-    # env = TestEnvDQN()
-    # env.map_1000(True)
+    # env = TrainEnvWillem()
+    env = TestEnvDQN()
+    env.map_1000(True)
     agent = TrainWillemModDQN(env.state_space, env.action_space, agent_name)
     agent.try_load(load)
 
@@ -284,8 +284,8 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
 
     if create:
         collect_willem_mod_observations(buffer, 100)
-        rewards = TrainWillemModAgent(agent_name, buffer, 0, False)
-        # rewards = TrainWillemModAgentEps(agent_name, buffer, 0, False)
+        # rewards = TrainWillemModAgent(agent_name, buffer, 0, False)
+        rewards = TrainWillemModAgentEps(agent_name, buffer, 0, False)
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
         agent = TestWillemModDQN(agent_name)
@@ -294,8 +294,8 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
 
     for i in range(start, start + n_runs):
         print(f"Running batch: {i}")
-        rewards = TrainWillemModAgent(agent_name, buffer, i, True)
-        # rewards = TrainWillemModAgentEps(agent_name, buffer, i, True)
+        # rewards = TrainWillemModAgent(agent_name, buffer, i, True)
+        rewards = TrainWillemModAgentEps(agent_name, buffer, i, True)
         total_rewards += rewards
 
         lib.plot(total_rewards, figure_n=3)
