@@ -45,7 +45,6 @@ class TrainEnvPureRep(CarModelDQN):
         self.start = lib.get_rands()
         while self._check_location(self.start):
             self.start = lib.get_rands()
-        # self.start = lib.get_rands(80, 10)
         self.car_x = self.start
 
         self.end = lib.get_rands()
@@ -106,10 +105,10 @@ class TrainEnvPureRep(CarModelDQN):
         if crash:
             self.reward = -1
             return 
-        # self.reward = 0
         
-        alpha = 0.05
-        self.reward = 0.0 - alpha * abs(action[0] - self.center_act)
+        lp_a = self.lp_th * self.action_space / np.pi
+        action_dif = action[0] - lp_a
+        self.reward = 1 - action_dif * 0.2
       
     def _locate_obstacles(self):
         n_obs = 2
@@ -245,10 +244,10 @@ class TrainEnvPureRep(CarModelDQN):
         plt.text(100, 80, s)
         s = f"Action: {self.action}"
         plt.text(100, 70, s) 
-        s = f"PP Action: [{self.pp_action[0]:.2f}, {self.pp_action[1]:.2f}]"
-        plt.text(100, 60, s) 
-        s = f"Mod action: {self.modified_action:.2f}"
-        plt.text(100, 40, s) 
+        # s = f"PP Action: [{self.pp_action[0]:.2f}, {self.pp_action[1]:.2f}]"
+        # plt.text(100, 60, s) 
+        # s = f"Mod action: {self.modified_action:.2f}"
+        # plt.text(100, 40, s) 
         s = f"Done: {self.done}"
         plt.text(100, 50, s) 
         s = f"Reward: [{self.reward:.1f}]" 

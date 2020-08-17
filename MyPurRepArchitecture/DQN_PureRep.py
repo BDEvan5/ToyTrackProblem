@@ -166,8 +166,8 @@ def TrainRepAgent(agent_name, buffer, i=0, load=True):
     print_n = 100
     rewards = []
     score = 0.0
+    state = env.reset()
     for n in range(1000):
-        state = env.reset()
 
         a = agent.act(state)
         s_prime, r, done, _ = env.step(a)
@@ -189,6 +189,10 @@ def TrainRepAgent(agent_name, buffer, i=0, load=True):
 
             agent.save()
             single_evaluationDQN(agent, True)
+
+        if done:
+            env.render_snapshot()
+            state = env.reset()
 
     return rewards
 
