@@ -21,14 +21,17 @@ class CarModelDQN:
         self.lp_th = None
         self.lp_sp = None
 
-        self.max_velocity = 10
-        self.dth_action = np.pi/5 # amount of rad to swerve with each action 
+        self.max_velocity = 4
+        self.dth_action = np.pi/4 # amount of rad to swerve with each action 
 
         self.ranges = np.zeros(self.n_ranges)
         self.range_angles = np.zeros(self.n_ranges)
         dth = np.pi/(self.n_ranges-1)
         for i in range(self.n_ranges):
             self.range_angles[i] = i * dth - np.pi/2
+
+        self.step_size = 1
+        self.n_searches = 30
 
     def _x_step(self, action):
         a, d_dot = self.get_integrals(action) 
@@ -135,6 +138,17 @@ class MapSetUp:
         self.obs_locs = [[58, 20], [25, 36], [28, 56], [45, 30], [37, 68], [60, 68]]
         self.set_up_map()
 
+    def map_1030_strip(self):
+        self.name = 'TestTrack1030'
+
+        self.start = [10, 45]
+        self.end = [90, 45]
+
+        self.obs_locs = [[30, 40], [50, 35], [70, 45]]
+        self.set_up_map()
+        
+        
+
     def set_up_map(self):
         self.hm_name = 'DataRecords/' + self.name + '_heatmap.npy'
         self.path_name = "DataRecords/" + self.name + "_path.npy" # move to setup call
@@ -198,7 +212,7 @@ class TestMap(MapSetUp):
         if self.y_bound[0] > x[1] or x[1] > self.y_bound[1]:
             return True 
 
-        if self.race_map[int(x[0]), int(x[1])]:
+        if self.race_map[int(round(x[0])), int(round(x[1]))]:
         # if self.race_map[int(x[1]), int(x[0])]:
             return True
 
@@ -323,8 +337,10 @@ class TestEnvDQN(TestMap, CarModelDQN):
         self.path_name = None
         self.target = None
 
-        self.step_size = 1
-        self.n_searches = 30
+        self.done = False
+        self.reward = 0
+        self.action = [0, 0]
+        self.modified_action = 0
 
     def run_path_finder(self):
         # self.show_map()
@@ -384,6 +400,10 @@ class TestEnvDQN(TestMap, CarModelDQN):
 
         th_mod = (action[0] - self.center_act) * self.dth_action
         self.action = [self.lp_th + th_mod, self.lp_sp]
+        self.action[0] = np.clip(self.action[0], -pi2, pi2)
+
+        self.pp_action = [self.lp_th *180/np.pi, self.lp_sp]
+        self.modified_action = self.action[0] * 180 / np.pi
 
         new_x = self._x_step(self.action)
         crash = self._check_line(new_x, self.car_x) or (self.steps > 200)
@@ -394,13 +414,13 @@ class TestEnvDQN(TestMap, CarModelDQN):
         r = self.reward
         self._set_target()
         obs = self._get_state_obs(self.target)
-        done = self.check_done() or crash
+        self.done = self.check_done() or crash
 
         self.speed_memory.append(self.velocity)
         self.memory.append(self.car_x)
 
 
-        return obs, r, done, None
+        return obs, r, self.done, None
 
     def calculate_reward(self, crash, action):
         if crash:
@@ -446,40 +466,51 @@ class TestEnvDQN(TestMap, CarModelDQN):
         self.target = target
 
     def box_render(self):
-        box = int(self.map_dim / 5)
-        car_x = int(self.car_x[0])
-        car_y = int(self.car_x[1])
-        x_min = max(0, car_x-box)
-        y_min = max(0, car_y-box)
-        x_max = min(self.map_dim, x_min+2*box)
-        y_max = min(self.map_dim, y_min+2*box)
-        plot_map = self.race_map[x_min:x_max, y_min:y_max]
-        x_mid = (x_min + x_max) / 2
-        y_mid = (y_min + y_max) / 2
-        car_pos = [car_x - x_mid + box, car_y - y_mid + box]
+        if not self.done:
+            box = int(self.map_dim / 5)
+            car_x = int(self.car_x[0])
+            car_y = int(self.car_x[1])
+            x_min = max(0, car_x-box)
+            y_min = max(0, car_y-box)
+            x_max = min(self.map_dim, x_min+2*box)
+            y_max = min(self.map_dim, y_min+2*box)
+            plot_map = self.race_map[x_min:x_max, y_min:y_max]
+            x_mid = (x_min + x_max) / 2
+            y_mid = (y_min + y_max) / 2
+            car_pos = [car_x - x_mid + box, car_y - y_mid + box]
 
-        fig = plt.figure(5)
-        plt.clf()  
-        plt.imshow(plot_map.T, origin='lower')
-        plt.xlim(0, box * 2)
-        plt.ylim(0, box * 2)
+            fig = plt.figure(5)
+            plt.clf()  
+            plt.imshow(plot_map.T, origin='lower')
+            plt.xlim(0, box * 2)
+            plt.ylim(0, box * 2)
 
-        plt.plot(car_pos[0], car_pos[1], '+', markersize=20)
-        targ = lib.add_locations(self.target, car_pos)
-        plt.plot(targ[0], targ[1], 'x', markersize=14)
+            plt.plot(car_pos[0], car_pos[1], '+', markersize=20)
+            targ = lib.add_locations(self.target, car_pos)
+            plt.plot(targ[0], targ[1], 'x', markersize=14)
 
-        for i in range(self.n_ranges):
-            angle = self.range_angles[i] + self.theta
-            fs = self.ranges[i] * self.step_size * self.n_searches
-            dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
-            range_val = lib.add_locations(car_pos, dx)
-            x = [car_pos[0], range_val[0]]
-            y = [car_pos[1], range_val[1]]
-            plt.plot(x, y)
+            for i in range(self.n_ranges):
+                angle = self.range_angles[i] + self.theta
+                fs = self.ranges[i] * self.step_size * self.n_searches
+                dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
+                range_val = lib.add_locations(car_pos, dx)
+                x = [car_pos[0], range_val[0]]
+                y = [car_pos[1], range_val[1]]
+                plt.plot(x, y)
 
+            s = f"Action: {self.action}"
+            plt.text(2*box, 35, s) 
+            s = f"PP Action: [{self.pp_action[0]:.2f}, {self.pp_action[1]:.2f}]"
+            plt.text(2*box, 30, s) 
+            s = f"Mod action: {self.modified_action:.2f}"
+            plt.text(2*box, 25, s) 
+            s = f"Done: {self.done}"
+            plt.text(2*box, 20, s) 
+            s = f"Reward: [{self.reward:.1f}]" 
+            plt.text(2*box, 15, s)
         
-        plt.pause(0.1)
-        # plt.show()
+            plt.pause(0.1)
+            # plt.show()
 
     def full_render(self):
         car_pos = self.car_x
@@ -528,9 +559,20 @@ class TestEnvDQN(TestMap, CarModelDQN):
         plt.plot(xs, ys, 'x', markersize=20)
 
         s = f"Steps: {self.steps}"
-        plt.text(100, 80, s)
+        plt.text(100, 85, s)
         s = f"Average speed: {np.mean(self.speed_memory)}"
-        plt.text(100, 70, s)
+        plt.text(100, 75, s)
+
+        s = f"Action: {self.action}"
+        plt.text(100, 70, s) 
+        s = f"PP Action: [{self.pp_action[0]:.2f}, {self.pp_action[1]:.2f}]"
+        plt.text(100, 60, s) 
+        s = f"Mod action: {self.modified_action:.2f}"
+        plt.text(100, 40, s) 
+        s = f"Done: {self.done}"
+        plt.text(100, 50, s) 
+        s = f"Reward: [{self.reward:.1f}]" 
+        plt.text(100, 80, s)
             
         plt.pause(0.001)
 

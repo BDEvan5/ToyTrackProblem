@@ -39,11 +39,12 @@ class ReplayBufferDQN():
 
 
 """Single Evals"""
-def single_evaluation(agent, show_snap=True, show_render=False):
+def single_evaluation(agent, show_snap=True, show_render=False, pause=False):
     env = TestEnvDQN()
     env.map_1000(True)
     # env.map_1010()
     # env.map_1020()
+    # env.map_1030_strip()
 
     score, done, state = 0, False, env.reset()
     while not done:
@@ -53,13 +54,13 @@ def single_evaluation(agent, show_snap=True, show_render=False):
         state = s_prime
         score += 1 # counts number of steps
         if show_render:
-            # env.box_render()
+            env.box_render()
             # env.full_render()
             pass
     if show_snap:
         env.render_snapshot()
-        # if show_render:
-        #     plt.show()
+    if pause:
+        plt.show()
         
     print(f"SingleRun --> Score: {score} --> Steps: {env.steps}")
     return score

@@ -25,7 +25,7 @@ BATCH_SIZE = 64
 
 EXPLORATION_MAX = 1.0
 EXPLORATION_MIN = 0.01
-EXPLORATION_DECAY = 0.995
+EXPLORATION_DECAY = 0.99
 
 
 class Qnet(nn.Module):
@@ -228,7 +228,8 @@ def TrainWillemModAgent(agent_name, buffer, i=0, load=True):
 def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
     # env = TrainEnvWillem()
     env = TestEnvDQN()
-    env.map_1000(True)
+    # env.map_1000(True)
+    env.map_1030_strip()
     agent = TrainWillemModDQN(env.state_space, env.action_space, agent_name)
     agent.try_load(load)
 
@@ -244,8 +245,8 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
         done_mask = 0.0 if done else 1.0
         buffer.put((state, a, r, s_prime, done_mask)) # never done
         score += r
-        agent.train_modification(buffer)
-        # agent.train_episodes(buffer)
+        # agent.train_modification(buffer)
+        agent.train_episodes(buffer)
 
         # env.render(False)
         state = s_prime
@@ -314,10 +315,10 @@ if __name__ == "__main__":
     agent_name = "TestingWillemMod"
     # agent_name = "ModTest"
 
-    # agent = TestWillemModDQN(12, 5, agent_name)
-    # single_evaluation(agent, True, True)
+    agent = TestWillemModDQN(agent_name)
+    single_evaluation(agent, True, True, True)
 
-    RunWillemModTraining(agent_name, 0, 50, create=True)
+    # RunWillemModTraining(agent_name, 0, 50, create=True)
     # RunWillemModTraining(agent_name, 5, 5, False)
     # RunWillemModTraining(agent_name, 10, 5, create=False)
 

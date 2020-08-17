@@ -8,6 +8,7 @@ import torch
 
 from TestEnvWillemMod import CarModelDQN
 
+pi2 = np.pi / 2
 
 class TrainEnvWillem(CarModelDQN):
     def __init__(self):
@@ -84,9 +85,8 @@ class TrainEnvWillem(CarModelDQN):
         self.steps += 1
         self.action = action # mod action
         th_mod = (action[0] - self.center_act) * self.dth_action
-        # x2 so that it can "look ahead further"
         modified_action = [self.lp_th + th_mod, self.lp_sp]
-        # modified_action = [th_mod, self.lp_sp]
+        modified_action[0] = np.clip(modified_action[0], -pi2, pi2)
 
         self.pp_action = [self.lp_th *180/np.pi, self.lp_sp]
         self.modified_action = modified_action[0] * 180 / np.pi
