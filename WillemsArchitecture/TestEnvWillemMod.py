@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 
 from PathFinder import PathFinder, modify_path
 
+pi2 = np.pi / 2
 
 class CarModelDQN:
     def __init__(self):
@@ -20,7 +21,7 @@ class CarModelDQN:
         self.lp_th = None
         self.lp_sp = None
 
-        self.max_velocity = 4
+        self.max_velocity = 10
         self.dth_action = np.pi/5 # amount of rad to swerve with each action 
 
         self.ranges = np.zeros(self.n_ranges)
@@ -71,6 +72,7 @@ class CarModelDQN:
     def set_lp_action(self, target):
         th_target = lib.get_bearing(self.car_x, target) 
         self.lp_th = th_target - self.theta
+        self.lp_th = np.clip(self.lp_th, -pi2, pi2)
 
         # speed between 1 and 0.4
         # self.lp_sp = (1 - abs(self.lp_th)/(np.pi/2) * 0.6) * self.max_velocity
@@ -88,6 +90,18 @@ class CarModelDQN:
         obs = np.concatenate([xy, self.ranges])
 
         return obs
+
+    def _update_ranges(self):
+        for i in range(self.n_ranges):
+            angle = self.range_angles[i] + self.theta
+            for j in range(self.n_searches): # number of search points
+                fs = self.step_size * j
+                dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
+                search_val = lib.add_locations(self.car_x, dx)
+                if self._check_location(search_val):
+                    break             
+            self.ranges[i] = (j) / (self.n_searches) # gives a scaled val to 1 
+ 
 
 class MapSetUp:
     def __init__(self):
@@ -422,8 +436,6 @@ class TestEnvDQN(TestMap, CarModelDQN):
         plt.pause(0.001)
         # fig.savefig(f"Renders/Rendering_{self.eps}")
 
-
-
     def _set_target(self):
         dis_cur_target = lib.get_distance(self.wpts[self.pind], self.car_x)
         if dis_cur_target < 10 and self.pind < len(self.wpts)-2: # how close to say you were there
@@ -432,17 +444,6 @@ class TestEnvDQN(TestMap, CarModelDQN):
         target = self.wpts[self.pind]
 
         self.target = target
-
-    def _update_ranges(self):
-        for i in range(self.n_ranges):
-            angle = self.range_angles[i] + self.theta
-            for j in range(self.n_searches): # number of search points
-                fs = self.step_size * j
-                dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
-                search_val = lib.add_locations(self.car_x, dx)
-                if self._check_location(search_val):
-                    break             
-            self.ranges[i] = (j) / self.n_searches # gives a scaled val to 1 
 
     def box_render(self):
         box = int(self.map_dim / 5)

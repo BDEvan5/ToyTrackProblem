@@ -41,15 +41,17 @@ class TrainEnvWillem(CarModelDQN):
         self.race_map = np.zeros((100, 100))
         self._locate_obstacles()
         
-        self.start = self.get_rands()
-        while self._check_location(self.start):
-            self.start = self.get_rands()
+        # self.start = self.get_rands()
+        # while self._check_location(self.start):
+        #     self.start = self.get_rands()
+        self.start = [50, 20]
         self.car_x = self.start
 
-        self.end = self.get_rands()
-        while self._check_location(self.end) or \
-            lib.get_distance(self.start, self.end) < 30:
-            self.end = self.get_rands()
+        # self.end = self.get_rands()
+        # while self._check_location(self.end) or \
+        #     lib.get_distance(self.start, self.end) < 30:
+        #     self.end = self.get_rands()
+        self.end = lib.get_rands(50, 25)
 
 
         th_start_end = lib.get_bearing(self.start, self.end)
@@ -74,20 +76,17 @@ class TrainEnvWillem(CarModelDQN):
         self.pp_action = np.zeros((2))
 
         
-
         return self._get_state_obs(self.end)
 
-    def get_rands(self, a=100, b=0):
-        r = [np.random.random() * a + b, np.random.random() * a + b]
-        return r
+    
 
     def step(self, action):
         self.steps += 1
         self.action = action # mod action
         th_mod = (action[0] - self.center_act) * self.dth_action
         # x2 so that it can "look ahead further"
-        # modified_action = [self.lp_th + th_mod, self.lp_sp]
-        modified_action = [th_mod, self.lp_sp]
+        modified_action = [self.lp_th + th_mod, self.lp_sp]
+        # modified_action = [th_mod, self.lp_sp]
 
         self.pp_action = [self.lp_th *180/np.pi, self.lp_sp]
         self.modified_action = modified_action[0] * 180 / np.pi
@@ -113,10 +112,10 @@ class TrainEnvWillem(CarModelDQN):
         if crash:
             self.reward = -1
             return 
-        self.reward = 0
+        # self.reward = 0
         
-        # alpha = 0.05
-        # self.reward = 0.0 - alpha * abs(action[0] - self.center_act)
+        alpha = 0.05
+        self.reward = 0.0 - alpha * abs(action[0] - self.center_act)
       
     def _locate_obstacles(self):
         n_obs = 2
@@ -128,28 +127,8 @@ class TrainEnvWillem(CarModelDQN):
         # obs_locs = [[35, 22], [55, 24]]
         # obs_locs = [[int(self.start[0]) - 3, 24]]
 
-        obs_locs = [[40, 75], [60, 50], [50, 30], [10, 80], [20, 10]]
-        obs_size = [8, 14]
-
-        for obs in obs_locs:
-            for i in range(obs_size[0]):
-                for j in range(obs_size[1]):
-                    x = i + obs[0]
-                    y = j + obs[1]
-                    self.race_map[x, y] = 2
-
-        obs_locs = [[20, 60], [60, 10], [20, 40], [70, 80], [70, 30]]
-        obs_size = [14, 5]
-
-        for obs in obs_locs:
-            for i in range(obs_size[0]):
-                for j in range(obs_size[1]):
-                    x = i + obs[0]
-                    y = j + obs[1]
-                    self.race_map[x, y] = 2
-
-        # obs_locs = [[20, 30], [50, 70]]
-        # obs_size = [40, 6]
+        # obs_locs = [[40, 75], [60, 50], [50, 30], [10, 80], [20, 10]]
+        # obs_size = [8, 14]
 
         # for obs in obs_locs:
         #     for i in range(obs_size[0]):
@@ -158,40 +137,30 @@ class TrainEnvWillem(CarModelDQN):
         #             y = j + obs[1]
         #             self.race_map[x, y] = 2
 
-
-        # wall boundaries
-        # obs_size = [20, 100]
-        # obs_locs = [[5, 0], [75, 0]]
+        # obs_locs = [[20, 60], [60, 10], [20, 40], [70, 80], [70, 30]]
+        # obs_size = [14, 5]
 
         # for obs in obs_locs:
         #     for i in range(obs_size[0]):
         #         for j in range(obs_size[1]):
         #             x = i + obs[0]
         #             y = j + obs[1]
-        #             self.race_map[x, y] = 1
+        #             self.race_map[x, y] = 2
+        # 
+        obs_locs = [[46, 23]]
+        obs_size = [8, 10]
 
-    def _update_ranges(self):
-        for i in range(self.n_ranges):
-            angle = self.range_angles[i] + self.theta
-            for j in range(self.n_searches): # number of search points
-                fs = self.step_size * j
-                dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
-                search_val = lib.add_locations(self.car_x, dx)
-                if self._check_location(search_val):
-                    break             
-            self.ranges[i] = (j) / (self.n_searches) # gives a scaled val to 1 
+        for obs in obs_locs:
+            for i in range(obs_size[0]):
+                for j in range(obs_size[1]):
+                    x = i + obs[0]
+                    y = j + obs[1]
+                    self.race_map[x, y] = 2
 
-    # def _get_state_obs(self):
-    #     self.set_lp_action(self.end)
-    #     self._update_ranges()
-
-    #     lp_sp = self.lp_sp 
-    #     lp_th = self.lp_th #/ np.pi
-
-    #     obs = np.concatenate([[lp_th], self.ranges])
-
-    #     return obs
         
+
+
+       
     def _check_location(self, x):
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
             return True

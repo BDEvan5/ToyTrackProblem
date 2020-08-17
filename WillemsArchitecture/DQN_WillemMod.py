@@ -23,14 +23,9 @@ LEARNING_RATE = 0.001
 h_size = 512
 BATCH_SIZE = 64
 
-
 EXPLORATION_MAX = 1.0
 EXPLORATION_MIN = 0.01
 EXPLORATION_DECAY = 0.995
-
-name00 = 'DataRecords/TrainTrack1000.npy'
-name10 = 'DataRecords/TrainTrack1010.npy'
-name20 = 'DataRecords/TrainTrack1020.npy'
 
 
 class Qnet(nn.Module):
@@ -289,8 +284,8 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
 
     if create:
         collect_willem_mod_observations(buffer, 100)
-        # rewards = TrainWillemModAgent(agent_name, buffer, 0, False)
-        rewards = TrainWillemModAgentEps(agent_name, buffer, 0, False)
+        rewards = TrainWillemModAgent(agent_name, buffer, 0, False)
+        # rewards = TrainWillemModAgentEps(agent_name, buffer, 0, False)
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
         agent = TestWillemModDQN(agent_name)
@@ -299,13 +294,12 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
 
     for i in range(start, start + n_runs):
         print(f"Running batch: {i}")
-        # rewards = TrainWillemModAgent(agent_name, buffer, i, True)
-        rewards = TrainWillemModAgentEps(agent_name, buffer, i, True)
+        rewards = TrainWillemModAgent(agent_name, buffer, i, True)
+        # rewards = TrainWillemModAgentEps(agent_name, buffer, i, True)
         total_rewards += rewards
 
         lib.plot(total_rewards, figure_n=3)
         plt.figure(2).savefig("PNGs/Training_DQN_rep" + str(i))
-        # np.save('DataRecords/' + agent_name + '_rewards1.npy', total_rewards)
         agent = TestWillemModDQN(agent_name)
         s = single_evaluation(agent, True, True)
         evals.append(s)

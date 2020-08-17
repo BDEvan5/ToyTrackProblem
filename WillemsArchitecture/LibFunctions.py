@@ -72,6 +72,11 @@ def theta_to_xy(theta):
 
     return [x, y]
 
+def get_rands(a=100, b=0):
+    r = [np.random.random() * a + b, np.random.random() * a + b]
+    return r
+
+
 def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     plt.figure(figure_n)
     plt.clf()        
