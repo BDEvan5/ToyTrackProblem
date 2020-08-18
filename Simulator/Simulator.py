@@ -97,7 +97,6 @@ class ScanSimulator:
         ray = j / self.n_searches * (1 + np.random.normal(0, self.std_noise))
         return ray
 
-
     def set_map(self, check_fcn):
         self._check_location = check_fcn
 
@@ -343,11 +342,10 @@ class TestMap(MapSetUp):
 
 
 class F110Env:
-    def __init__(self):
+    def __init__(self, race_map):
         self.timestep = 0.01
 
-        self.race_map = TestMap()
-        self.race_map.map_1000(True)
+        self.race_map = race_map
 
         self.car = CarModel()
         self.scan_sim = ScanSimulator(10, np.pi*2/3)
@@ -357,7 +355,6 @@ class F110Env:
         self.reward = 0
         self.action = np.zeros((2, 1))
         self.action_memory = []
-
 
     def step(self, action, updates=10):
         self.action = action
@@ -376,7 +373,6 @@ class F110Env:
         self.action_memory.append([self.car.x, self.car.y])
 
         return obs, reward, done, None
-
 
     def reset(self, poses=None):
         self.done = False
@@ -401,7 +397,6 @@ class F110Env:
         
 
         return self.get_state_obs()
-
 
     def get_state_obs(self):
         car_state = self.car.get_car_state()
@@ -489,7 +484,7 @@ def CorridorAction(obs):
     dth = np.pi / 9
     theta_dot = dth * max_range - np.pi/2
 
-    kp_delta = 10
+    kp_delta = 5
     L = 0.33
     # d_dot = d_heading * kp_delta
     delta = np.arctan(theta_dot * L / (obs[3]+0.001))
@@ -504,7 +499,9 @@ def CorridorAction(obs):
 
 
 def sim_driver():
-    env = F110Env()
+    race_map = TestMap()
+    race_map.map_1000(True)
+    env = F110Env(race_map)
 
     done, state, score = False, env.reset(None), 0.0
     while not done:
