@@ -149,8 +149,7 @@ class TrainEnvPureRep(CarModelDQN):
         #             x = i + obs[0]
         #             y = j + obs[1]
         #             self.race_map[x, y] = 2
-
-             
+            
     def _check_location(self, x):
         if self.x_bound[0] > x[0] or x[0] > self.x_bound[1]:
             return True

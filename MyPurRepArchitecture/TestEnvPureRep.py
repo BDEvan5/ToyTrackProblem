@@ -149,8 +149,6 @@ class MapSetUp:
         self.obs_locs = [[30, 40], [50, 35], [70, 45]]
         self.set_up_map()
         
-        
-
     def set_up_map(self):
         self.hm_name = 'DataRecords/' + self.name + '_heatmap.npy'
         self.path_name = "DataRecords/" + self.name + "_path.npy" # move to setup call
