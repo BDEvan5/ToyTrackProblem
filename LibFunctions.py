@@ -76,6 +76,14 @@ def get_rands(a=100, b=0):
     r = [np.random.random() * a + b, np.random.random() * a + b]
     return r
 
+def limit_theta(theta):
+    if theta > np.pi:
+        theta = theta - 2*np.pi
+    elif theta < -np.pi:
+        theta += 2*np.pi
+
+    return theta
+
 
 def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     plt.figure(figure_n)
