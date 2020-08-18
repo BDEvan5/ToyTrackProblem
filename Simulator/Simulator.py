@@ -73,7 +73,7 @@ class ScanSimulator:
         self.scan_output = np.zeros(number_of_beams)
 
         self.step_size = 1
-        self.n_searches = 30
+        self.n_searches = 50
 
         self.race_map = None
         self.x_bound = [1, 99]
@@ -86,7 +86,7 @@ class ScanSimulator:
 
         return self.scan_output
 
-    def trace_ray(self, x, y, theta):
+    def trace_ray(self, x, y, theta, noise=True):
         for j in range(self.n_searches): # number of search points
             fs = self.step_size * j
             dx =  [np.sin(theta) * fs, np.cos(theta) * fs]
@@ -94,7 +94,8 @@ class ScanSimulator:
             if self._check_location(search_val):
                 break       
 
-        return j / self.n_searches      
+        ray = j / self.n_searches * (1 + np.random.normal(0, self.std_noise))
+        return ray
 
 
     def set_map(self, check_fcn):
@@ -349,20 +350,22 @@ class F110Env:
         self.race_map.map_1000(True)
 
         self.car = CarModel()
-        self.scan_sim = ScanSimulator(10)
+        self.scan_sim = ScanSimulator(10, np.pi*2/3)
         self.scan_sim.set_map(self.race_map._check_location)
 
         self.done = False
         self.reward = 0
         self.action = np.zeros((2, 1))
+        self.action_memory = []
 
 
-    def step(self, action):
+    def step(self, action, updates=10):
         self.action = action
         acceleration = action[0]
         steer_dot = action[1]
 
-        self.car.update_kinematic_state(acceleration, steer_dot, self.timestep)
+        for _ in range(updates):
+            self.car.update_kinematic_state(acceleration, steer_dot, self.timestep)
         self.check_done()
         self.update_reward()
 
@@ -370,11 +373,14 @@ class F110Env:
         done = self.done
         reward = self.reward
 
+        self.action_memory.append([self.car.x, self.car.y])
+
         return obs, reward, done, None
 
 
     def reset(self, poses=None):
         self.done = False
+        self.action_memory = []
 
         if poses is not None:
             self.x = poses['x']
@@ -445,13 +451,16 @@ class F110Env:
         plt.plot(self.car.x, self.car.y, '+', markersize=16)
 
         for i in range(self.scan_sim.number_of_beams):
-            angle = i * self.scan_sim.dth + self.car.theta - np.pi/2
+            angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
             fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations([self.car.x, self.car.y], dx)
             x = [car_x, range_val[0]]
             y = [car_y, range_val[1]]
             plt.plot(x, y)
+
+        for pos in self.action_memory:
+            plt.plot(pos[0], pos[1], 'x', markersize=6)
 
         s = f"Reward: [{self.reward:.1f}]" 
         plt.text(100, 80, s)
@@ -465,10 +474,10 @@ class F110Env:
         plt.text(100, 55, s)
         s = f"Theta: [{(self.car.theta * 180 / np.pi):.2f}]"
         plt.text(100, 50, s) 
-        s = f"Delta: [{self.car.steering:.2f}]"
+        s = f"Delta x100: [{(self.car.steering*100):.2f}]"
         plt.text(100, 45, s) 
 
-        plt.pause(0.001)
+        plt.pause(0.0001)
         if wait:
             plt.show()
 
@@ -478,11 +487,13 @@ def CorridorAction(obs):
     ranges = obs[5:]
     max_range = np.argmax(ranges)
     dth = np.pi / 9
-    heading_ref = dth * max_range - np.pi/2
-    d_heading = heading_ref - obs[4] # d_delta
+    theta_dot = dth * max_range - np.pi/2
 
-    kp_delta = 1
-    d_dot = d_heading * kp_delta
+    kp_delta = 10
+    L = 0.33
+    # d_dot = d_heading * kp_delta
+    delta = np.arctan(theta_dot * L / (obs[3]+0.001))
+    d_dot = (delta - obs[4]) * kp_delta
 
     a = 0
     if obs[3] < 6:
@@ -498,7 +509,7 @@ def sim_driver():
     done, state, score = False, env.reset(None), 0.0
     while not done:
         action = CorridorAction(state)
-        s_p, r, done, _ = env.step(action)
+        s_p, r, done, _ = env.step(action, updates=20)
         score += r
         state = s_p
 
