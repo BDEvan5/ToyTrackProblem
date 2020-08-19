@@ -5,6 +5,7 @@ from Simulator import F110Env, CorridorAction
 from RaceMaps import EnvironmentMap
 from OptimalAgent import OptimalAgent
 from WillemsPureMod import WillemsVehicle
+from CommonTestUtilsDQN import ReplayBufferDQN
 
 
 def simulation_test():
@@ -56,6 +57,7 @@ def single_evaluation_vehicle(vehicle):
     wpts = vehicle.init_plan()
     while not done:
         action = vehicle.act(state)
+
         s_p, r, done, _ = env.step(action, updates=20)
         score += r
         state = s_p
@@ -85,19 +87,18 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
     env_map = EnvironmentMap('TrainTrackEmpty')
 
     env = F110Env(env_map)
-    vehicle = WillemsVehicle(env_map, env.obs_space, 5, load)
+    vehicle = WillemsVehicle(env_map, agent_name, env.obs_space, 5, load)
     
     print_n = 100
     rewards = []
-    score = 0.0
-    crashes = 0
-    state = env.reset()
+
+    done, state, score = False, env.reset(None), 0.0
+    wpts = vehicle.init_plan()
     for n in range(1000):
-        a = vehicle.act(state)
+        a, nn_a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
-        crashes += done
         done_mask = 0.0 if done else 1.0
-        buffer.put((state, a, r, s_prime, done_mask)) 
+        buffer.put((state, nn_a, r, s_prime, done_mask)) 
         score += r
         vehicle.agent.train_episodes(buffer)
 
@@ -106,15 +107,11 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
 
         if n % print_n == 0 and n > 0:
             rewards.append(score)
-            # env.render()   
-            # env.render_snapshot() 
             exp = vehicle.agent.model.exploration_rate
             mean = np.mean(rewards)
             b = buffer.size()
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
-            print(f"Crashes: {crashes}")
             score = 0
-            crashes = 0
             lib.plot(rewards, figure_n=2)
 
             vehicle.agent.save()
@@ -126,7 +123,6 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
             state = env.reset()
             vehicle.init_plan()
 
-            
     vehicle.agent.save()
 
     return rewards
@@ -138,14 +134,14 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
     evals = []
 
     if create:
-        collect_willem_mod_observations(buffer, 100)
+        # collect_willem_mod_observations(buffer, 100)
         # rewards = TrainWillemModAgent(agent_name, buffer, 0, False)
         rewards = TrainWillemModAgentEps(agent_name, buffer, 0, False)
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
-        agent = TestWillemModDQN(agent_name)
-        s = single_evaluation(agent)
-        evals.append(s)
+        # agent = TestWillemModDQN(agent_name)
+        # s = single_evaluation(agent)
+        # evals.append(s)
 
     for i in range(start, start + n_runs):
         print(f"Running batch: {i}")
@@ -170,9 +166,11 @@ if __name__ == "__main__":
     # simulation_test()
 
     agent_name = "TestingWillem"
-    env_map = EnvironmentMap('TestTrack1000')
+    # env_map = EnvironmentMap('TestTrack1000')
 
-    env = F110Env(env_map)
-    vehicle = WillemsVehicle(env_map, agent_name, env.obs_space, 5, False)
-    single_evaluation_vehicle(vehicle)
+    # env = F110Env(env_map)
+    # vehicle = WillemsVehicle(env_map, agent_name, env.obs_space, 5, False)
+    # single_evaluation_vehicle(vehicle)
 
+    RunWillemModTraining(agent_name, 0, 50, True)
+    RunWillemModTraining(agent_name, 0, 50, False)

@@ -1,4 +1,5 @@
 import numpy as np 
+import random
 
 import torch
 import torch.nn as nn
@@ -185,27 +186,27 @@ class WillemsVehicle:
         return self.wpts
     
     def act(self, obs):
-        # v_ref, d_ref = self.get_corridor_references(obs)
         v_ref, d_ref = self.get_target_references(obs)
+        v_ref, d_ref, nn_a = self.modify_references(obs, v_ref, d_ref)
         a, d_dot = self.control_system(obs, v_ref, d_ref)
 
         a = np.clip(a, -8, 8)
         d_dot = np.clip(d_dot, -3.2, 3.2)
 
-        return [a, d_dot]
+        return [a, d_dot], nn_a
 
-    def get_corridor_references(self, obs):
-        ranges = obs[5:]
-        max_range = np.argmax(ranges)
-        dth = np.pi / 9
-        theta_dot = dth * max_range - np.pi/2
+    def modify_references(self, obs, v_ref, d_ref):
+        target_theta = lib.get_bearing(obs[0:2], self.target) - obs[2]
+        nn_obs = [target_theta, obs[3], obs[4], v_ref, d_ref]
+        nn_obs.append(obs[5:]) # range finders
 
-        L = 0.33
-        delta_ref = np.arctan(theta_dot * L / (obs[3]+0.001))
+        nn_action = self.agent.act(nn_obs)
+        d_steering = 0.01
+        d_ref_mod = d_ref + (action[0] - 2) * d_steering
 
-        v_ref = 6
+        return v_ref, d_ref_mod, nn_action
 
-        return v_ref, delta_ref
+    # def get_nn_state(self, )
 
     def get_target_references(self, obs):
         self._set_target(obs)
