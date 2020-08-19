@@ -109,6 +109,8 @@ class F110Env:
         self.action = np.zeros((2, 1))
         self.action_memory = []
 
+        self.obs_space = len(self.get_state_obs())
+
     def step(self, action, updates=10):
         self.action = action
         acceleration = action[0]
