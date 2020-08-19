@@ -12,9 +12,9 @@ class GeneralMap:
         self.map_width = race_map.shape[1]
 
     def _check_location(self, x):
-        if x[0] < 1 or x[0] > self.map_width:
+        if x[0] < 1 or x[0] > self.map_width  - 1:
             return True
-        if x[1] < 1 or x[1] > self.map_height:
+        if x[1] < 1 or x[1] > self.map_height - 1:
             return True 
 
         if self.race_map[int(round(x[0])), int(round(x[1]))]:
@@ -64,10 +64,18 @@ class EnvironmentMap:
         self.obs_hm = None
         self.obs_free_hm = None
 
+        self.start = None
+        self.end = None
+
+        self.load_maps()
+
     def load_maps(self):
         yaml_editor = MapYamlEditor(self.name)
         yaml_editor.load_yaml_file()
         yaml_editor.print_contents()
+
+        self.start = yaml_editor.start
+        self.end = yaml_editor.end
 
         map_name = 'DataRecords/' + yaml_editor.map_name + '.npy'
         map_array = np.load(map_name)
@@ -80,7 +88,6 @@ class EnvironmentMap:
         obs_hm = self.create_hm(self.hm_name)
         self.obs_hm = GeneralMap(obs_hm)
 
-
     def add_obs(self, obs_locs, obs_size):
         for obs in obs_locs:
             for i in range(obs_size[0]):
@@ -91,7 +98,7 @@ class EnvironmentMap:
 
     def create_hm(self, hm_name, n_units=2):
         try:
-            raise Exception
+            # raise Exception
             return np.load(hm_name)
             # print(f"Heatmap loaded")
         except:
@@ -129,6 +136,18 @@ class EnvironmentMap:
         new_map[:, 98:] = np.ones_like(new_map[:, 98:])
         return new_map
  
+    def generate_random_start(self):
+        self.start = lib.get_rands()
+        while self.race_map._check_location(self.start):
+            self.start = lib.get_rands()
+
+        self.end = lib.get_rands()
+        while self.race_map._check_location(self.end) or \
+            lib.get_distance(self.start, self.end) < 30:
+            self.end = lib.get_rands()
+        self.end = lib.get_rands(80, 10)
+
+
 
 class MapYamlEditor:
     def __init__(self, map_name='TestTrack1000'):

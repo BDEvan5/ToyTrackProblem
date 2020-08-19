@@ -2,16 +2,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from Simulator import F110Env, CorridorAction
-from RaceMaps import TestMap
+from RaceMaps import TestMap, EnvironmentMap
 from OptimalAgent import OptimalAgent
 
 
 def simulation_test():
-    race_map = TestMap()
-    race_map.map_1000(True)
+    # race_map = TestMap()
+    # race_map.map_1000(True)
+    env_map = EnvironmentMap('TestTrack1000')
 
-    env = F110Env(race_map)
-    agent = OptimalAgent(race_map)
+    env = F110Env(env_map)
+    agent = OptimalAgent(env_map)
 
     done, state, score = False, env.reset(None), 0.0
     wpts = agent.init_agent()

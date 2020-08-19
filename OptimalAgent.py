@@ -5,42 +5,41 @@ import LibFunctions as lib
 
 
 class OptimalAgent:
-    def __init__(self, race_map):
-        self.race_map = race_map
+    def __init__(self, env_map):
+        self.env_map = env_map
         self.wpts = None
 
-        self.path_name = "DataRecords/" + self.race_map.name + "_path.npy" # move to setup call
+        self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
         self.pind = 1
         self.target = None
-
 
     def init_agent(self):
         # self.race_map.show_hm()
         try:
-            raise Exception
+            # raise Exception
             self.wpts = np.load(self.path_name)
         except:
-            fcn = self.race_map._check_line_path
-            path_finder = PathFinder(fcn, self.race_map.start, self.race_map.end)
+            fcn = self.env_map.obs_hm._check_line
+            path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
             path = path_finder.run_search(5)
-            self.race_map.show_map(path)
+            # self.env_map.obs_hm.show_map(path)
             path = modify_path(path)
             self.wpts = path
             np.save(self.path_name, self.wpts)
             print("Path Generated")
 
-        self.wpts = np.append(self.wpts, self.race_map.end)
+        self.wpts = np.append(self.wpts, self.env_map.end)
         self.wpts = np.reshape(self.wpts, (-1, 2))
 
         new_pts = []
         for wpt in self.wpts:
-            if not self.race_map._check_location(wpt):
+            if not self.env_map.race_course._check_location(wpt):
                 new_pts.append(wpt)
             else:
                 pass
         self.wpts = np.asarray(new_pts)    
 
-        self.race_map.show_map(self.wpts)
+        # self.env_map.race_course.show_map(self.wpts)
 
         self.pind = 1
 
@@ -82,7 +81,6 @@ class OptimalAgent:
         delta_ref = np.arctan(theta_dot * L / (obs[3]+0.001))
 
         return v_ref, delta_ref
-
 
     def control_system(self, obs, v_ref, d_ref):
         kp_a = 10

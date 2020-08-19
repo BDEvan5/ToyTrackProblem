@@ -94,10 +94,11 @@ class ScanSimulator:
 
 
 class F110Env:
-    def __init__(self, race_map):
+    def __init__(self, env_map):
         self.timestep = 0.01
 
-        self.race_map = race_map
+        self.env_map = env_map
+        self.race_map = env_map.race_course
 
         self.car = CarModel()
         self.scan_sim = ScanSimulator(10, np.pi*2/3)
@@ -137,8 +138,8 @@ class F110Env:
             self.car.steering = 0
             self.car.velocity = 0
         else:
-            self.car.x = self.race_map.start[0]
-            self.car.y = self.race_map.start[1]
+            self.car.x = self.env_map.start[0]
+            self.car.y = self.env_map.start[1]
             self.car.velocity = 0
             self.car.steering = 0
             self.car.theta = 3
@@ -157,7 +158,7 @@ class F110Env:
     def check_done(self):
         if self.race_map._check_location([self.car.x, self.car.y]):
             self.done = True
-        if lib.get_distance([self.car.x, self.car.y], self.race_map.end) < 5:
+        if lib.get_distance([self.car.x, self.car.y], self.env_map.end) < 5:
             self.done = True
 
     def update_reward(self):
@@ -170,11 +171,11 @@ class F110Env:
         fig = plt.figure(4)
         plt.clf()  
         plt.imshow(self.race_map.race_map.T, origin='lower')
-        plt.xlim(0, self.race_map.map_dim)
-        plt.ylim(-10, self.race_map.map_dim)
-        plt.plot(self.race_map.start[0], self.race_map.start[1], '*', markersize=12)
+        plt.xlim(0, self.race_map.map_width)
+        plt.ylim(-10, self.race_map.map_height)
+        plt.plot(self.env_map.start[0], self.env_map.start[1], '*', markersize=12)
 
-        plt.plot(self.race_map.end[0], self.race_map.end[1], '*', markersize=12)
+        plt.plot(self.env_map.end[0], self.env_map.end[1], '*', markersize=12)
         plt.plot(self.car.x, self.car.y, '+', markersize=16)
 
         for i in range(self.scan_sim.number_of_beams):
