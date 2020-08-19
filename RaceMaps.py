@@ -438,9 +438,9 @@ def test_environment():
     my_environ = EnvironmentMap('TestTrack1000')
     my_environ.load_maps()
     my_environ.race_course.show_map()
-    my_environ.obs_free_hm.show_map()
-    my_environ.obs_hm.show_map()
-    my_environ.race_course.show_map()
+    # my_environ.obs_free_hm.show_map()
+    # my_environ.obs_hm.show_map()
+    # my_environ.race_course.show_map()
 
 
 if __name__ == "__main__":
