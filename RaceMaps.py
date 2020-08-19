@@ -53,7 +53,7 @@ class GeneralMap:
 
 
 class EnvironmentMap:
-    def __init__(self, name='TestTrack1010'):
+    def __init__(self, name):
         self.name = name 
         self.yaml_name = 'DataRecords/' + self.name + '.yaml'
 
@@ -91,7 +91,7 @@ class EnvironmentMap:
 
     def create_hm(self, hm_name, n_units=2):
         try:
-            # raise Exception
+            raise Exception
             return np.load(hm_name)
             # print(f"Heatmap loaded")
         except:
@@ -178,6 +178,22 @@ class MapYamlEditor:
         yaml_name = 'DataRecords/' + self.map_name + '.yaml'
         with open(yaml_name) as yaml_file:
             self.dict = yaml.load(yaml_file, Loader=yaml.FullLoader)
+
+        self.convert_dict_values()
+
+    def convert_dict_values(self):
+        self.map_name = self.dict['map_name']
+        self.start = self.dict['start']
+        self.end = self.dict['end']
+
+        obs_dict = self.dict['obstacles']
+        self.obs_locs = []
+        for i in range(len(obs_dict)):
+            self.obs_locs.append(obs_dict[i])
+
+        self.obs_size =  self.dict['obs_size']
+        self.width = self.dict['width']
+        self.height = self.dict['height']
 
     def print_contents(self):
         print(f"Dictionary of: {self.map_name}")
@@ -424,6 +440,7 @@ def test_environment():
     my_environ.race_course.show_map()
     my_environ.obs_free_hm.show_map()
     my_environ.obs_hm.show_map()
+    my_environ.race_course.show_map()
 
 
 if __name__ == "__main__":
