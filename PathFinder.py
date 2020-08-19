@@ -94,15 +94,6 @@ class PathFinder:
     def _check_open_list(self, new_node):
         for open_node in self.open_list:
             if (new_node == open_node).all(): # if in open set return true
-                # if new_node.g > open_node.g: # if also beats g score - update g
-                #     open_node.g = new_node.g
-                #     open_node.parent = new_node.parent
-                # return True
-                # if new_node.g < open_node.g:
-                #     return True
-                # elif self._check_closed_list()
-                # if new_node.g > open_node.g:
-                #     return True
                 if new_node.g < open_node.g:
                     open_node.g = new_node.g
                     open_node.parent = new_node.parent

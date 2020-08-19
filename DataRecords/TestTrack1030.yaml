@@ -1,0 +1,22 @@
+end:
+- 90
+- 45
+height: 100
+map_name: TestTrack1030
+obs_size:
+- 8
+- 14
+obstacles:
+  0:
+  - 30
+  - 40
+  1:
+  - 50
+  - 35
+  2:
+  - 70
+  - 45
+start:
+- 10
+- 45
+width: 100
