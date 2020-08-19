@@ -168,7 +168,7 @@ class MapYamlEditor:
         self.start = [53, 5]
         self.end = [90, 20]
 
-        self.obs_locs = [[20, 20], [60, 60]]
+        self.obs_locs = [[40, 75], [25, 45], [70, 60], [50, 30], [75, 15], [10, 80], [20, 10]]
 
         self.obs_size = [8, 14]
         self.height = 100
@@ -448,10 +448,14 @@ class TestMap(MapSetUp):
 
 #Test and setup fcns
 def create_yaml_file():
-    yaml_maker = MapYamlEditor('TestTrack1010')
+    yaml_maker = MapYamlEditor('TrainTrackEmpty')
     yaml_maker.save_dict_yaml()
     yaml_maker.load_yaml_file()
     yaml_maker.print_contents()
+
+    my_environ = EnvironmentMap('TrainTrackEmpty')
+    my_environ.load_maps()
+    my_environ.race_course.show_map()
 
 def test_environment():
     my_environ = EnvironmentMap('TestTrack1000')
@@ -463,8 +467,8 @@ def test_environment():
 
 
 if __name__ == "__main__":
-    # create_yaml_file()    
-    test_environment()
+    create_yaml_file()    
+    # test_environment()
 
     
 
