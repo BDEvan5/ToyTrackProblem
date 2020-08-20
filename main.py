@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
 from Simulator import F110Env, CorridorAction
 from RaceMaps import EnvironmentMap
@@ -70,17 +71,28 @@ def single_evaluation_vehicle(vehicle):
 
 
 """Training functions"""
-def collect_willem_mod_observations(buffer, n_itterations=5000):
-    env = TrainEnvWillem()
+def collect_willem_mod_observations(buffer, agent_name, n_itterations=5000):
+    env_map = EnvironmentMap('TrainTrackEmpty')
 
-    for i in range(n_itterations):
-        s = env.reset()
-        action = env.random_action()
-        s_p, r, done, _ = env.step(action)
-        done_mask = 0.0 if done else 1.0
-        buffer.put((s, action, r, s_p, done_mask))
+    env = F110Env(env_map)
+    vehicle = WillemsVehicle(env_map, agent_name, env.obs_space, 5, False)
 
-        print("\rPopulating Buffer {}/{}.".format(i, n_itterations), end="")
+    done, state, score = False, env.reset(None), 0.0
+    wpts = vehicle.init_straight_plan()
+    for n in range(n_itterations):
+        a = vehicle.random_act(state)
+        s_prime, r, done, _ = env.step(a, 50)
+        vehicle.add_memory_entry(r, done, s_prime, buffer)
+        
+        state = s_prime
+        
+        if done:
+            # env.render_snapshot(wpts=wpts)
+            env_map.generate_random_start()
+            state = env.reset()
+            wpts = vehicle.init_straight_plan()
+
+        print("\rPopulating Buffer {}/{}.".format(n, n_itterations), end="")
         sys.stdout.flush()
     print(" ")
 
@@ -97,20 +109,21 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
     wpts = vehicle.init_straight_plan()
     for n in range(1000):
         a = vehicle.act(state)
-        s_prime, r, done, _ = env.step(a, 25)
-        vehicle.add_memory_entry(r, done, s_prime)
+        s_prime, r, done, _ = env.step(a, 10)
+        # vehicle.add_memory_entry(r, done, s_prime, buffer)
         
         score += r
-        vehicle.agent.train_episodes(vehicle.buffer)
+        # vehicle.agent.train_episodes(buffer)
+        vehicle.agent.train_modification(buffer)
 
-        env.render(False)
+        env.render(False, wpts)
         state = s_prime
 
         if n % print_n == 0 and n > 0:
             rewards.append(score)
             exp = vehicle.agent.model.exploration_rate
             mean = np.mean(rewards)
-            b = vehicle.buffer.size()
+            b = buffer.size()
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
             score = 0
             # lib.plot(rewards, figure_n=2)
@@ -131,9 +144,8 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
     buffer = ReplayBufferDQN()
     total_rewards = []
 
-    evals = []
-
     if create:
+        # collect_willem_mod_observations(buffer, agent_name, 1000)
         rewards = TrainWillemModAgentEps(agent_name, buffer, 0, False)
         total_rewards += rewards
         # lib.plot(total_rewards, figure_n=3)

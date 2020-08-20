@@ -147,7 +147,8 @@ class F110Env:
             self.car.y = self.env_map.start[1]
             self.car.velocity = 0
             self.car.steering = 0
-            self.car.theta = 3
+            th = lib.get_bearing(self.env_map.start, self.env_map.end) + np.random.random() - 0.5
+            self.car.theta = th
 
         
         return self.get_state_obs()
@@ -165,7 +166,7 @@ class F110Env:
             self.done = True
         if lib.get_distance([self.car.x, self.car.y], self.env_map.end) < 5:
             self.done = True
-        if self.steps > 200:
+        if self.steps > 100:
             self.done = True
 
     def update_reward(self):
@@ -200,14 +201,14 @@ class F110Env:
         for pos in self.action_memory:
             plt.plot(pos[0], pos[1], 'x', markersize=6)
 
-        xs, ys = [], []
         if wpts is not None:
+            xs, ys = [], []
             for pt in wpts:
                 xs.append(pt[0])
                 ys.append(pt[1])
         
-        # plt.plot(xs, ys)
-        plt.plot(xs, ys, 'x', markersize=20)
+            # plt.plot(xs, ys)
+            plt.plot(xs, ys, 'x', markersize=20)
 
         s = f"Reward: [{self.reward:.1f}]" 
         plt.text(100, 80, s)
@@ -223,6 +224,9 @@ class F110Env:
         plt.text(100, 50, s) 
         s = f"Delta x100: [{(self.car.steering*100):.2f}]"
         plt.text(100, 45, s) 
+
+        s = f"Steps: {self.steps}"
+        plt.text(100, 35, s)
 
         plt.pause(0.0001)
         if wait:
@@ -276,6 +280,9 @@ class F110Env:
         plt.text(100, 50, s) 
         s = f"Delta x100: [{(self.car.steering*100):.2f}]"
         plt.text(100, 45, s) 
+
+        s = f"Steps: {self.steps}"
+        plt.text(100, 35, s)
 
         plt.pause(0.0001)
         if wait:

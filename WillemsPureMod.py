@@ -159,7 +159,6 @@ class WillemsVehicle:
 
         self.agent.try_load(load)
         self.state_action = None
-        self.buffer = ReplayBufferDQN()
 
     def init_plan(self):
         fcn = self.env_map.obs_free_hm._check_line
@@ -213,8 +212,21 @@ class WillemsVehicle:
     def act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)
 
+        """This is where the agent can be removed if needed"""
+        # nn_obs = self.transform_obs(obs, v_ref, d_ref)
+        # nn_action = self.agent.act(nn_obs)
+        # v_ref, d_ref = self.modify_references(nn_action, v_ref, d_ref)
+        # self.state_action = [nn_obs, nn_action]
+
+        a, d_dot = self.control_system(obs, v_ref, d_ref)
+
+        return [a, d_dot]
+
+    def random_act(self, obs):
+        v_ref, d_ref = self.get_target_references(obs)
+
         nn_obs = self.transform_obs(obs, v_ref, d_ref)
-        nn_action = self.agent.act(nn_obs)
+        nn_action = [np.random.randint(0, self.action_space-1)]
         v_ref, d_ref = self.modify_references(nn_action, v_ref, d_ref)
 
         a, d_dot = self.control_system(obs, v_ref, d_ref)
@@ -226,28 +238,36 @@ class WillemsVehicle:
 
         return [a, d_dot]
 
-    def add_memory_entry(self, reward, done, s_prime):
-        beta = 0.1
-        reward -= abs(self.state_action[1][0] - self.center_act) * beta
+    def add_memory_entry(self, reward, done, s_prime, buffer):
+        new_reward = self.update_reward(reward, self.state_action[1])
 
         v_ref, d_ref = self.get_target_references(s_prime)
         nn_s_prime = self.transform_obs(s_prime, v_ref, d_ref)
         done_mask = 0.0 if done else 1.0
 
-        mem_entry = (self.state_action[0], self.state_action[1], reward, nn_s_prime, done_mask)
+        mem_entry = (self.state_action[0], self.state_action[1], new_reward, nn_s_prime, done_mask)
 
-        self.buffer.put(mem_entry)
+        buffer.put(mem_entry)
+
+    def update_reward(self, reward, action):
+        beta = 0.2
+        d_action = abs(action[0] - self.center_act)
+        if d_action == 0:
+            new_reward = 1
+        else:
+            new_reward = - d_action * beta
+
+        return new_reward
 
     def transform_obs(self, obs, v_ref, d_ref):
-        target_theta = lib.get_bearing(obs[0:2], self.target) - obs[2]
-        nn_obs = [target_theta, obs[3], obs[4], v_ref, d_ref]
+        max_angle = np.pi/2
+        max_v = 7.5
+
+        target_theta = (lib.get_bearing(obs[0:2], self.target) - obs[2]) / (2*max_angle)
+        nn_obs = [target_theta, obs[3]/max_v, obs[4]/max_angle, v_ref/max_v, d_ref/max_angle]
         nn_obs = np.array(nn_obs)
 
         nn_obs = np.concatenate([nn_obs, obs[5:]])
-
-        # nn_obs.append(obs[5:]) # range finders
-
-        # nn_obs = nn_obs.flatten()
 
         return nn_obs
 
@@ -262,14 +282,14 @@ class WillemsVehicle:
     def get_target_references(self, obs):
         self._set_target(obs)
 
-        v_ref = 6
+        v_ref = 7.5
 
         th_target = lib.get_bearing(obs[0:2], self.target)
         theta_dot = th_target - obs[2]
         theta_dot = lib.limit_theta(theta_dot)
 
         L = 0.33
-        delta_ref = np.arctan(theta_dot * L / (obs[3]+0.001))
+        delta_ref = np.arctan(theta_dot * L / max(((obs[3], 1))))
 
         return v_ref, delta_ref
 
@@ -277,8 +297,11 @@ class WillemsVehicle:
         kp_a = 10
         a = (v_ref - obs[3]) * kp_a
         
-        kp_delta = 5
+        kp_delta = 1
         d_dot = (d_ref - obs[4]) * kp_delta
+
+        a = np.clip(a, -8, 8)
+        d_dot = np.clip(d_dot, -3.2, 3.2)
 
         return a, d_dot
 
