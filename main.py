@@ -4,10 +4,12 @@ import sys
 
 from Simulator import F110Env, CorridorAction
 from RaceMaps import EnvironmentMap
+from CommonTestUtilsDQN import ReplayBufferDQN, ReplayBufferSuper
+import LibFunctions as lib
+
 from OptimalAgent import OptimalAgent
 from WillemsPureMod import WillemsVehicle
-from CommonTestUtilsDQN import ReplayBufferDQN
-import LibFunctions as lib
+from MyPureRep import PureRepDataGen
 
 
 def simulation_test():
@@ -70,7 +72,7 @@ def single_evaluation_vehicle(vehicle):
     print(f"Score: {score}")
 
 
-"""Training functions"""
+"""Training functions: PURE MODE"""
 def collect_willem_mod_observations(buffer, agent_name, n_itterations=5000):
     env_map = EnvironmentMap('TrainTrackEmpty')
 
@@ -157,6 +159,32 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
         total_rewards += rewards
 
         # lib.plot(total_rewards, figure_n=3)
+
+"""Training functions: PURE REP"""
+def generate_data_buffer():
+    env_map = EnvironmentMap('TestTrack1000')
+
+    env = F110Env(env_map)
+    vehicle = PureRepDataGen(env_map)
+
+    buffer = ReplayBufferSuper()
+
+    done, state, score = False, env.reset(None), 0.0
+    wpts = vehicle.init_agent()
+    while not done:
+        action = agent.act(state)
+        s_p, r, done, _ = env.step(action, updates=20)
+
+        nn_state, nn_action = vehicle.get_nn_vals(state)
+        buffer.add(nn_state, action)
+
+        score += r
+        state = s_p
+
+        # env.render(True)
+        env.render(False, wpts)
+
+    print(f"Score: {score}")
 
 
 

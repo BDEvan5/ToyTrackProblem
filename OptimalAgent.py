@@ -98,3 +98,6 @@ class OptimalAgent:
             self.pind += 1
         
         self.target = self.wpts[self.pind]
+
+
+

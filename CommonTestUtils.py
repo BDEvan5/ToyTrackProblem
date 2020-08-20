@@ -36,7 +36,30 @@ class ReplayBufferDQN():
     def size(self):
         return len(self.buffer)
 
+class ReplayBufferSuper(object):
+    def __init__(self, max_size=100000):     
+        self.storage = []
+        self.max_size = max_size
+        self.ptr = 0
 
+    def add(self, data):        
+        if len(self.storage) == self.max_size:
+            self.storage[int(self.ptr)] = data
+            self.ptr = (self.ptr + 1) % self.max_size
+        else:
+            self.storage.append(data)
+
+    def sample(self, batch_size):
+        ind = np.random.randint(0, len(self.storage), size=batch_size)
+        states, actions = [], []
+
+        for i in ind: 
+            s, a = self.storage[i]
+            states.append(np.array(s, copy=False))
+            actions.append(np.array(a, copy=False))
+
+        return np.array(states), np.array(actions)
+        
 
 """Single Evals"""
 def single_evaluation(agent, show_snap=True, show_render=False, pause=False):
