@@ -8,7 +8,7 @@ import torch.optim as optim
 
 from PathFinder import PathFinder, modify_path
 import LibFunctions as lib
-
+from CommonTestUtilsDQN import ReplayBufferDQN
 
 #Hyperparameters
 GAMMA = 0.95
@@ -154,9 +154,12 @@ class WillemsVehicle:
 
         self.obs_space = obs_space
         self.action_space = action_space
+        self.center_act = (self.action_space - 1) / 2
         self.agent = TrainWillemModDQN(obs_space, action_space, name)
 
         self.agent.try_load(load)
+        self.state_action = None
+        self.buffer = ReplayBufferDQN()
 
     def init_plan(self):
         fcn = self.env_map.obs_free_hm._check_line
@@ -184,29 +187,77 @@ class WillemsVehicle:
         self.pind = 1
 
         return self.wpts
-    
+
+    def init_straight_plan(self):
+        # this is when there are no known obs for training.
+        start = self.env_map.start
+        end = self.env_map.end
+
+        resolution = 10
+        dx, dy = lib.sub_locations(end, start)
+
+        n_pts = max((round(max((abs(dx), abs(dy))) / resolution), 3))
+        ddx = dx / (n_pts - 1)
+        ddy = dy / (n_pts - 1)
+
+        self.wpts = []
+        for i in range(n_pts):
+            pt = lib.add_locations(start, [ddx, ddy], i)
+            self.wpts.append(pt)
+
+        self.pind = 1
+
+        return self.wpts
+
+
     def act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)
-        v_ref, d_ref, nn_a = self.modify_references(obs, v_ref, d_ref)
+
+        nn_obs = self.transform_obs(obs, v_ref, d_ref)
+        nn_action = self.agent.act(nn_obs)
+        v_ref, d_ref = self.modify_references(nn_action, v_ref, d_ref)
+
         a, d_dot = self.control_system(obs, v_ref, d_ref)
 
         a = np.clip(a, -8, 8)
         d_dot = np.clip(d_dot, -3.2, 3.2)
 
-        return [a, d_dot], nn_a
+        self.state_action = [nn_obs, nn_action]
 
-    def modify_references(self, obs, v_ref, d_ref):
+        return [a, d_dot]
+
+    def add_memory_entry(self, reward, done, s_prime):
+        beta = 0.1
+        reward -= abs(self.state_action[1][0] - self.center_act) * beta
+
+        v_ref, d_ref = self.get_target_references(s_prime)
+        nn_s_prime = self.transform_obs(s_prime, v_ref, d_ref)
+        done_mask = 0.0 if done else 1.0
+
+        mem_entry = (self.state_action[0], self.state_action[1], reward, nn_s_prime, done_mask)
+
+        self.buffer.put(mem_entry)
+
+    def transform_obs(self, obs, v_ref, d_ref):
         target_theta = lib.get_bearing(obs[0:2], self.target) - obs[2]
         nn_obs = [target_theta, obs[3], obs[4], v_ref, d_ref]
-        nn_obs.append(obs[5:]) # range finders
+        nn_obs = np.array(nn_obs)
 
-        nn_action = self.agent.act(nn_obs)
+        nn_obs = np.concatenate([nn_obs, obs[5:]])
+
+        # nn_obs.append(obs[5:]) # range finders
+
+        # nn_obs = nn_obs.flatten()
+
+        return nn_obs
+
+    def modify_references(self, nn_action, v_ref, d_ref):
         d_steering = 0.01
-        d_ref_mod = d_ref + (action[0] - 2) * d_steering
+        d_ref_mod = d_ref + (nn_action[0] - self.center_act) * d_steering
 
-        return v_ref, d_ref_mod, nn_action
+        v_ref_mod = v_ref
 
-    # def get_nn_state(self, )
+        return v_ref_mod, d_ref_mod
 
     def get_target_references(self, obs):
         self._set_target(obs)
@@ -238,3 +289,10 @@ class WillemsVehicle:
             self.pind += 1
         
         self.target = self.wpts[self.pind]
+
+
+
+
+
+
+

@@ -219,6 +219,59 @@ class F110Env:
         plt.pause(0.0001)
         if wait:
             plt.show()
+            
+    def render_snapshot(self, wait=False, wpts=None):
+        car_x = int(self.car.x)
+        car_y = int(self.car.y)
+        fig = plt.figure(4)
+        plt.clf()  
+        plt.imshow(self.race_map.race_map.T, origin='lower')
+        plt.xlim(0, self.race_map.map_width)
+        plt.ylim(-10, self.race_map.map_height)
+        plt.plot(self.env_map.start[0], self.env_map.start[1], '*', markersize=12)
+
+        plt.plot(self.env_map.end[0], self.env_map.end[1], '*', markersize=12)
+        plt.plot(self.car.x, self.car.y, '+', markersize=16)
+
+        for i in range(self.scan_sim.number_of_beams):
+            angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
+            fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
+            dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
+            range_val = lib.add_locations([self.car.x, self.car.y], dx)
+            x = [car_x, range_val[0]]
+            y = [car_y, range_val[1]]
+            plt.plot(x, y)
+
+        for pos in self.action_memory:
+            plt.plot(pos[0], pos[1], 'x', markersize=6)
+
+        if wpts is not None:
+            xs, ys = [], []
+            for pt in wpts:
+                xs.append(pt[0])
+                ys.append(pt[1])
+        
+            # plt.plot(xs, ys)
+            plt.plot(xs, ys, 'x', markersize=20)
+
+        s = f"Reward: [{self.reward:.1f}]" 
+        plt.text(100, 80, s)
+        s = f"Action: [{self.action[0]:.2f}, {self.action[1]:.2f}]"
+        plt.text(100, 70, s) 
+        s = f"Done: {self.done}"
+        plt.text(100, 65, s) 
+        s = f"Pos: [{self.car.x:.2f}, {self.car.y:.2f}]"
+        plt.text(100, 60, s)
+        s = f"Vel: [{self.car.velocity:.2f}]"
+        plt.text(100, 55, s)
+        s = f"Theta: [{(self.car.theta * 180 / np.pi):.2f}]"
+        plt.text(100, 50, s) 
+        s = f"Delta x100: [{(self.car.steering*100):.2f}]"
+        plt.text(100, 45, s) 
+
+        plt.pause(0.0001)
+        if wait:
+            plt.show()
 
 
 def CorridorAction(obs):

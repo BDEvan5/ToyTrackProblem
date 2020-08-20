@@ -6,6 +6,7 @@ from RaceMaps import EnvironmentMap
 from OptimalAgent import OptimalAgent
 from WillemsPureMod import WillemsVehicle
 from CommonTestUtilsDQN import ReplayBufferDQN
+import LibFunctions as lib
 
 
 def simulation_test():
@@ -93,14 +94,14 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
     rewards = []
 
     done, state, score = False, env.reset(None), 0.0
-    wpts = vehicle.init_plan()
+    wpts = vehicle.init_straight_plan()
     for n in range(1000):
-        a, nn_a = vehicle.act(state)
-        s_prime, r, done, _ = env.step(a)
-        done_mask = 0.0 if done else 1.0
-        buffer.put((state, nn_a, r, s_prime, done_mask)) 
+        a = vehicle.act(state)
+        s_prime, r, done, _ = env.step(a, 25)
+        vehicle.add_memory_entry(r, done, s_prime)
+        
         score += r
-        vehicle.agent.train_episodes(buffer)
+        vehicle.agent.train_episodes(vehicle.buffer)
 
         # env.render(False)
         state = s_prime
@@ -109,19 +110,18 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
             rewards.append(score)
             exp = vehicle.agent.model.exploration_rate
             mean = np.mean(rewards)
-            b = buffer.size()
+            b = vehicle.buffer.size()
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
             score = 0
-            lib.plot(rewards, figure_n=2)
+            # lib.plot(rewards, figure_n=2)
 
             vehicle.agent.save()
-            single_evaluation(agent, True)
         
         if done:
-            env.render_snapshot()
+            env.render_snapshot(wpts=wpts)
             env_map.generate_random_start()
             state = env.reset()
-            vehicle.init_plan()
+            wpts = vehicle.init_straight_plan()
 
     vehicle.agent.save()
 
@@ -134,32 +134,18 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
     evals = []
 
     if create:
-        # collect_willem_mod_observations(buffer, 100)
-        # rewards = TrainWillemModAgent(agent_name, buffer, 0, False)
         rewards = TrainWillemModAgentEps(agent_name, buffer, 0, False)
         total_rewards += rewards
         lib.plot(total_rewards, figure_n=3)
-        # agent = TestWillemModDQN(agent_name)
-        # s = single_evaluation(agent)
-        # evals.append(s)
+
 
     for i in range(start, start + n_runs):
         print(f"Running batch: {i}")
-        # rewards = TrainWillemModAgent(agent_name, buffer, i, True)
         rewards = TrainWillemModAgentEps(agent_name, buffer, i, True)
         total_rewards += rewards
 
         lib.plot(total_rewards, figure_n=3)
-        plt.figure(2).savefig("PNGs/Training_DQN_rep" + str(i))
-        agent = TestWillemModDQN(agent_name)
-        s = single_evaluation(agent, True, True)
-        evals.append(s)
 
-    try:
-        print(evals)
-        print(f"Max: {max(evals)}")
-    except:
-        pass
 
 
 if __name__ == "__main__":

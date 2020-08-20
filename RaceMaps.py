@@ -138,11 +138,11 @@ class EnvironmentMap:
  
     def generate_random_start(self):
         self.start = lib.get_rands()
-        while self.race_map._check_location(self.start):
+        while self.race_course._check_location(self.start):
             self.start = lib.get_rands()
 
         self.end = lib.get_rands()
-        while self.race_map._check_location(self.end) or \
+        while self.race_course._check_location(self.end) or \
             lib.get_distance(self.start, self.end) < 30:
             self.end = lib.get_rands()
         self.end = lib.get_rands(80, 10)
