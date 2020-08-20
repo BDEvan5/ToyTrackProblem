@@ -103,7 +103,7 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
         score += r
         vehicle.agent.train_episodes(vehicle.buffer)
 
-        # env.render(False)
+        env.render(False)
         state = s_prime
 
         if n % print_n == 0 and n > 0:
@@ -136,7 +136,7 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
     if create:
         rewards = TrainWillemModAgentEps(agent_name, buffer, 0, False)
         total_rewards += rewards
-        lib.plot(total_rewards, figure_n=3)
+        # lib.plot(total_rewards, figure_n=3)
 
 
     for i in range(start, start + n_runs):
@@ -144,7 +144,7 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
         rewards = TrainWillemModAgentEps(agent_name, buffer, i, True)
         total_rewards += rewards
 
-        lib.plot(total_rewards, figure_n=3)
+        # lib.plot(total_rewards, figure_n=3)
 
 
 

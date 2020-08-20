@@ -108,10 +108,12 @@ class F110Env:
         self.reward = 0
         self.action = np.zeros((2, 1))
         self.action_memory = []
+        self.steps = 0
 
         self.obs_space = len(self.get_state_obs())
 
     def step(self, action, updates=10):
+        self.steps +=1
         self.action = action
         acceleration = action[0]
         steer_dot = action[1]
@@ -132,6 +134,7 @@ class F110Env:
     def reset(self, poses=None, random_start=False):
         self.done = False
         self.action_memory = []
+        self.steps = 0
         
         if poses is not None:
             self.car.x = poses['x']
@@ -162,9 +165,14 @@ class F110Env:
             self.done = True
         if lib.get_distance([self.car.x, self.car.y], self.env_map.end) < 5:
             self.done = True
+        if self.steps > 200:
+            self.done = True
 
     def update_reward(self):
-        self.reward = 1
+        if self.race_map._check_location([self.car.x, self.car.y]):
+            self.reward = -1
+        else:
+            self.reward = 1
     
 
     def render(self, wait=False, wpts=None):
