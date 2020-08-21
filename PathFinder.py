@@ -48,11 +48,11 @@ class PathFinder:
             self.find_current_node()
 
             if self.check_done():
-                print("The shortest path has been found")
+                # print("The shortest path has been found")
                 break
             self.generate_children()
             i += 1
-        print(f"Number of itterations: {i}")
+        # print(f"Number of itterations: {i}")
         assert i < max_steps, "Max Iterations reached: problem with search"
         assert len(self.open_list) > 0, "Search broke: no open nodes"
         path = self.get_path_list()
@@ -217,7 +217,7 @@ def reduce_path_diag(path):
     new_path.append(path[-2]) # add end
     new_path.append(path[-1]) # add end
      
-    print(f"Path Reduced from: {len(path)} to: {len(new_path)}  points by straight analysis")
+    # print(f"Path Reduced from: {len(path)} to: {len(new_path)}  points by straight analysis")
 
     return new_path
 

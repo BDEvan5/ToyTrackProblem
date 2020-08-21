@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from collections import deque
 import random
+import pickle
 
 # from TestEnvWillemMod import TestEnvDQN
 from matplotlib import pyplot as plt
@@ -59,6 +60,16 @@ class ReplayBufferSuper(object):
             actions.append(np.array(a, copy=False))
 
         return np.array(states), np.array(actions)
+
+    def save_buffer(self, b_name="SuperBuf"):
+        f_name = 'DataRecords/' + b_name
+        b_file = open(f_name, 'wb')
+        pickle.dump(self.storage, b_file)
+
+    def load_buffer(self, b_name="SuperBuf"):
+        f_name = 'DataRecords/' + b_name
+        with open(f_name, 'w') as b_file:
+            self.storage = pickle.load(b_file)
         
 
 """Single Evals"""

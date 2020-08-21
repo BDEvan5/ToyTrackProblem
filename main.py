@@ -9,7 +9,7 @@ import LibFunctions as lib
 
 from OptimalAgent import OptimalAgent
 from WillemsPureMod import WillemsVehicle
-from MyPureRep import PureRepDataGen
+from MyPureRep import PureRepDataGen, SuperTrainRep
 
 
 def simulation_test():
@@ -186,14 +186,54 @@ def generate_data_buffer(b_length=10000):
 
         if done:
             env.render_snapshot(wpts=wpts)
+            if r == -1:
+                print(f"The vehicle has crashed: check this out")
+                plt.show()
+
             env_map.generate_random_start()
             wpts = vehicle.init_agent()
             state = env.reset()
 
+            print(f"Ep done in {env.steps} steps --> B Number: {n}")
+
     return buffer
 
-def TrainRepAgent(agent_name):
-    buffer = generate_data_buffer()
+def create_buffer(load=True):
+    if load:
+        try:
+            buffer = ReplayBufferSuper()
+            buffer.load_buffer()
+            print(f"Buffer loaded")
+        except:
+            buffer = generate_data_buffer(500)
+        buffer.save_buffer()
+        print(f"Buffer generated and saved")
+
+    else:
+        buffer = generate_data_buffer()
+        buffer.save_buffer()
+        print(f"Buffer generated and saved")
+
+    return buffer
+
+def TrainRepAgent(agent_name, load=True):
+    buffer = create_buffer(True)
+
+    agent = SuperTrainRep(15, 2, agent_name)
+
+    print_n = 1000
+    avg_loss = 0
+    for i in range(50000):
+        l = agent.train(buffer)
+        avg_loss += l
+
+        if i % print_n == 1:
+            print(f"It: {i} --> Loss: {avg_loss}")
+            agent.save()
+            avg_loss = 0
+
+    agent.save()
+
 
 
 
@@ -214,4 +254,4 @@ if __name__ == "__main__":
     # RunWillemModTraining(agent_name, 0, 50, False)
 
     agent_name = "TestingRep"
-    TrainRepAgent(agent_name)
+    TrainRepAgent(agent_name, False)

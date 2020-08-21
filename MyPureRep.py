@@ -1,7 +1,24 @@
 import numpy as np 
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+
 from PathFinder import PathFinder, modify_path
 import LibFunctions as lib
+
+
+# hyper parameters
+BATCH_SIZE = 100
+GAMMA = 0.99
+tau = 0.005
+NOISE = 0.2
+NOISE_CLIP = 0.5
+EXPLORE_NOISE = 0.1
+POLICY_FREQUENCY = 2
+POLICY_NOISE = 0.2
+
 
 
 class PureRepDataGen:
@@ -21,14 +38,16 @@ class PureRepDataGen:
     def init_agent(self):
         fcn = self.env_map.obs_hm._check_line
         path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
-        try:
-            path = path_finder.run_search(5)
-        except AssertionError:
-            print(f"Search Problem: generating new start")
-            self.env_map.generate_random_start()
-            path = path_finder.run_search(5)
+        path = None
+        while path is None:
+            try:
+                path = path_finder.run_search(5)
+            except AssertionError:
+                print(f"Search Problem: generating new start")
+                self.env_map.generate_random_start()
+
         self.wpts = modify_path(path)
-        print("Path Generated")
+        # print("Path Generated")
 
         self.wpts = np.append(self.wpts, self.env_map.end)
         self.wpts = np.reshape(self.wpts, (-1, 2))
@@ -142,5 +161,74 @@ class PureRepDataGen:
         
         self.nn_target = self.nn_wpts[self.nn_pind]
 
+
+class Actor(nn.Module):   
+    def __init__(self, state_dim, action_dim, max_action=1):
+        super(Actor, self).__init__()
+
+        self.l1 = nn.Linear(state_dim, 400)
+        self.l2 = nn.Linear(400, 300)
+        self.l3 = nn.Linear(300, action_dim)
+
+        self.max_action = max_action
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+
+    def forward(self, x):
+        x = F.relu(self.l1(x))
+        y = F.relu(self.l2(x))
+        z = self.l3(y)
+        a = self.max_action * torch.tanh(z) 
+        return a
+
+
+
+class SuperTrainRep(object):
+    def __init__(self, state_dim, action_dim, agent_name):
+        self.model = None
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.agent_name = agent_name
+
+    def train(self, replay_buffer):
+        s, a_r = replay_buffer.sample(BATCH_SIZE)
+        states = torch.FloatTensor(s)
+        right_actions = torch.FloatTensor(a_r)
+
+        actions = self.model(states)
+
+        actor_loss = F.mse_loss(actions, right_actions)
+
+        self.model.optimizer.zero_grad()
+        actor_loss.backward()
+        self.model.optimizer.step()
+
+        return actor_loss
+
+    def save(self, directory='./td3_saves'):
+        torch.save(self.model, '%s/%s_model.pth' % (directory, self.agent_name))
+
+    def load(self, directory='./td3_saves'):
+        self.model = torch.load('%s/%s_model.pth' % (directory, self.agent_name))
+
+    def create_agent(self):
+        self.model = Actor(self.state_dim, self.action_dim, 1)
+
+    def try_load(self, load=True):
+        if load:
+            try:
+                self.load()
+            except:
+                print(f"Unable to load model")
+                pass
+        else:
+            self.create_agent()
+            print(f"Not loading - restarting training")
+
+    def act(self, state):
+        state = torch.FloatTensor(state.reshape(1, -1))
+
+        action = self.model(state).data.numpy().flatten()
+
+        return action
 
 

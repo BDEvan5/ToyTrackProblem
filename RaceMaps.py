@@ -139,14 +139,14 @@ class EnvironmentMap:
         return new_map
  
     def generate_random_start(self):
-        self.start = lib.get_rands()
+        self.start = lib.get_rands(90, 5)
         while self.obs_hm._check_location(self.start):
-            self.start = lib.get_rands()
+            self.start = lib.get_rands(90, 5)
 
         self.end = lib.get_rands()
         while self.obs_hm._check_location(self.end) or \
             lib.get_distance(self.start, self.end) < 30:
-            self.end = lib.get_rands()
+            self.end = lib.get_rands(90, 5)
             # self.end = lib.get_rands(80, 10)
 
 
