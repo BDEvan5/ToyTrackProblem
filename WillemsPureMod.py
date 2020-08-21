@@ -8,7 +8,7 @@ import torch.optim as optim
 
 from PathFinder import PathFinder, modify_path
 import LibFunctions as lib
-from CommonTestUtilsDQN import ReplayBufferDQN
+from CommonTestUtils import ReplayBufferDQN
 
 #Hyperparameters
 GAMMA = 0.95

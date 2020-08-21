@@ -204,7 +204,7 @@ def reduce_path_diag(path):
     new_path = []
     new_path.append(path[0]) # starting pos
     pt1 = path[0]
-    for i in range(2, len(path)-1): 
+    for i in range(1, len(path)-1): 
         pt2 = path[i]
         if pt1[0] == pt2[0] or pt1[1] == pt2[1]:
             continue

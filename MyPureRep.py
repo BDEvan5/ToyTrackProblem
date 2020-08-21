@@ -19,19 +19,16 @@ class PureRepDataGen:
         self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
 
     def init_agent(self):
-        # self.race_map.show_hm()
+        fcn = self.env_map.obs_hm._check_line
+        path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
         try:
-            # raise Exception
-            self.wpts = np.load(self.path_name)
-        except:
-            fcn = self.env_map.obs_hm._check_line
-            path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
             path = path_finder.run_search(5)
-            # self.env_map.obs_hm.show_map(path)
-            path = modify_path(path)
-            self.wpts = path
-            np.save(self.path_name, self.wpts)
-            print("Path Generated")
+        except AssertionError:
+            print(f"Search Problem: generating new start")
+            self.env_map.generate_random_start()
+            path = path_finder.run_search(5)
+        self.wpts = modify_path(path)
+        print("Path Generated")
 
         self.wpts = np.append(self.wpts, self.env_map.end)
         self.wpts = np.reshape(self.wpts, (-1, 2))
@@ -44,7 +41,7 @@ class PureRepDataGen:
                 pass
         self.wpts = np.asarray(new_pts)    
 
-        # self.env_map.race_course.show_map(self.wpts)
+        self.env_map.race_course.show_map(False, self.wpts)
 
         self.pind = 1
 
@@ -83,7 +80,7 @@ class PureRepDataGen:
         return [a, d_dot]
 
     def get_nn_vals(self, obs):
-        v_ref, delta_ref = self.get_target_references(obs, self.nn_target)
+        v_ref, d_ref = self.get_target_references(obs, self.nn_target)
 
         max_angle = np.pi/2
         max_v = 7.5

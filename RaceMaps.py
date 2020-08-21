@@ -32,8 +32,9 @@ class GeneralMap:
                 return True
         return False
 
-    def show_map(self, path=None):
+    def show_map(self, show=False, path=None):
         fig = plt.figure(7)
+        plt.clf()
 
         plt.imshow(self.race_map.T, origin='lower')
         # plt.plot(self.start[0], self.start[1], '*', markersize=20)
@@ -48,8 +49,9 @@ class GeneralMap:
             plt.plot(xs, ys)
             plt.plot(xs, ys, 'x', markersize=16)
 
-        plt.show()
-        # plt.pause(0.001)
+        plt.pause(0.001)
+        if show:
+            plt.show()
 
 
 class EnvironmentMap:
@@ -98,7 +100,7 @@ class EnvironmentMap:
 
     def create_hm(self, hm_name, n_units=2):
         try:
-            # raise Exception
+            raise Exception
             return np.load(hm_name)
             # print(f"Heatmap loaded")
         except:
@@ -138,14 +140,14 @@ class EnvironmentMap:
  
     def generate_random_start(self):
         self.start = lib.get_rands()
-        while self.race_course._check_location(self.start):
+        while self.obs_hm._check_location(self.start):
             self.start = lib.get_rands()
 
         self.end = lib.get_rands()
-        while self.race_course._check_location(self.end) or \
+        while self.obs_hm._check_location(self.end) or \
             lib.get_distance(self.start, self.end) < 30:
             self.end = lib.get_rands()
-        self.end = lib.get_rands(80, 10)
+            # self.end = lib.get_rands(80, 10)
 
 
 

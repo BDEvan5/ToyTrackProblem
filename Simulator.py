@@ -106,7 +106,7 @@ class F110Env:
 
         self.done = False
         self.reward = 0
-        self.action = np.zeros((2, 1))
+        self.action = np.zeros((2))
         self.action_memory = []
         self.steps = 0
 
@@ -175,7 +175,6 @@ class F110Env:
         else:
             self.reward = 1
     
-
     def render(self, wait=False, wpts=None):
         car_x = int(self.car.x)
         car_y = int(self.car.y)

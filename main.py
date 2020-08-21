@@ -4,7 +4,7 @@ import sys
 
 from Simulator import F110Env, CorridorAction
 from RaceMaps import EnvironmentMap
-from CommonTestUtilsDQN import ReplayBufferDQN, ReplayBufferSuper
+from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper
 import LibFunctions as lib
 
 from OptimalAgent import OptimalAgent
@@ -161,30 +161,42 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
         # lib.plot(total_rewards, figure_n=3)
 
 """Training functions: PURE REP"""
-def generate_data_buffer():
-    env_map = EnvironmentMap('TestTrack1000')
+def generate_data_buffer(b_length=10000):
+    env_map = EnvironmentMap('TrainTrackEmpty')
 
     env = F110Env(env_map)
     vehicle = PureRepDataGen(env_map)
 
     buffer = ReplayBufferSuper()
 
-    done, state, score = False, env.reset(None), 0.0
+    env_map.generate_random_start()
     wpts = vehicle.init_agent()
-    while not done:
-        action = agent.act(state)
+    done, state, score = False, env.reset(None), 0.0
+    # env.render(True, wpts)
+    for n in range(b_length):
+        action = vehicle.act(state)
         s_p, r, done, _ = env.step(action, updates=20)
 
-        nn_state, nn_action = vehicle.get_nn_vals(state)
-        buffer.add(nn_state, action)
+        nn_state = vehicle.get_nn_vals(state)
+        buffer.add((nn_state, action))
 
-        score += r
         state = s_p
 
-        # env.render(True)
-        env.render(False, wpts)
+        # env.render(False, wpts)
 
-    print(f"Score: {score}")
+        if done:
+            env.render_snapshot(wpts=wpts)
+            env_map.generate_random_start()
+            wpts = vehicle.init_agent()
+            state = env.reset()
+
+    return buffer
+
+def TrainRepAgent(agent_name):
+    buffer = generate_data_buffer()
+
+
+
 
 
 
@@ -198,5 +210,8 @@ if __name__ == "__main__":
     # vehicle = WillemsVehicle(env_map, agent_name, env.obs_space, 5, False)
     # single_evaluation_vehicle(vehicle)
 
-    RunWillemModTraining(agent_name, 0, 50, True)
-    RunWillemModTraining(agent_name, 0, 50, False)
+    # RunWillemModTraining(agent_name, 0, 50, True)
+    # RunWillemModTraining(agent_name, 0, 50, False)
+
+    agent_name = "TestingRep"
+    TrainRepAgent(agent_name)
