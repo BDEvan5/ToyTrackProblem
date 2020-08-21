@@ -65,11 +65,12 @@ class ReplayBufferSuper(object):
         f_name = 'DataRecords/' + b_name
         b_file = open(f_name, 'wb')
         pickle.dump(self.storage, b_file)
+        b_file.close() 
 
     def load_buffer(self, b_name="SuperBuf"):
         f_name = 'DataRecords/' + b_name
-        with open(f_name, 'w') as b_file:
-            self.storage = pickle.load(b_file)
+        b_file = open(f_name, 'rb')
+        self.storage = pickle.load(b_file)
         
 
 """Single Evals"""

@@ -9,7 +9,7 @@ import LibFunctions as lib
 
 from OptimalAgent import OptimalAgent
 from WillemsPureMod import WillemsVehicle
-from MyPureRep import PureRepDataGen, SuperTrainRep
+from MyPureRep import PureRepDataGen, SuperTrainRep, SuperRepVehicle
 
 
 def simulation_test():
@@ -178,7 +178,7 @@ def generate_data_buffer(b_length=10000):
         s_p, r, done, _ = env.step(action, updates=20)
 
         nn_state = vehicle.get_nn_vals(state)
-        buffer.add((nn_state, action))
+        buffer.add((nn_state, [action[1]]))
 
         state = s_p
 
@@ -205,53 +205,112 @@ def create_buffer(load=True):
             buffer.load_buffer()
             print(f"Buffer loaded")
         except:
-            buffer = generate_data_buffer(500)
-        buffer.save_buffer()
-        print(f"Buffer generated and saved")
+            print(f"Load error")
 
     else:
-        buffer = generate_data_buffer()
+        buffer = generate_data_buffer(5000)
         buffer.save_buffer()
         print(f"Buffer generated and saved")
 
     return buffer
 
-def TrainRepAgent(agent_name, load=True):
+def TrainRepAgent(agent_name, load):
     buffer = create_buffer(True)
+    # buffer = create_buffer(False)
+# 
+    agent = SuperTrainRep(14, 1, agent_name)
+    agent.try_load(load)
 
-    agent = SuperTrainRep(15, 2, agent_name)
-
-    print_n = 1000
+    print_n = 100
+    test_n = 1000
     avg_loss = 0
     for i in range(50000):
         l = agent.train(buffer)
         avg_loss += l
 
-        if i % print_n == 1:
+        # print(f"{i}-> loss: {l}")
+
+        if i % print_n == 0:
             print(f"It: {i} --> Loss: {avg_loss}")
             agent.save()
             avg_loss = 0
 
+        # if i % test_n == 0:
+        #     TestRepAgentEmpty(agent_name)
+        #     TestRepAgentTest(agent_name)
+
     agent.save()
 
 
+def TestRepAgentTest(agent_name):
+    env_map = EnvironmentMap('TestTrack1000')
+
+    env = F110Env(env_map)
+    vehicle = SuperRepVehicle(env_map, agent_name, env.obs_space, 1, True)
+    
+    wpts = vehicle.init_agent()
+    done, state, score = False, env.reset(None), 0.0
+    # env.render(True, wpts)
+    while not done:
+
+        action = vehicle.act(state)
+        s_p, r, done, _ = env.step(action, updates=20)
+        state = s_p
+        env.render(False, wpts)
+
+    env.render_snapshot(wpts=wpts, wait=False)
+    if r == -1:
+        print(f"The vehicle has crashed: check this out")
+
+def TestRepAgentEmpty(agent_name):
+    env_map = EnvironmentMap('TrainTrackEmpty')
+
+    env = F110Env(env_map)
+    vehicle = SuperRepVehicle(env_map, agent_name, env.obs_space, 1, True)
+    
+    env_map.generate_random_start()
+    wpts = vehicle.init_agent()
+    done, state, score = False, env.reset(None), 0.0
+    # env.render(True, wpts)
+    while not done:
+
+        action = vehicle.act(state)
+        s_p, r, done, _ = env.step(action, updates=20)
+        state = s_p
+        env.render(False, wpts)
+
+    env.render_snapshot(wpts=wpts, wait=False)
+    if r == -1:
+        print(f"The vehicle has crashed: check this out")
 
 
-
-
-
-if __name__ == "__main__":
-    # simulation_test()
-
+"""Total functions"""
+def WillemsMod():
     agent_name = "TestingWillem"
+    RunWillemModTraining(agent_name, 0, 50, True)
+    # RunWillemModTraining(agent_name, 0, 50, False)
+
     # env_map = EnvironmentMap('TestTrack1000')
 
     # env = F110Env(env_map)
     # vehicle = WillemsVehicle(env_map, agent_name, env.obs_space, 5, False)
     # single_evaluation_vehicle(vehicle)
 
-    # RunWillemModTraining(agent_name, 0, 50, True)
-    # RunWillemModTraining(agent_name, 0, 50, False)
 
+def SuperRep():
     agent_name = "TestingRep"
+    # TestRepAgent(agent_name)
     TrainRepAgent(agent_name, False)
+
+
+
+
+if __name__ == "__main__":
+    # simulation_test()
+    WillemsMod()
+    # SuperRep()
+
+
+
+
+    
