@@ -130,7 +130,7 @@ class TrainWillemModDQN:
         self.update_steps += 1
         if self.update_steps % 100 == 1: # every 20 eps or so
             self.target.load_state_dict(self.model.state_dict())
-        if self.update_steps % 12 == 1:
+        if self.update_steps % 30 == 1:
             self.model.exploration_rate *= EXPLORATION_DECAY 
             self.model.exploration_rate = max(EXPLORATION_MIN, self.model.exploration_rate)
 
@@ -256,6 +256,9 @@ class WillemsVehicle:
         self.state_action = None
         self.state_value = None
 
+        self.dec_vals = []
+        self.action_history = []
+
     def init_plan(self):
         fcn = self.env_map.obs_free_hm._check_line
         path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
@@ -304,6 +307,9 @@ class WillemsVehicle:
                 pass
 
         self.pind = 1
+        
+        self.dec_vals = []
+        self.action_history = []
 
         return self.wpts
 
@@ -312,11 +318,18 @@ class WillemsVehicle:
 
         """This is where the agent can be removed if needed"""
         nn_obs = self.transform_obs(obs, v_ref, phi_ref)
-        nn_action = self.agent.act(nn_obs)
-        v_ref, phi_ref_nn = self.modify_references(nn_action, v_ref, phi_ref)
-        self.state_action = [nn_obs, nn_action]
+        dec_val = self.check_agent.model(torch.from_numpy(nn_obs).float())
+        dec_val = dec_val.detach().numpy()[0]
+        self.dec_vals.append(dec_val)
+        if dec_val < 0:
+            nn_action = self.agent.act(nn_obs)
+            self.action_history.append(nn_action)
+            v_ref, phi_ref = self.modify_references(nn_action, v_ref, phi_ref)
+            self.state_action = [nn_obs, nn_action]
+        else:
+            self.state_action = None
 
-        a, d_dot = self.control_system(obs, v_ref, phi_ref_nn)
+        a, d_dot = self.control_system(obs, v_ref, phi_ref)
 
         return [a, d_dot]
 
@@ -350,17 +363,18 @@ class WillemsVehicle:
         return [a, d_dot]
 
     def add_memory_entry(self, reward, done, s_prime, buffer):
-        new_reward = self.update_reward(reward, self.state_action[1])
+        if self.state_action is not None:
+            new_reward = self.update_reward(reward, self.state_action[1])
 
-        v_ref, d_ref = self.get_target_references(s_prime)
-        nn_s_prime = self.transform_obs(s_prime, v_ref, d_ref)
-        done_mask = 0.0 if done else 1.0
+            v_ref, d_ref = self.get_target_references(s_prime)
+            nn_s_prime = self.transform_obs(s_prime, v_ref, d_ref)
+            done_mask = 0.0 if done else 1.0
 
-        mem_entry = (self.state_action[0], self.state_action[1], new_reward, nn_s_prime, done_mask)
+            mem_entry = (self.state_action[0], self.state_action[1], new_reward, nn_s_prime, done_mask)
 
-        if new_reward == -1 or np.random.random() < 0.2: # save 20% of 1s
-        # if new_reward != 1:
-            buffer.put(mem_entry)
+            if new_reward == -1 or np.random.random() < 0.2: # save 20% of 1s
+            # if new_reward != 1:
+                buffer.put(mem_entry)
 
     def add_decision_entry(self, reward, done, s_prime, buffer):
         v_ref, phi_ref = self.get_target_references(s_prime)
@@ -380,7 +394,7 @@ class WillemsVehicle:
         elif d_action == 0:
             new_reward = 0
         else:
-            new_reward = 0 - d_action * beta
+            new_reward = 0 #- d_action * beta
 
         return new_reward
 
