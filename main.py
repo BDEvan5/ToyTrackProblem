@@ -2,13 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
+import torch
+
 from Simulator import F110Env, CorridorAction
 from RaceMaps import EnvironmentMap
 from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper
 import LibFunctions as lib
 
 from OptimalAgent import OptimalAgent
-from WillemsPureMod import WillemsVehicle
+from WillemsPureMod import WillemsVehicle, TrainWillemModDQN
 from MyPureRep import PureRepDataGen, SuperTrainRep, SuperRepVehicle
 
 
@@ -99,26 +101,28 @@ def collect_willem_mod_observations(buffer, agent_name, n_itterations=5000):
     print(" ")
 
 def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
-    env_map = EnvironmentMap('TrainTrackEmpty')
+    env_map = EnvironmentMap('TrainTrackSmall')
 
     env = F110Env(env_map)
-    vehicle = WillemsVehicle(env_map, agent_name, env.obs_space, 5, load)
+    vehicle = WillemsVehicle(env_map, agent_name, 11, 5, load)
     
-    print_n = 100
+    print_n = 500
     rewards = []
 
     done, state, score = False, env.reset(None), 0.0
     wpts = vehicle.init_straight_plan()
-    for n in range(1000):
+    for n in range(10000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a, 20)
-        # vehicle.add_memory_entry(r, done, s_prime, buffer)
+
+        # if n % 4 == 0 or r == -1:
+        vehicle.add_memory_entry(r, done, s_prime, buffer)
         
         score += r
-        # vehicle.agent.train_episodes(buffer)
-        vehicle.agent.train_modification(buffer)
+        vehicle.agent.train_episodes(buffer)
+        # vehicle.agent.train_modification(buffer)
 
-        env.render(False, wpts)
+        # env.render(False, wpts)
         state = s_prime
 
         if n % print_n == 0 and n > 0:
@@ -128,12 +132,13 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
             b = buffer.size()
             print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
             score = 0
-            # lib.plot(rewards, figure_n=2)
+            lib.plot(rewards, figure_n=2)
 
             vehicle.agent.save()
         
         if done:
-            env.render_snapshot(wpts=wpts)
+            print(f"Out: {vehicle.agent.last_out}")
+            env.render_snapshot(wpts=wpts, wait=True)
             env_map.generate_random_start()
             state = env.reset()
             wpts = vehicle.init_straight_plan()
@@ -141,6 +146,47 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
     vehicle.agent.save()
 
     return rewards
+
+def view_nn(wait=True):
+    nn = TrainWillemModDQN(11, 5, "TestingWillem")
+    nn.try_load(True)
+
+    phi = [0]
+    beams = [1, 1, 1, 1, 0.1, 0.1, 0.1, 0.1, 1, 1]
+    obs = np.concatenate([phi, beams])
+    obs_t = torch.from_numpy(obs).float()
+    out = nn.model(obs_t)
+    print(f"Out: {out}")
+
+    car_x = 50
+    car_y = 10
+    fig = plt.figure(4)
+    plt.clf()  
+    plt.xlim(0, 100)
+    plt.ylim(0, 50)
+
+    plt.plot(car_x, car_y, '+', markersize=16)
+    targ = [np.sin(phi), np.cos(phi)]
+    end = lib.add_locations([car_x, car_y], targ, 40)
+    plt.plot(end[0], end[1], 'x', markersize=20)
+
+    dth = np.pi / 9
+    for i in range(len(beams)):
+        angle = i * dth  - np.pi/2
+        fs = beams[i] * 30
+        dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
+        range_val = lib.add_locations([car_x, car_y], dx)
+        x = [car_x, range_val[0]]
+        y = [car_y, range_val[1]]
+        plt.plot(x, y)
+
+    plt.pause(0.0001)
+    if wait:
+        plt.show()
+        
+
+
+
 
 def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
     buffer = ReplayBufferDQN()
@@ -286,8 +332,8 @@ def TestRepAgentEmpty(agent_name):
 """Total functions"""
 def WillemsMod():
     agent_name = "TestingWillem"
-    RunWillemModTraining(agent_name, 0, 50, True)
-    # RunWillemModTraining(agent_name, 0, 50, False)
+    # RunWillemModTraining(agent_name, 0, 50, True)
+    RunWillemModTraining(agent_name, 0, 50, False)
 
     # env_map = EnvironmentMap('TestTrack1000')
 
@@ -314,6 +360,7 @@ if __name__ == "__main__":
     WillemsMod()
     # SuperRep()
 
+    # view_nn()
 
 
 

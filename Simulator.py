@@ -120,8 +120,7 @@ class F110Env:
 
         for _ in range(updates):
             self.car.update_kinematic_state(acceleration, steer_dot, self.timestep)
-        self.check_done()
-        self.update_reward()
+        self.check_done_reward()
 
         obs = self.get_state_obs()
         done = self.done
@@ -161,19 +160,16 @@ class F110Env:
 
         return state
 
-    def check_done(self):
+    def check_done_reward(self):
+        self.reward = 0 # normal
         if self.race_map._check_location([self.car.x, self.car.y]):
             self.done = True
+            self.reward = -1
         if lib.get_distance([self.car.x, self.car.y], self.env_map.end) < 5:
             self.done = True
+            self.reward = 1
         if self.steps > 100:
             self.done = True
-
-    def update_reward(self):
-        if self.race_map._check_location([self.car.x, self.car.y]):
-            self.reward = -1
-        else:
-            self.reward = 1
     
     def render(self, wait=False, wpts=None):
         car_x = int(self.car.x)

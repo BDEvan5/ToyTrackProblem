@@ -47,6 +47,7 @@ class TrainWillemModDQN:
 
         self.model = None
         self.target = None
+        self.last_out = None
 
         self.update_steps = 0
 
@@ -60,6 +61,7 @@ class TrainWillemModDQN:
 
     def greedy_action(self, obs):
         out = self.model.forward(obs)
+        self.last_out = out
         return out.argmax().item()
 
     def train_modification(self, buffer):
@@ -211,17 +213,16 @@ class WillemsVehicle:
 
         return self.wpts
 
-
     def act(self, obs):
-        v_ref, d_ref = self.get_target_references(obs)
+        v_ref, phi_ref = self.get_target_references(obs)
 
         """This is where the agent can be removed if needed"""
-        # nn_obs = self.transform_obs(obs, v_ref, d_ref)
-        # nn_action = self.agent.act(nn_obs)
-        # v_ref, d_ref = self.modify_references(nn_action, v_ref, d_ref)
-        # self.state_action = [nn_obs, nn_action]
+        nn_obs = self.transform_obs(obs, v_ref, phi_ref)
+        nn_action = self.agent.act(nn_obs)
+        v_ref, phi_ref_nn = self.modify_references(nn_action, v_ref, phi_ref)
+        self.state_action = [nn_obs, nn_action]
 
-        a, d_dot = self.control_system(obs, v_ref, d_ref)
+        a, d_dot = self.control_system(obs, v_ref, phi_ref_nn)
 
         return [a, d_dot]
 
@@ -250,37 +251,44 @@ class WillemsVehicle:
 
         mem_entry = (self.state_action[0], self.state_action[1], new_reward, nn_s_prime, done_mask)
 
-        buffer.put(mem_entry)
+        if new_reward != 0 or np.random.random() < 0.2: # save 20% of 1s
+        # if new_reward != 1:
+            buffer.put(mem_entry)
 
     def update_reward(self, reward, action):
-        beta = 0.2
+        beta = 0.01
         d_action = abs(action[0] - self.center_act)
-        if d_action == 0:
-            new_reward = 1
+        if reward == -1:
+            new_reward = -1
+        elif d_action == 0:
+            new_reward = 0
         else:
-            new_reward = - d_action * beta
+            new_reward = 0 - d_action * beta
 
         return new_reward
 
-    def transform_obs(self, obs, v_ref, d_ref):
+    def transform_obs(self, obs, v_ref, phi_ref):
         max_angle = np.pi/2
         max_v = 7.5
 
-        target_theta = (lib.get_bearing(obs[0:2], self.target) - obs[2]) / (2*max_angle)
-        nn_obs = [target_theta, obs[3]/max_v, obs[4]/max_angle, v_ref/max_v, d_ref/max_angle]
-        nn_obs = np.array(nn_obs)
+        # target_theta = (lib.get_bearing(obs[0:2], self.target) - obs[2]) / (2*max_angle)
+        # nn_obs = [target_theta, obs[3]/max_v, obs[4]/max_angle, v_ref/max_v, d_ref/max_angle]
+        # nn_obs = np.array(nn_obs)
+
+        scaled_target_phi = phi_ref / max_angle
+        nn_obs = [scaled_target_phi]
 
         nn_obs = np.concatenate([nn_obs, obs[5:]])
 
         return nn_obs
 
-    def modify_references(self, nn_action, v_ref, d_ref):
-        d_steering = 0.01
-        d_ref_mod = d_ref + (nn_action[0] - self.center_act) * d_steering
+    def modify_references(self, nn_action, v_ref, phi_ref):
+        d_phi = 0.4 # rad
+        phi_new = phi_ref + (nn_action[0] - self.center_act) * d_phi
 
         v_ref_mod = v_ref
 
-        return v_ref_mod, d_ref_mod
+        return v_ref_mod, phi_new
 
     def get_target_references(self, obs):
         self._set_target(obs)
@@ -288,17 +296,18 @@ class WillemsVehicle:
         v_ref = 7.5
 
         th_target = lib.get_bearing(obs[0:2], self.target)
-        theta_dot = th_target - obs[2]
-        theta_dot = lib.limit_theta(theta_dot)
+        phi_ref = th_target - obs[2]
+        phi_ref = lib.limit_theta(phi_ref)
 
-        L = 0.33
-        delta_ref = np.arctan(theta_dot * L / max(((obs[3], 1))))
+        return v_ref, phi_ref
 
-        return v_ref, delta_ref
-
-    def control_system(self, obs, v_ref, d_ref):
+    def control_system(self, obs, v_ref, phi_ref):
         kp_a = 10
         a = (v_ref - obs[3]) * kp_a
+
+        theta_dot = phi_ref * 1
+        L = 0.33
+        d_ref = np.arctan(theta_dot * L / max(((obs[3], 1))))
         
         kp_delta = 1
         d_dot = (d_ref - obs[4]) * kp_delta
@@ -315,7 +324,6 @@ class WillemsVehicle:
             self.pind += 1
         
         self.target = self.wpts[self.pind]
-
 
 
 
