@@ -174,11 +174,11 @@ def generate_data_buffer(b_length=10000):
     done, state, score = False, env.reset(None), 0.0
     # env.render(True, wpts)
     for n in range(b_length):
-        action = vehicle.act(state)
+        action, nn_action = vehicle.act(state)
         s_p, r, done, _ = env.step(action, updates=20)
 
         nn_state = vehicle.get_nn_vals(state)
-        buffer.add((nn_state, [action[1]]))
+        buffer.add((nn_state, [nn_action]))
 
         state = s_p
 
@@ -198,7 +198,7 @@ def generate_data_buffer(b_length=10000):
 
     return buffer
 
-def create_buffer(load=True):
+def create_buffer(load=True, n_steps=1000):
     if load:
         try:
             buffer = ReplayBufferSuper()
@@ -208,7 +208,7 @@ def create_buffer(load=True):
             print(f"Load error")
 
     else:
-        buffer = generate_data_buffer(5000)
+        buffer = generate_data_buffer(n_steps)
         buffer.save_buffer()
         print(f"Buffer generated and saved")
 
@@ -218,7 +218,7 @@ def TrainRepAgent(agent_name, load):
     buffer = create_buffer(True)
     # buffer = create_buffer(False)
 # 
-    agent = SuperTrainRep(14, 1, agent_name)
+    agent = SuperTrainRep(11, 1, agent_name)
     agent.try_load(load)
 
     print_n = 100
@@ -273,7 +273,6 @@ def TestRepAgentEmpty(agent_name):
     done, state, score = False, env.reset(None), 0.0
     # env.render(True, wpts)
     while not done:
-
         action = vehicle.act(state)
         s_p, r, done, _ = env.step(action, updates=20)
         state = s_p
@@ -299,16 +298,21 @@ def WillemsMod():
 
 def SuperRep():
     agent_name = "TestingRep"
-    # TestRepAgent(agent_name)
-    TrainRepAgent(agent_name, False)
+
+    for i in range(10):
+        TestRepAgentTest(agent_name)
+        # TestRepAgentEmpty(agent_name)
+
+    # TrainRepAgent(agent_name, False)
+    # TrainRepAgent(agent_name, True)
 
 
 
 
 if __name__ == "__main__":
     # simulation_test()
-    WillemsMod()
-    # SuperRep()
+    # WillemsMod()
+    SuperRep()
 
 
 

@@ -166,7 +166,7 @@ class F110Env:
             self.done = True
         if lib.get_distance([self.car.x, self.car.y], self.env_map.end) < 5:
             self.done = True
-        if self.steps > 50:
+        if self.steps > 100:
             self.done = True
 
     def update_reward(self):

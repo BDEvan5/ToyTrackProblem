@@ -90,23 +90,29 @@ class PureRepDataGen:
     def act(self, obs):
         # v_ref, d_ref = self.get_corridor_references(obs)
         self._set_target(obs)
-        v_ref, d_ref = self.get_target_references(obs, self.target)
+        v_ref, d_ref, target_phi = self.get_target_references(obs, self.target)
         a, d_dot = self.control_system(obs, v_ref, d_ref)
 
         a = np.clip(a, -8, 8)
         d_dot = np.clip(d_dot, -3.2, 3.2)
 
-        return [a, d_dot]
+        return [a, d_dot], target_phi
 
     def get_nn_vals(self, obs):
-        v_ref, d_ref = self.get_target_references(obs, self.nn_target)
+        v_ref, d_ref, target_phi = self.get_target_references(obs, self.nn_target)
 
         max_angle = np.pi/2
         max_v = 7.5
 
-        target_theta = (lib.get_bearing(obs[0:2], self.nn_target) - obs[2]) / (2*max_angle)
-        nn_obs = [target_theta, obs[3]/max_v, obs[4]/max_angle, d_ref/max_angle]
-        nn_obs = np.array(nn_obs)
+        # target_theta = (lib.get_bearing(obs[0:2], self.nn_target) - obs[2]) / (2*max_angle)
+        # nn_obs = [target_theta, obs[3]/max_v, obs[4]/max_angle, d_ref/max_angle]
+        # nn_obs = np.array(nn_obs)
+
+        target_theta = (lib.get_bearing(obs[0:2], self.target))
+        target_phi = target_theta - obs[2]
+        target_phi = lib.limit_theta(target_phi)
+        scaled_target_phi = target_phi / max_angle
+        nn_obs = [scaled_target_phi]
 
         nn_obs = np.concatenate([nn_obs, obs[5:]])
 
@@ -129,13 +135,13 @@ class PureRepDataGen:
         v_ref = 6
 
         th_target = lib.get_bearing(obs[0:2], target)
-        theta_dot = th_target - obs[2]
-        theta_dot = lib.limit_theta(theta_dot)
+        target_phi = th_target - obs[2]
+        target_phi = lib.limit_theta(target_phi)
 
         L = 0.33
-        delta_ref = np.arctan(theta_dot * L / (obs[3]+0.001))
+        delta_ref = np.arctan(target_phi * L / (obs[3]+0.001))
 
-        return v_ref, delta_ref
+        return v_ref, delta_ref, target_phi
 
     def control_system(self, obs, v_ref, d_ref):
         kp_a = 10
@@ -191,7 +197,8 @@ class SuperTrainRep(object):
         self.action_dim = action_dim
         self.agent_name = agent_name
 
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cpu')
         print(f"Device: {self.device}")
 
     def train(self, replay_buffer):
@@ -286,12 +293,13 @@ class SuperRepVehicle:
 
         return self.wpts
 
-
     def act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)
 
         nn_obs = self.get_nn_vals(obs)
-        d_ref_nn = self.agent.act(nn_obs)[0]
+        target_phi = self.agent.act(nn_obs)[0] * np.pi/2
+        L = 0.33
+        d_ref_nn = np.arctan(target_phi * L / max((obs[3],1)))
 
         a, d_dot = self.control_system(obs, v_ref, d_ref_nn)
 
@@ -303,10 +311,16 @@ class SuperRepVehicle:
         max_angle = np.pi/2
         max_v = 7.5
 
-        target_theta = (lib.get_bearing(obs[0:2], self.target) - obs[2]) / (2*max_angle)
-        nn_obs = [target_theta, obs[3]/max_v, obs[4]/max_angle, d_ref/max_angle]
-        nn_obs = np.array(nn_obs)
+        # target_theta = (lib.get_bearing(obs[0:2], self.target))
+        # nn_obs = [target_theta, obs[3]/max_v, obs[4]/max_angle, d_ref/max_angle]
+        # nn_obs = np.array(nn_obs)
+        target_theta = (lib.get_bearing(obs[0:2], self.target))
+        target_phi = target_theta - obs[2]
+        target_phi = lib.limit_theta(target_phi)
 
+        scaled_target_phi = target_phi / max_angle
+        nn_obs = [scaled_target_phi]
+        
         nn_obs = np.concatenate([nn_obs, obs[5:]])
 
         return nn_obs
@@ -317,11 +331,11 @@ class SuperRepVehicle:
         v_ref = 7.5
 
         th_target = lib.get_bearing(obs[0:2], self.target)
-        theta_dot = th_target - obs[2]
-        theta_dot = lib.limit_theta(theta_dot)
+        target_phi = th_target - obs[2]
+        target_phi = lib.limit_theta(target_phi)
 
         L = 0.33
-        delta_ref = np.arctan(theta_dot * L / max(((obs[3], 1))))
+        delta_ref = np.arctan(target_phi * L / max(((obs[3], 1))))
 
         return v_ref, delta_ref
 
