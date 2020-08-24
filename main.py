@@ -72,7 +72,7 @@ def single_evaluation_vehicle(vehicle):
     print(f"Score: {score}")
 
 
-"""Training functions: PURE MODE"""
+"""Training functions: PURE MOD"""
 def collect_willem_mod_observations(buffer, agent_name, n_itterations=5000):
     env_map = EnvironmentMap('TrainTrackEmpty')
 
@@ -111,7 +111,7 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
     wpts = vehicle.init_straight_plan()
     for n in range(1000):
         a = vehicle.act(state)
-        s_prime, r, done, _ = env.step(a, 10)
+        s_prime, r, done, _ = env.step(a, 20)
         # vehicle.add_memory_entry(r, done, s_prime, buffer)
         
         score += r
@@ -217,7 +217,7 @@ def create_buffer(load=True, n_steps=1000):
 def TrainRepAgent(agent_name, load):
     buffer = create_buffer(True)
     # buffer = create_buffer(False)
-# 
+
     agent = SuperTrainRep(11, 1, agent_name)
     agent.try_load(load)
 
@@ -311,8 +311,8 @@ def SuperRep():
 
 if __name__ == "__main__":
     # simulation_test()
-    # WillemsMod()
-    SuperRep()
+    WillemsMod()
+    # SuperRep()
 
 
 

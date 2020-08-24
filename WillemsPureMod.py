@@ -201,8 +201,11 @@ class WillemsVehicle:
 
         self.wpts = []
         for i in range(n_pts):
-            pt = lib.add_locations(start, [ddx, ddy], i)
-            self.wpts.append(pt)
+            wpt = lib.add_locations(start, [ddx, ddy], i)
+            if not self.env_map.race_course._check_location(wpt):
+                self.wpts.append(wpt)
+            else:
+                pass
 
         self.pind = 1
 
@@ -307,8 +310,8 @@ class WillemsVehicle:
 
     def _set_target(self, obs):
         dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-        shift_distance = 5
-        if dis_cur_target < shift_distance and self.pind < len(self.wpts)-2: # how close to say you were there
+        shift_distance = 10
+        if dis_cur_target < shift_distance and self.pind < len(self.wpts)-1: # how close to say you were there
             self.pind += 1
         
         self.target = self.wpts[self.pind]
