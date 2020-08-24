@@ -149,7 +149,17 @@ class EnvironmentMap:
             self.end = lib.get_rands(90, 5)
             # self.end = lib.get_rands(80, 10)
 
+    def random_obstacles(self):
+        self.race_course.race_map = np.zeros((100, 100))
+        obs_size = [6, 8]
+        obs_locs = []
+        for i in range(5):
+            obs_locs.append(lib.get_rand_ints(40, 25))
+        self.add_obs(obs_locs, obs_size)
 
+    def set_start(self):
+        self.start = [50, 15]
+        self.end = [50, 85]
 
 class MapYamlEditor:
     def __init__(self, map_name='TestTrack1000'):

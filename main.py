@@ -109,6 +109,8 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
     print_n = 500
     rewards = []
 
+    env_map.set_start()
+    env_map.random_obstacles()
     done, state, score = False, env.reset(None), 0.0
     wpts = vehicle.init_straight_plan()
     for n in range(10000):
@@ -142,7 +144,9 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
             env.render_snapshot(wpts=wpts, wait=False)
             if r == -1:
                 pass
-            env_map.generate_random_start()
+            # env_map.generate_random_start()^
+            env_map.set_start()
+            env_map.random_obstacles() 
             state = env.reset()
             wpts = vehicle.init_straight_plan()
 
@@ -382,8 +386,8 @@ def TestRepAgentEmpty(agent_name):
 """Total functions"""
 def WillemsMod():
     agent_name = "TestingWillem"
-    # RunWillemModTraining(agent_name, 0, 50, True)
-    RunWillemModTraining(agent_name, 0, 50, False)
+    RunWillemModTraining(agent_name, 0, 50, True)
+    # RunWillemModTraining(agent_name, 0, 50, False)
 
     # run_decision_training()
 

@@ -258,6 +258,7 @@ class WillemsVehicle:
 
         self.dec_vals = []
         self.action_history = []
+        self._out_his = []
 
     def init_plan(self):
         fcn = self.env_map.obs_free_hm._check_line
@@ -310,6 +311,7 @@ class WillemsVehicle:
         
         self.dec_vals = []
         self.action_history = []
+        self.out_his = []
 
         return self.wpts
 
@@ -318,16 +320,17 @@ class WillemsVehicle:
 
         """This is where the agent can be removed if needed"""
         nn_obs = self.transform_obs(obs, v_ref, phi_ref)
-        dec_val = self.check_agent.model(torch.from_numpy(nn_obs).float())
-        dec_val = dec_val.detach().numpy()[0]
-        self.dec_vals.append(dec_val)
-        if dec_val < 0:
-            nn_action = self.agent.act(nn_obs)
-            self.action_history.append(nn_action)
-            v_ref, phi_ref = self.modify_references(nn_action, v_ref, phi_ref)
-            self.state_action = [nn_obs, nn_action]
-        else:
-            self.state_action = None
+        # dec_val = self.check_agent.model(torch.from_numpy(nn_obs).float())
+        # dec_val = dec_val.detach().numpy()[0]
+        # self.dec_vals.append(dec_val)
+        # if dec_val < 0:
+        nn_action = self.agent.act(nn_obs)
+        self.out_his.append(self.agent.last_out)
+        self.action_history.append(nn_action)
+        v_ref, phi_ref = self.modify_references(nn_action, v_ref, phi_ref)
+        self.state_action = [nn_obs, nn_action]
+        # else:
+        #     self.state_action = None
 
         a, d_dot = self.control_system(obs, v_ref, phi_ref)
 
@@ -344,7 +347,6 @@ class WillemsVehicle:
         a, d_dot = self.control_system(obs, v_ref, phi_ref)
 
         return [a, d_dot]
-
 
     def random_act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)
@@ -372,7 +374,7 @@ class WillemsVehicle:
 
             mem_entry = (self.state_action[0], self.state_action[1], new_reward, nn_s_prime, done_mask)
 
-            if new_reward == -1 or np.random.random() < 0.2: # save 20% of 1s
+            if new_reward != 0 or np.random.random() < 0.2: # save 20% of 1s
             # if new_reward != 1:
                 buffer.put(mem_entry)
 
@@ -385,16 +387,15 @@ class WillemsVehicle:
 
         buffer.put(mem_entry)
 
-
     def update_reward(self, reward, action):
-        beta = 0.01
+        beta = 0.001
         d_action = abs(action[0] - self.center_act)
         if reward == -1:
             new_reward = -1
         elif d_action == 0:
             new_reward = 0
         else:
-            new_reward = 0 #- d_action * beta
+            new_reward = 0 - d_action * beta
 
         return new_reward
 

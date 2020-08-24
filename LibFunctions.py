@@ -54,7 +54,7 @@ def get_bearing(x1=[0, 0], x2=[0, 0]):
     dx = x2[0] - x1[0]
     th_start_end = np.arctan(grad)
     if th_start_end > 0:
-        if dx > 0:
+        if dx >= 0:
             th_start_end = np.pi / 2 - th_start_end
         else:
             th_start_end = -np.pi/2 - th_start_end
@@ -74,6 +74,10 @@ def theta_to_xy(theta):
 
 def get_rands(a=100, b=0):
     r = [np.random.random() * a + b, np.random.random() * a + b]
+    return r
+
+def get_rand_ints(a=100, b=0):
+    r = [int(np.random.random() * a + b), int(np.random.random() * a + b)]
     return r
 
 def limit_theta(theta):

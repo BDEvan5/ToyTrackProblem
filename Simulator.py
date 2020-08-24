@@ -146,8 +146,8 @@ class F110Env:
             self.car.y = self.env_map.start[1]
             self.car.velocity = 0
             self.car.steering = 0
-            th = lib.get_bearing(self.env_map.start, self.env_map.end) + np.random.random() - 0.5
-            self.car.theta = th
+            th = lib.get_bearing(self.env_map.start, self.env_map.end) 
+            self.car.theta = th + np.random.random() - 0.5
 
         
         return self.get_state_obs()
