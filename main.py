@@ -10,7 +10,7 @@ from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper
 import LibFunctions as lib
 
 from OptimalAgent import OptimalAgent
-from WillemsPureMod import WillemsVehicle, TrainWillemModDQN
+from WillemsPureMod import WillemsVehicle, TrainWillemModDQN, TrainWillemDecideDQN
 from MyPureRep import PureRepDataGen, SuperTrainRep, SuperRepVehicle
 
 
@@ -206,6 +206,119 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
 
         # lib.plot(total_rewards, figure_n=3)
 
+def collect_willem_dec_observations(buffer, agent_name, n_itterations=5000):
+    env_map = EnvironmentMap('TrainTrackEmpty')
+
+    env = F110Env(env_map)
+    vehicle = WillemsVehicle(env_map, agent_name, env.obs_space, 5, False)
+
+    done, state, score = False, env.reset(None), 0.0
+    wpts = vehicle.init_straight_plan()
+    for n in range(n_itterations):
+        a = vehicle.no_mod_act(state)
+        s_prime, r, done, _ = env.step(a, 50)
+        vehicle.add_decision_entry(r, done, s_prime, buffer)
+        
+        state = s_prime
+        
+        if done:
+            # env.render_snapshot(wpts=wpts)
+            env_map.generate_random_start()
+            state = env.reset()
+            wpts = vehicle.init_straight_plan()
+
+        print("\rPopulating Buffer {}/{}.".format(n, n_itterations), end="")
+        sys.stdout.flush()
+    print(" ")
+
+def run_decision_training():
+    buffer = ReplayBufferDQN()
+
+    collect_willem_dec_observations(buffer, 'Decisions', 2000)
+
+    agent = TrainWillemDecideDQN(11, 'Decisions')
+    agent.try_load(True)
+
+    total_loss = []
+    interval = 1000
+    for i in range(10000):
+        l = agent.train_episodes(buffer)
+
+        if i % interval == 0:
+            print(f"Loss: {l}")
+            agent.save()
+    agent.save()
+
+
+
+def TrainWillemDecAgentEps(agent_name, buffer, i=0, load=True):
+    env_map = EnvironmentMap('TrainTrackSmall')
+
+    env = F110Env(env_map)
+    vehicle = WillemsVehicle(env_map, agent_name, 11, 5, load)
+    
+    print_n = 500
+    rewards = []
+
+    done, state, score = False, env.reset(None), 0.0
+    wpts = vehicle.init_straight_plan()
+    for n in range(10000):
+        a = vehicle.act(state)
+        s_prime, r, done, _ = env.step(a, 20)
+
+        vehicle.add_memory_entry(r, done, s_prime, buffer)
+        
+        score += r
+        vehicle.agent.train_episodes(buffer)
+        # vehicle.agent.train_modification(buffer)
+
+        # env.render(False, wpts)
+        state = s_prime
+
+        if n % print_n == 0 and n > 0:
+            rewards.append(score)
+            exp = vehicle.agent.model.exploration_rate
+            mean = np.mean(rewards)
+            b = buffer.size()
+            print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
+            score = 0
+            lib.plot(rewards, figure_n=2)
+
+            vehicle.agent.save()
+        
+        if done:
+            print(f"Out: {vehicle.agent.last_out}")
+            env.render_snapshot(wpts=wpts, wait=True)
+            env_map.generate_random_start()
+            state = env.reset()
+            wpts = vehicle.init_straight_plan()
+
+    vehicle.agent.save()
+
+    return rewards
+
+
+def RunWillemDecTraining(agent_name, start=0, n_runs=5, create=False):
+    buffer = ReplayBufferDQN()
+    total_rewards = []
+
+    if create:
+        # collect_willem_mod_observations(buffer, agent_name, 1000)
+        rewards = TrainWillemDecAgentEps(agent_name, buffer, 0, False)
+        total_rewards += rewards
+        # lib.plot(total_rewards, figure_n=3)
+
+
+    for i in range(start, start + n_runs):
+        print(f"Running batch: {i}")
+        rewards = TrainWillemDecAgentEps(agent_name, buffer, i, True)
+        total_rewards += rewards
+
+        # lib.plot(total_rewards, figure_n=3)
+
+
+
+
 """Training functions: PURE REP"""
 def generate_data_buffer(b_length=10000):
     env_map = EnvironmentMap('TrainTrackEmpty')
@@ -333,7 +446,9 @@ def TestRepAgentEmpty(agent_name):
 def WillemsMod():
     agent_name = "TestingWillem"
     # RunWillemModTraining(agent_name, 0, 50, True)
-    RunWillemModTraining(agent_name, 0, 50, False)
+    # RunWillemModTraining(agent_name, 0, 50, False)
+
+    run_decision_training()
 
     # env_map = EnvironmentMap('TestTrack1000')
 
