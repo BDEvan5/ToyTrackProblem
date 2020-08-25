@@ -291,6 +291,77 @@ def TrainRepAgent(agent_name, load):
 
     agent.save()
 
+def run_ep(vehicle, env, buffer):
+    env.env_map.generate_random_start()
+    wpts = vehicle.init_agent()
+    done, state, score = False, env.reset(None), 0.0
+    while not done:
+        action = vehicle.opti_act(state)
+        vehicle.add_mem_step(buffer, state)
+        s_p, r, done, _ = env.step(action, updates=20)
+
+        state = s_p
+    
+    vehicle.show_history()
+    env.render_snapshot(wpts=wpts)
+    if r == -1:
+        print(f"The vehicle has crashed: check this out")
+        # plt.show()
+    print(f"Ep done in {env.steps} steps --> B Number: {buffer.ptr}")
+
+def test_rep(vehicle):
+    store_map = vehicle.env_map
+    env_map = EnvironmentMap('TrainTrackEmpty')
+
+    env = F110Env(env_map)
+    vehicle.env_map = env_map
+
+    env_map.generate_random_start()
+    wpts = vehicle.init_agent()
+    done, state, score = False, env.reset(None), 0.0
+    while not done:
+        action = vehicle.act(state)
+        s_p, r, done, _ = env.step(action, updates=20)
+        state = s_p
+        # env.render(False, wpts)
+
+    vehicle.show_history()
+    env.render_snapshot(wpts=wpts)
+    if r == -1:
+        print(f"The vehicle has crashed: check this out")
+        # plt.show()
+    print(f"Ep done in {env.steps} steps ")
+
+    vehicle.env_map = store_map
+
+
+def RunRepTrain(agent_name, load):
+    env_map = EnvironmentMap('TrainTrackEmpty')
+    env = F110Env(env_map)
+    vehicle = SuperRepVehicle(env_map, agent_name, False)
+
+    buffer = ReplayBufferSuper()
+
+    for i in range(10):
+        run_ep(vehicle, env, buffer)
+
+        vehicle.agent.train(buffer)
+    vehicle.agent.save()
+
+    score, losses = 0, []
+    for n in range(10000):
+        l = vehicle.agent.train(buffer)
+        score += l 
+
+        if n % 100 == 1:
+            losses.append(score)
+            vehicle.agent.save()
+            print(f"Loss: {score}")
+            score = 0
+
+            test_rep(vehicle)
+
+
 def GenerateAndTrainRep(agent_name, load=False):
 
     env_map = EnvironmentMap('TrainTrackEmpty')
@@ -304,7 +375,7 @@ def GenerateAndTrainRep(agent_name, load=False):
     done, state, score = False, env.reset(None), 0.0
     losses = []
     # env.render(True, wpts)
-    for n in range(100000):
+    for n in range(1000):
         action = vehicle.opti_act(state)
         vehicle.add_mem_step(buffer, state)
         s_p, r, done, _ = env.step(action, updates=20)
@@ -335,6 +406,18 @@ def GenerateAndTrainRep(agent_name, load=False):
             lib.plot(losses, title="Loss", figure_n=2)
             score = 0
             # TestRepAgentEmpty(agent_name)
+
+    for n in range(10000):
+        l = vehicle.agent.train(buffer)
+        score += l 
+
+        if n % 100 == 1:
+            losses.append(score)
+            vehicle.agent.save()
+            lib.plot(losses, title="Loss", figure_n=2)
+            score = 0
+
+            
 
 
 
@@ -407,8 +490,8 @@ def SuperRep():
     # TrainRepAgent(agent_name, False)
     # TrainRepAgent(agent_name, True)
 
-    GenerateAndTrainRep(agent_name, False)
-
+    # GenerateAndTrainRep(agent_name, False)
+    RunRepTrain(agent_name, False)
 
 
 

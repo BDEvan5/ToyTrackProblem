@@ -28,12 +28,12 @@ class Actor(nn.Module):
         super(Actor, self).__init__()
 
         self.l1 = nn.Linear(state_dim, 512)
-        self.l2 = nn.Linear(512, 512)
-        self.l3 = nn.Linear(512, 300)
-        self.l4 = nn.Linear(300, action_dim)
+        self.l2 = nn.Linear(512, 300)
+        self.l3 = nn.Linear(300, 100)
+        self.l4 = nn.Linear(100, action_dim)
 
         self.max_action = max_action
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
 
     def forward(self, x):
         x = F.relu(self.l1(x))
@@ -41,7 +41,6 @@ class Actor(nn.Module):
         z = F.relu(self.l3(y))
         w = self.l4(z)
         a = self.max_action * torch.tanh(w) 
-        # a = torch.clamp(w, -1, 1)
 
         return a
 
@@ -58,20 +57,22 @@ class SuperTrainRep(object):
         print(f"Device: {self.device}")
 
     def train(self, replay_buffer, iters=5):
-        for i in range(iters):
-            s, a_r = replay_buffer.sample(BATCH_SIZE)
-            states = torch.FloatTensor(s).to(self.device)
-            right_actions = torch.FloatTensor(a_r).to(self.device)
+        if len(replay_buffer.storage) > BATCH_SIZE:
+            for i in range(iters):
+                s, a_r = replay_buffer.sample(BATCH_SIZE)
+                states = torch.FloatTensor(s).to(self.device)
+                right_actions = torch.FloatTensor(a_r).to(self.device)
 
-            actions = self.model(states)
+                actions = self.model(states)
 
-            actor_loss = F.mse_loss(actions, right_actions)
+                actor_loss = F.mse_loss(actions, right_actions)
 
-            self.model.optimizer.zero_grad()
-            actor_loss.backward()
-            self.model.optimizer.step()
+                self.model.optimizer.zero_grad()
+                actor_loss.backward()
+                self.model.optimizer.step()
 
-        return actor_loss.detach().item()
+            return actor_loss.detach().item()
+        return 0
 
     def save(self, directory='./td3_saves'):
         torch.save(self.model, '%s/%s_model.pth' % (directory, self.agent_name))
@@ -79,9 +80,11 @@ class SuperTrainRep(object):
 
     def load(self, directory='./td3_saves'):
         self.model = torch.load('%s/%s_model.pth' % (directory, self.agent_name))
+        print(f"The agent has loaded: {self.agent_name}")
 
     def create_agent(self):
         self.model = Actor(self.state_dim, self.action_dim, 1)
+        print(f"Agent created: {self.state_dim}, {self.action_dim}")
 
     def try_load(self, load=True):
         if load:
@@ -212,7 +215,7 @@ class SuperRepVehicle:
         v_ref, target_phi = self.get_target_references(obs, self.target)
         self.target_phi_history.append(target_phi/ np.pi *2)
 
-        nn_phi = nn_act * np.pi
+        nn_phi = nn_act * np.pi/2
 
         a, d_dot = self.control_system(obs, v_ref, nn_phi)
 
@@ -235,7 +238,7 @@ class SuperRepVehicle:
         plt.pause(0.001)
 
     def get_nn_vals(self, obs):
-        v_ref, target_phi_straight = self.get_target_references(obs, self.nn_target)
+        v_ref, target_phi_straight = self.get_target_references(obs, self.env_map.end)
 
         max_angle = np.pi
 
@@ -249,7 +252,8 @@ class SuperRepVehicle:
     def add_mem_step(self, buffer, obs):
         nn_state = self.get_nn_vals(obs)
         v, target_phi = self.get_target_references(obs, self.target)
-        buffer.add((nn_state, [target_phi/np.pi]))
+        data = (nn_state, [target_phi/np.pi*2])
+        buffer.add(data)
 
     def get_target_references(self, obs, target):
         v_ref = 6
