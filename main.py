@@ -11,7 +11,7 @@ import LibFunctions as lib
 
 from OptimalAgent import OptimalAgent
 from WillemsPureMod import WillemsVehicle, TrainWillemModDQN
-from MyPureRep import PureRepDataGen, SuperTrainRep, SuperRepVehicle
+from MyPureRep import SuperTrainRep, SuperRepVehicle
 
 
 def simulation_test():
@@ -192,8 +192,6 @@ def view_nn(wait=True):
         
 
 
-
-
 def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
     buffer = ReplayBufferDQN()
     total_rewards = []
@@ -212,51 +210,6 @@ def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
 
         # lib.plot(total_rewards, figure_n=3)
 
-def collect_willem_dec_observations(buffer, agent_name, n_itterations=5000):
-    env_map = EnvironmentMap('TrainTrackEmpty')
-
-    env = F110Env(env_map)
-    vehicle = WillemsVehicle(env_map, agent_name, env.obs_space, 5, False)
-
-    done, state, score = False, env.reset(None), 0.0
-    wpts = vehicle.init_straight_plan()
-    for n in range(n_itterations):
-        a = vehicle.no_mod_act(state)
-        s_prime, r, done, _ = env.step(a, 50)
-        vehicle.add_decision_entry(r, done, s_prime, buffer)
-        
-        state = s_prime
-        
-        if done:
-            # env.render_snapshot(wpts=wpts)
-            env_map.generate_random_start()
-            state = env.reset()
-            wpts = vehicle.init_straight_plan()
-
-        print("\rPopulating Buffer {}/{}.".format(n, n_itterations), end="")
-        sys.stdout.flush()
-    print(" ")
-
-def run_decision_training():
-    buffer = ReplayBufferDQN()
-
-    collect_willem_dec_observations(buffer, 'Decisions', 2000)
-
-    agent = TrainWillemDecideDQN(11, 'Decisions')
-    agent.try_load(True)
-
-    total_loss = []
-    interval = 1000
-    for i in range(10000):
-        l = agent.train_episodes(buffer)
-
-        if i % interval == 0:
-            print(f"Loss: {l}")
-            agent.save()
-    agent.save()
-
-
-
 
 
 """Training functions: PURE REP"""
@@ -264,7 +217,7 @@ def generate_data_buffer(b_length=10000):
     env_map = EnvironmentMap('TrainTrackEmpty')
 
     env = F110Env(env_map)
-    vehicle = PureRepDataGen(env_map)
+    vehicle = SuperRepVehicle(env_map)
 
     buffer = ReplayBufferSuper()
 
@@ -273,11 +226,9 @@ def generate_data_buffer(b_length=10000):
     done, state, score = False, env.reset(None), 0.0
     # env.render(True, wpts)
     for n in range(b_length):
-        action, nn_action = vehicle.act(state)
+        action = vehicle.opti_act(state)
+        vehicle.add_mem_step(buffer, state)
         s_p, r, done, _ = env.step(action, updates=20)
-
-        nn_state = vehicle.get_nn_vals(state)
-        buffer.add((nn_state, [nn_action]))
 
         state = s_p
 
@@ -289,11 +240,11 @@ def generate_data_buffer(b_length=10000):
                 print(f"The vehicle has crashed: check this out")
                 plt.show()
 
+            print(f"Ep done in {env.steps} steps --> B Number: {n}")
             env_map.generate_random_start()
             wpts = vehicle.init_agent()
             state = env.reset()
 
-            print(f"Ep done in {env.steps} steps --> B Number: {n}")
 
     return buffer
 
@@ -314,8 +265,8 @@ def create_buffer(load=True, n_steps=1000):
     return buffer
 
 def TrainRepAgent(agent_name, load):
-    buffer = create_buffer(True)
-    # buffer = create_buffer(False)
+    # buffer = create_buffer(True)
+    buffer = create_buffer(False)
 
     agent = SuperTrainRep(11, 1, agent_name)
     agent.try_load(load)
@@ -340,12 +291,58 @@ def TrainRepAgent(agent_name, load):
 
     agent.save()
 
+def GenerateAndTrainRep(agent_name, load=False):
+
+    env_map = EnvironmentMap('TrainTrackEmpty')
+    env = F110Env(env_map)
+    vehicle = SuperRepVehicle(env_map, agent_name, False)
+
+    buffer = ReplayBufferSuper()
+
+    env_map.generate_random_start()
+    wpts = vehicle.init_agent()
+    done, state, score = False, env.reset(None), 0.0
+    losses = []
+    # env.render(True, wpts)
+    for n in range(100000):
+        action = vehicle.opti_act(state)
+        vehicle.add_mem_step(buffer, state)
+        s_p, r, done, _ = env.step(action, updates=20)
+
+        l = vehicle.agent.train(buffer)
+        score += l
+        # losses.append(l)
+
+        state = s_p
+
+        if done:
+            vehicle.show_history()
+            env.render_snapshot(wpts=wpts)
+            if r == -1:
+                print(f"The vehicle has crashed: check this out")
+                # plt.show()
+            print(f"Ep done in {env.steps} steps --> B Number: {n}")
+
+            env_map.generate_random_start()
+            wpts = vehicle.init_agent()
+            state = env.reset()
+
+            # vehicle.agent.save()
+
+        if n % 100 == 1:
+            losses.append(score)
+            vehicle.agent.save()
+            lib.plot(losses, title="Loss", figure_n=2)
+            score = 0
+            # TestRepAgentEmpty(agent_name)
+
+
 
 def TestRepAgentTest(agent_name):
     env_map = EnvironmentMap('TestTrack1000')
 
     env = F110Env(env_map)
-    vehicle = SuperRepVehicle(env_map, agent_name, env.obs_space, 1, True)
+    vehicle = SuperRepVehicle(env_map, agent_name)
     
     wpts = vehicle.init_agent()
     done, state, score = False, env.reset(None), 0.0
@@ -357,7 +354,7 @@ def TestRepAgentTest(agent_name):
         state = s_p
         env.render(False, wpts)
 
-    env.render_snapshot(wpts=wpts, wait=False)
+    env.render_snapshot(wpts=wpts, wait=True)
     if r == -1:
         print(f"The vehicle has crashed: check this out")
 
@@ -365,19 +362,21 @@ def TestRepAgentEmpty(agent_name):
     env_map = EnvironmentMap('TrainTrackEmpty')
 
     env = F110Env(env_map)
-    vehicle = SuperRepVehicle(env_map, agent_name, env.obs_space, 1, True)
+    vehicle = SuperRepVehicle(env_map, agent_name, True)
     
     env_map.generate_random_start()
     wpts = vehicle.init_agent()
+    # wpts = vehicle.init_straight_plan()
     done, state, score = False, env.reset(None), 0.0
     # env.render(True, wpts)
     while not done:
         action = vehicle.act(state)
         s_p, r, done, _ = env.step(action, updates=20)
         state = s_p
-        env.render(False, wpts)
+        # env.render(False, wpts)
 
-    env.render_snapshot(wpts=wpts, wait=False)
+    vehicle.show_history()
+    env.render_snapshot(wpts=wpts, wait=True)
     if r == -1:
         print(f"The vehicle has crashed: check this out")
 
@@ -401,19 +400,22 @@ def SuperRep():
     agent_name = "TestingRep"
 
     for i in range(10):
-        TestRepAgentTest(agent_name)
+        pass
+        # TestRepAgentTest(agent_name)
         # TestRepAgentEmpty(agent_name)
 
     # TrainRepAgent(agent_name, False)
     # TrainRepAgent(agent_name, True)
+
+    GenerateAndTrainRep(agent_name, False)
 
 
 
 
 if __name__ == "__main__":
     # simulation_test()
-    WillemsMod()
-    # SuperRep()
+    # WillemsMod()
+    SuperRep()
 
     # view_nn()
 

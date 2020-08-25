@@ -113,7 +113,7 @@ class F110Env:
         self.obs_space = len(self.get_state_obs())
 
     def step(self, action, updates=10):
-        self.steps +=1
+        self.steps += 1
         self.action = action
         acceleration = action[0]
         steer_dot = action[1]
