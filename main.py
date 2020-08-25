@@ -385,8 +385,8 @@ def TestRepAgentEmpty(agent_name):
 """Total functions"""
 def WillemsMod():
     agent_name = "TestingWillem"
-    RunWillemModTraining(agent_name, 0, 50, True)
-    # RunWillemModTraining(agent_name, 0, 50, False)
+    # RunWillemModTraining(agent_name, 0, 50, True)
+    RunWillemModTraining(agent_name, 0, 50, False)
 
     # run_decision_training()
 
