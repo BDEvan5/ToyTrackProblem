@@ -1,5 +1,6 @@
 import numpy as np 
 import random
+from matplotlib import pyplot as plt
 
 import torch
 import torch.nn as nn
@@ -157,6 +158,8 @@ class WillemsVehicle:
         self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
         self.pind = 1
         self.target = None
+        self.steps = 0
+        self.slow_freq = 10
 
         self.obs_space = obs_space
         self.action_space = action_space
@@ -165,7 +168,7 @@ class WillemsVehicle:
 
         self.agent.try_load(load)
         self.state_action = None
-        self.state_value = None
+        self.cur_nn_act = None
 
         self.mod_history = []
         self.out_his = []
@@ -226,13 +229,18 @@ class WillemsVehicle:
         v_ref, phi_ref = self.get_target_references(obs)
 
         """This is where the agent can be removed if needed"""
-        nn_obs = self.transform_obs(obs, v_ref, phi_ref)
+        
+        if self.steps % self.slow_freq == 0:
+            nn_obs = self.transform_obs(obs, v_ref, phi_ref)
 
-        nn_action = self.agent.act(nn_obs)
-        self.out_his.append(self.agent.get_out(nn_obs))
-        self.mod_history.append(nn_action)
-        v_ref, phi_ref = self.modify_references(nn_action, v_ref, phi_ref)
-        self.state_action = [nn_obs, nn_action]
+            nn_action = self.agent.act(nn_obs)
+            self.cur_nn_act = nn_action
+            self.out_his.append(self.agent.get_out(nn_obs))
+            self.mod_history.append(nn_action)
+            self.state_action = [nn_obs, nn_action]
+
+        self.steps += 1
+        v_ref, phi_ref = self.modify_references(self.cur_nn_act, v_ref, phi_ref)
 
         a, d_dot = self.control_system(obs, v_ref, phi_ref)
 
@@ -243,9 +251,13 @@ class WillemsVehicle:
         # lib.plot_no_avg(self.reward_history, figure_n=2, title="Reward history")
         lib.plot_multi(self.out_his, "Outputs", figure_n=3)
 
+        plt.figure(3)
+        plt.plot(self.reward_history)
+
         self.mod_history.clear()
         self.out_his.clear()
         self.reward_history.clear()
+        self.steps = 0
         
 
     def no_mod_act(self, obs):
@@ -277,7 +289,7 @@ class WillemsVehicle:
         return [a, d_dot]
 
     def add_memory_entry(self, reward, done, s_prime, buffer):
-        if self.state_action is not None:
+        if reward !=0 or self.steps % self.slow_freq == 0:
             new_reward = self.update_reward(reward, self.state_action[1])
 
             v_ref, d_ref = self.get_target_references(s_prime)
@@ -295,6 +307,8 @@ class WillemsVehicle:
         d_action = abs(action[0] - self.center_act)
         if reward == -1:
             new_reward = -1
+        elif reward == 1:
+            new_reward = 1
         elif d_action == 0:
             new_reward = 0
         else:

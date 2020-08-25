@@ -168,7 +168,7 @@ def get_moving_average(period, values):
         # else already zero
     return moving_avg
 
-def plot_multi(value_array, title="Results", figure_n=2):
+def plot_multi(value_array, title="Results", figure_n=2, ylim=[-1, 1]):
     plt.figure(figure_n)
     plt.clf()        
     plt.title(title)
@@ -176,6 +176,8 @@ def plot_multi(value_array, title="Results", figure_n=2):
     plt.ylabel('Duration')
 
     value_array = np.array(value_array)
+
+    plt.ylim(ylim)
 
     n_sets = len(value_array[0])
     leg = []

@@ -1,6 +1,6 @@
 end:
 - 50
-- 90
+- 75
 height: 100
 map_name: TrainTrackEmpty
 obs_size:
@@ -9,7 +9,7 @@ obs_size:
 obstacles:
   0:
   - 46
-  - 50
+  - 40
   # 1:
   # - 25
   # - 45
