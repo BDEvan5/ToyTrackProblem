@@ -101,16 +101,16 @@ def collect_willem_mod_observations(buffer, agent_name, n_itterations=5000):
     print(" ")
 
 def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
-    env_map = EnvironmentMap('TrainTrackSmall')
+    env_map = EnvironmentMap('TrainTrackFixed')
 
     env = F110Env(env_map)
-    vehicle = WillemsVehicle(env_map, agent_name, 11, 5, load)
+    vehicle = WillemsVehicle(env_map, agent_name, 11, 3, load)
     
     print_n = 500
     rewards = []
 
-    env_map.set_start()
-    env_map.random_obstacles()
+    # env_map.set_start()
+    # env_map.random_obstacles()
     done, state, score = False, env.reset(None), 0.0
     wpts = vehicle.init_straight_plan()
     for n in range(10000):

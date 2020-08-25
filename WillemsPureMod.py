@@ -415,7 +415,7 @@ class WillemsVehicle:
         return nn_obs
 
     def modify_references(self, nn_action, v_ref, phi_ref):
-        d_phi = 0.4 # rad
+        d_phi = 0.7 # rad
         phi_new = phi_ref + (nn_action[0] - self.center_act) * d_phi
 
         v_ref_mod = v_ref
