@@ -139,14 +139,12 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
             vehicle.agent.save()
         
         if done:
-            # print(f"Out: {vehicle.agent.last_out}")
-            # print(f"Dec: {vehicle.dec_vals}")
             env.render_snapshot(wpts=wpts, wait=False)
             if r == -1:
                 pass
             # env_map.generate_random_start()^
-            env_map.set_start()
-            env_map.random_obstacles() 
+            # env_map.set_start()
+            # env_map.random_obstacles() 
             state = env.reset()
             wpts = vehicle.init_straight_plan()
 

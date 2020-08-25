@@ -39,25 +39,6 @@ class Qnet(nn.Module):
         return x
       
 
-class Vnet(nn.Module):
-    def __init__(self, obs_space):
-        super(Vnet, self).__init__()
-        
-        self.fc1 = nn.Linear(obs_space, h_size)
-        self.fc2 = nn.Linear(h_size, h_size)
-        self.fc3 = nn.Linear(h_size, 1)
-
-        self.optimizer = optim.Adam(self.parameters(), lr=LEARNING_RATE)
-        self.exploration_rate = EXPLORATION_MAX
-
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-      
-
-
 class TrainWillemModDQN:
     def __init__(self, obs_space, action_space, name):
         self.action_space = action_space
@@ -162,79 +143,6 @@ class TrainWillemModDQN:
         print(f"Created new model")
 
 
-class TrainWillemDecideDQN:
-    def __init__(self, obs_space, name):
-        self.obs_space = obs_space
-        self.name = name
-
-        self.model = None
-        self.target = None
-
-        self.update_steps = 0
-
-    def decide(self, obs):
-        v = self.model.forward(obs)
-        return v
-
-    def train_episodes(self, buffer):
-        n_train = 1
-        for i in range(n_train):
-            if buffer.size() < BATCH_SIZE:
-                return
-            s, v, r, s_p, done = buffer.memory_sample(BATCH_SIZE)
-
-            next_values = self.target.forward(s_p)
-
-            g = torch.ones_like(done) * GAMMA
-            q_update = r + g * next_values * done
-            q_vals = self.model.forward(s)
-
-            loss = F.mse_loss(q_vals, q_update.detach())
-
-            self.model.optimizer.zero_grad()
-            loss.backward()
-            self.model.optimizer.step()
-
-        self.update_networks()
-
-        return loss.detach().numpy()
-
-    def update_networks(self):
-        self.update_steps += 1
-        if self.update_steps % 100 == 1: # every 20 eps or so
-            self.target.load_state_dict(self.model.state_dict())
-        if self.update_steps % 12 == 1:
-            self.model.exploration_rate *= EXPLORATION_DECAY 
-            self.model.exploration_rate = max(EXPLORATION_MIN, self.model.exploration_rate)
-
-    def save(self, directory="./dqn_saves"):
-        filename = self.name
-        torch.save(self.model, '%s/%s_model.pth' % (directory, filename))
-        torch.save(self.target, '%s/%s_target.pth' % (directory, filename))
-        print(f"Saved Agent: {self.name}")
-
-    def load(self, directory="./dqn_saves"):
-        filename = self.name
-        self.model = torch.load('%s/%s_model.pth' % (directory, filename))
-        self.target = torch.load('%s/%s_target.pth' % (directory, filename))
-        print(f"Loaded Agent: {self.name}")
-
-    def try_load(self, load=True):
-        if load:
-            try:
-                self.load()
-            except:
-                print(f"Unable to load model")
-                self.create_model()
-        else:
-            self.create_model()
-
-    def create_model(self):
-        self.model = Vnet(self.obs_space)
-        self.target = Vnet(self.obs_space)
-        print(f"Created new model")
-
-
 class WillemsVehicle:
     def __init__(self, env_map, name, obs_space, action_space, load=True):
         self.env_map = env_map
@@ -320,17 +228,12 @@ class WillemsVehicle:
 
         """This is where the agent can be removed if needed"""
         nn_obs = self.transform_obs(obs, v_ref, phi_ref)
-        # dec_val = self.check_agent.model(torch.from_numpy(nn_obs).float())
-        # dec_val = dec_val.detach().numpy()[0]
-        # self.dec_vals.append(dec_val)
-        # if dec_val < 0:
+
         nn_action = self.agent.act(nn_obs)
         self.out_his.append(self.agent.last_out)
         self.action_history.append(nn_action)
         v_ref, phi_ref = self.modify_references(nn_action, v_ref, phi_ref)
         self.state_action = [nn_obs, nn_action]
-        # else:
-        #     self.state_action = None
 
         a, d_dot = self.control_system(obs, v_ref, phi_ref)
 
@@ -378,15 +281,6 @@ class WillemsVehicle:
             # if new_reward != 1:
                 buffer.put(mem_entry)
 
-    def add_decision_entry(self, reward, done, s_prime, buffer):
-        v_ref, phi_ref = self.get_target_references(s_prime)
-        nn_s_prime = self.transform_obs(s_prime, phi_ref=phi_ref)
-        done_mask = 0.0 if done else 1.0
-
-        mem_entry = (self.state_value[0], self.state_value[1], reward, nn_s_prime, done_mask)
-
-        buffer.put(mem_entry)
-
     def update_reward(self, reward, action):
         beta = 0.001
         d_action = abs(action[0] - self.center_act)
@@ -402,10 +296,6 @@ class WillemsVehicle:
     def transform_obs(self, obs, v_ref=None, phi_ref=None):
         max_angle = np.pi/2
         max_v = 7.5
-
-        # target_theta = (lib.get_bearing(obs[0:2], self.target) - obs[2]) / (2*max_angle)
-        # nn_obs = [target_theta, obs[3]/max_v, obs[4]/max_angle, v_ref/max_v, d_ref/max_angle]
-        # nn_obs = np.array(nn_obs)
 
         scaled_target_phi = phi_ref / max_angle
         nn_obs = [scaled_target_phi]
