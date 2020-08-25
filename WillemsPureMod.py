@@ -303,12 +303,12 @@ class WillemsVehicle:
                 buffer.put(mem_entry)
 
     def update_reward(self, reward, action):
-        beta = 0.001
+        beta = 0.1
         d_action = abs(action[0] - self.center_act)
         if reward == -1:
             new_reward = -1
-        elif reward == 1:
-            new_reward = 1
+        # elif reward == 1:
+        #     new_reward = 1
         elif d_action == 0:
             new_reward = 0
         else:

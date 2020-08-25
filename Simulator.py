@@ -165,7 +165,7 @@ class F110Env:
         if self.race_map._check_location([self.car.x, self.car.y]):
             self.done = True
             self.reward = -1
-        if lib.get_distance([self.car.x, self.car.y], self.env_map.end) < 5:
+        if lib.get_distance([self.car.x, self.car.y], self.env_map.end) < 10:
             self.done = True
             self.reward = 1
         if self.steps > 100:

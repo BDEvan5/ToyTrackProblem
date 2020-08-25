@@ -121,8 +121,8 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
         vehicle.add_memory_entry(r, done, s_prime, buffer)
         
         score += r
-        vehicle.agent.train_episodes(buffer)
-        # vehicle.agent.train_modification(buffer)
+        # vehicle.agent.train_episodes(buffer)
+        vehicle.agent.train_modification(buffer)
 
         # env.render(False, wpts)
         state = s_prime
