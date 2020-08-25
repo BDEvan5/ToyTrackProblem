@@ -59,6 +59,12 @@ class TrainWillemModDQN:
             a = self.greedy_action(obs_t)
             return [a]
 
+    def get_out(self, obs):
+        obs_t = torch.from_numpy(obs).float()
+        out = self.model.forward(obs_t)
+
+        return out.detach().numpy()
+
     def greedy_action(self, obs):
         out = self.model.forward(obs)
         self.last_out = out
@@ -157,16 +163,13 @@ class WillemsVehicle:
         self.center_act = (self.action_space - 1) / 2
         self.agent = TrainWillemModDQN(obs_space, action_space, name)
 
-        self.check_agent = TrainWillemDecideDQN(11, 'Decisions')
-        self.check_agent.try_load(True)
-
         self.agent.try_load(load)
         self.state_action = None
         self.state_value = None
 
-        self.dec_vals = []
-        self.action_history = []
-        self._out_his = []
+        self.mod_history = []
+        self.out_his = []
+        self.reward_history = []
 
     def init_plan(self):
         fcn = self.env_map.obs_free_hm._check_line
@@ -216,10 +219,6 @@ class WillemsVehicle:
                 pass
 
         self.pind = 1
-        
-        self.dec_vals = []
-        self.action_history = []
-        self.out_his = []
 
         return self.wpts
 
@@ -230,14 +229,24 @@ class WillemsVehicle:
         nn_obs = self.transform_obs(obs, v_ref, phi_ref)
 
         nn_action = self.agent.act(nn_obs)
-        self.out_his.append(self.agent.last_out)
-        self.action_history.append(nn_action)
+        self.out_his.append(self.agent.get_out(nn_obs))
+        self.mod_history.append(nn_action)
         v_ref, phi_ref = self.modify_references(nn_action, v_ref, phi_ref)
         self.state_action = [nn_obs, nn_action]
 
         a, d_dot = self.control_system(obs, v_ref, phi_ref)
 
         return [a, d_dot]
+
+    def show_vehcile_history(self):
+        lib.plot_no_avg(self.mod_history, figure_n=1, title="Mod history")
+        # lib.plot_no_avg(self.reward_history, figure_n=2, title="Reward history")
+        lib.plot_multi(self.out_his, "Outputs", figure_n=3)
+
+        self.mod_history.clear()
+        self.out_his.clear()
+        self.reward_history.clear()
+        
 
     def no_mod_act(self, obs):
         v_ref, phi_ref = self.get_target_references(obs)
@@ -290,6 +299,8 @@ class WillemsVehicle:
             new_reward = 0
         else:
             new_reward = 0 - d_action * beta
+
+        self.reward_history.append(new_reward)
 
         return new_reward
 

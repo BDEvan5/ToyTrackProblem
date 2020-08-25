@@ -10,7 +10,7 @@ from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper
 import LibFunctions as lib
 
 from OptimalAgent import OptimalAgent
-from WillemsPureMod import WillemsVehicle, TrainWillemModDQN, TrainWillemDecideDQN
+from WillemsPureMod import WillemsVehicle, TrainWillemModDQN
 from MyPureRep import PureRepDataGen, SuperTrainRep, SuperRepVehicle
 
 
@@ -139,6 +139,7 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
             vehicle.agent.save()
         
         if done:
+            vehicle.show_vehcile_history()
             env.render_snapshot(wpts=wpts, wait=False)
             if r == -1:
                 pass

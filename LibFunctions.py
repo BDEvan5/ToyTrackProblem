@@ -102,8 +102,16 @@ def plot(values, moving_avg_period=10, title="Results", figure_n=2):
     moving_avg = get_moving_average(moving_avg_period * 5, values)
     plt.plot(moving_avg)    
     plt.pause(0.001)
-    # print("Episode", (len(values)), "\n", \
-    #     moving_avg_period, "episode moving avg:", moving_avg)
+
+def plot_no_avg(values, moving_avg_period=10, title="Results", figure_n=2):
+    plt.figure(figure_n)
+    plt.clf()        
+    plt.title(title)
+    plt.xlabel('Episode')
+    plt.ylabel('Duration')
+    plt.plot(values)
+
+    plt.pause(0.0001)
 
 def plot_comp(values1, values2,  moving_avg_period=10, title="Results", figure_n=2):
     plt.figure(figure_n)
@@ -159,6 +167,26 @@ def get_moving_average(period, values):
             moving_avg[i] = np.mean(values[i-period:i])
         # else already zero
     return moving_avg
+
+def plot_multi(value_array, title="Results", figure_n=2):
+    plt.figure(figure_n)
+    plt.clf()        
+    plt.title(title)
+    plt.xlabel('Episode')
+    plt.ylabel('Duration')
+
+    value_array = np.array(value_array)
+
+    n_sets = len(value_array[0])
+    leg = []
+    for i in range(n_sets):
+        plt.plot(value_array[:, i])
+        leg.append(f"{i}")
+    
+    plt.legend(leg)
+
+    # plt.plot(values)
+    plt.pause(0.0001)
 
 
 if __name__ == "__main__":
