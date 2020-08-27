@@ -229,8 +229,8 @@ class TrackGenerator(TrackMapBase):
             for y in range(3):
                 new_i = i + x - 1
                 new_j = j + y - 1
-                # self.map_data.track_map[new_i, new_j] = True
-                self.map_data.track_map[new_i, new_j] = False
+                self.map_data.track_map[new_i, new_j] = True
+                # self.map_data.track_map[new_i, new_j] = False
 
                 color = self.get_map_color(new_i, new_j)
                 idx = self.rect_map[new_i, new_j]    
@@ -241,7 +241,8 @@ class TrackGenerator(TrackMapBase):
         i, j = self.get_loaction_value(info.x, info.y)
         # print(f"Button clicked OFF: {info.x};{info.y} --> {i}:{j}")
 
-        self.map_data.track_map[i, j] = True
+        # self.map_data.track_map[i, j] = True
+        self.map_data.track_map[i, j] = False
 
         color = self.get_map_color(i, j)
         idx = self.rect_map[i, j]    

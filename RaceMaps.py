@@ -57,10 +57,10 @@ class GeneralMap:
 class EnvironmentMap:
     def __init__(self, name):
         self.name = name 
-        self.yaml_name = 'DataRecords/' + self.name + '.yaml'
+        self.yaml_name = 'Maps/' + self.name + '.yaml'
 
-        self.obs_free_hm_name = 'DataRecords/' + self.name + '_heatmap_obs_free.npy'
-        self.hm_name = 'DataRecords/' + self.name + '_heatmap.npy'
+        self.obs_free_hm_name = 'Maps/' + self.name + '_heatmap_obs_free.npy'
+        self.hm_name = 'Maps/' + self.name + '_heatmap.npy'
 
         self.race_course = None
         self.obs_hm = None
@@ -74,12 +74,12 @@ class EnvironmentMap:
     def load_maps(self):
         yaml_editor = MapYamlEditor(self.name)
         yaml_editor.load_yaml_file()
-        yaml_editor.print_contents()
+        # yaml_editor.print_contents()
 
         self.start = yaml_editor.start
         self.end = yaml_editor.end
 
-        map_name = 'DataRecords/' + yaml_editor.map_name + '.npy'
+        map_name = 'Maps/' + yaml_editor.map_name + '.npy'
         map_array = np.load(map_name)
         self.race_course = GeneralMap(map_array.T)
 
@@ -106,15 +106,15 @@ class EnvironmentMap:
         except:
             hm = self._set_up_heat_map()
             np.save(hm_name, hm)
-            print(f"Heatmap saved")
+            # print(f"Heatmap saved")
             return hm
 
     def _set_up_heat_map(self):
-        print(f"Starting heatmap production")
+        # print(f"Starting heatmap production")
         track_map = self.race_course.race_map
         for i in range(2): 
             new_map = np.zeros_like(track_map)
-            print(f"Map run: {i}")
+            # print(f"Map run: {i}")
             for i in range(1, 98 - 2):
                 for j in range(1, 98 - 2):
                     left = track_map[i-1, j]
@@ -161,6 +161,9 @@ class EnvironmentMap:
         self.start = [50, 15]
         self.end = [50, 85]
 
+
+
+
 class MapYamlEditor:
     def __init__(self, map_name='TestTrack1000'):
         self.dict = {}
@@ -201,12 +204,12 @@ class MapYamlEditor:
         self.dict['height'] = self.height
 
     def save_dict_yaml(self):
-        yaml_name = 'DataRecords/' + self.map_name + '.yaml'
+        yaml_name = 'Maps/' + self.map_name + '.yaml'
         with open(yaml_name, 'w') as yaml_file:
             yaml.dump(self.dict, yaml_file)
 
     def load_yaml_file(self):
-        yaml_name = 'DataRecords/' + self.map_name + '.yaml'
+        yaml_name = 'Maps/' + self.map_name + '.yaml'
         with open(yaml_name) as yaml_file:
             self.dict = yaml.load(yaml_file, Loader=yaml.FullLoader)
 

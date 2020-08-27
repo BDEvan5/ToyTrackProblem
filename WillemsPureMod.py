@@ -259,7 +259,6 @@ class WillemsVehicle:
         self.reward_history.clear()
         self.steps = 0
         
-
     def no_mod_act(self, obs):
         v_ref, phi_ref = self.get_target_references(obs)
 
@@ -372,6 +371,149 @@ class WillemsVehicle:
         
         self.target = self.wpts[self.pind]
 
+
+
+class RaceModVehicle:
+    def __init__(self, env_map, name, obs_space, action_space, load=True):
+        self.env_map = env_map
+        self.wpts = None
+
+        self.path_name = self.path_name = 'Maps/' + self.env_map.name + '_path.npy' # move to setup call
+        self.pind = 1
+        self.target = None
+        self.steps = 0
+        self.slow_freq = 10
+
+        self.obs_space = obs_space
+        self.action_space = action_space
+        self.center_act = (self.action_space - 1) / 2
+        self.agent = TrainWillemModDQN(obs_space, action_space, name)
+
+        self.agent.try_load(load)
+        self.state_action = None
+        self.cur_nn_act = None
+
+        self.mod_history = []
+        self.out_his = []
+        self.reward_history = []
+
+    def init_race_plan(self):
+        self.env_map.obs_free_hm.show_map(False)
+        fcn = self.env_map.obs_free_hm._check_line
+        path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
+        path = None
+
+        try:
+            path = np.load(self.path_name)
+        except:
+            path = path_finder.run_search(5)
+            np.save(self.path_name, path)
+
+        self.wpts = modify_path(path)
+
+        self.wpts = np.append(self.wpts, self.env_map.end)
+        self.wpts = np.reshape(self.wpts, (-1, 2))
+
+        new_pts = []
+        for wpt in self.wpts:
+            if not self.env_map.race_course._check_location(wpt):
+                new_pts.append(wpt)
+            else:
+                pass
+        self.wpts = np.asarray(new_pts)    
+
+        self.env_map.race_course.show_map(False, self.wpts)
+
+        self.pind = 1
+
+        return self.wpts
+
+    def act(self, obs):
+        v_ref, phi_ref = self.get_target_references(obs)
+
+        """This is where the agent can be removed if needed"""
+        # if self.steps % self.slow_freq == 0:
+        #     nn_obs = self.transform_obs(obs, v_ref, phi_ref)
+
+        #     nn_action = self.agent.act(nn_obs)
+        #     self.cur_nn_act = nn_action
+        #     self.out_his.append(self.agent.get_out(nn_obs))
+        #     self.mod_history.append(nn_action)
+        #     self.state_action = [nn_obs, nn_action]
+        # v_ref, phi_ref = self.modify_references(self.cur_nn_act, v_ref, phi_ref)
+
+        self.steps += 1
+
+        a, d_dot = self.control_system(obs, v_ref, phi_ref)
+
+        return [a, d_dot]
+
+    def show_history(self):
+        lib.plot_no_avg(self.mod_history, figure_n=1, title="Mod history")
+        # lib.plot_no_avg(self.reward_history, figure_n=2, title="Reward history")
+        lib.plot_multi(self.out_his, "Outputs", figure_n=3)
+
+        plt.figure(3)
+        plt.plot(self.reward_history)
+
+        self.mod_history.clear()
+        self.out_his.clear()
+        self.reward_history.clear()
+        self.steps = 0
+        
+    def transform_obs(self, obs, v_ref=None, phi_ref=None):
+        max_angle = np.pi/2
+        max_v = 7.5
+
+        scaled_target_phi = phi_ref / max_angle
+        nn_obs = [scaled_target_phi]
+
+        nn_obs = np.concatenate([nn_obs, obs[5:]])
+
+        return nn_obs
+
+    def modify_references(self, nn_action, v_ref, phi_ref):
+        d_phi = 0.7 # rad
+        phi_new = phi_ref + (nn_action[0] - self.center_act) * d_phi
+
+        v_ref_mod = v_ref
+
+        return v_ref_mod, phi_new
+
+    def get_target_references(self, obs):
+        self._set_target(obs)
+
+        v_ref = 7.5
+
+        th_target = lib.get_bearing(obs[0:2], self.target)
+        phi_ref = th_target - obs[2]
+        phi_ref = lib.limit_theta(phi_ref)
+
+        return v_ref, phi_ref
+
+    def control_system(self, obs, v_ref, phi_ref):
+        kp_a = 10
+        a = (v_ref - obs[3]) * kp_a
+
+        theta_dot = phi_ref * 1
+        L = 0.33
+        d_ref = np.arctan(theta_dot * L / max(((obs[3], 1))))
+        
+        kp_delta = 1
+        d_dot = (d_ref - obs[4]) * kp_delta
+
+        a = np.clip(a, -8, 8)
+        d_dot = np.clip(d_dot, -3.2, 3.2)
+
+        return a, d_dot
+
+    def _set_target(self, obs):
+        dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
+        shift_distance = 10
+        if dis_cur_target < shift_distance and self.pind < len(self.wpts)-1: # how close to say you were there
+            self.pind += 1
+        
+        self.target = self.wpts[self.pind]
 
 
 

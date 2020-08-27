@@ -12,6 +12,8 @@ class CarModel:
         self.velocity = 0
         self.steering = 0
 
+        self.prev_loc = 0
+
         self.wheelbase = 0.33
         self.mass = 3.74
         self.len_cg_rear = 0.17
@@ -118,9 +120,14 @@ class F110Env:
         acceleration = action[0]
         steer_dot = action[1]
 
+        self.car.prev_loc = [self.car.x, self.car.y]
         for _ in range(updates):
             self.car.update_kinematic_state(acceleration, steer_dot, self.timestep)
-        self.check_done_reward()
+        
+        # self.check_done_reward()
+
+        self.check_done_race()
+        self.reward += updates * self.timestep
 
         obs = self.get_state_obs()
         done = self.done
@@ -152,6 +159,10 @@ class F110Env:
         
         return self.get_state_obs()
 
+    def reset_lap(self):
+        self.steps = 0
+        self.reward = 0
+
     def get_state_obs(self):
         car_state = self.car.get_car_state()
         scan = self.scan_sim.get_scan(self.car.x, self.car.y, self.car.theta)
@@ -170,6 +181,17 @@ class F110Env:
             self.reward = 1
         if self.steps > 100:
             self.done = True
+
+    def check_done_race(self):
+        if self.race_map._check_location([self.car.x, self.car.y]):
+            self.done = True
+            self.reward = -1
+        if self.steps > 300:
+            self.done = True
+        start_y = self.env_map.start_y
+        if self.car.prev_loc[1] < start_y and self.car.y > start_y:
+            self.done = True
+
     
     def render(self, wait=False, wpts=None):
         car_x = int(self.car.x)
