@@ -159,16 +159,19 @@ class WillemsVehicle:
         self.pind = 1
         self.target = None
         self.steps = 0
-        self.slow_freq = 10
+        self.slow_freq = 2
 
         self.obs_space = obs_space
         self.action_space = action_space
         self.center_act = (self.action_space - 1) / 2
-        self.agent = TrainWillemModDQN(obs_space, action_space, name)
+        self.agent = TrainWillemModDQN(obs_space+5, action_space, name)
 
         self.agent.try_load(load)
         self.state_action = None
         self.cur_nn_act = None
+        self.prev_nn_act = self.center_act
+
+        self.mem_window = [0, 0, 0, 0, 0]
 
         self.mod_history = []
         self.out_his = []
@@ -239,8 +242,12 @@ class WillemsVehicle:
             self.mod_history.append(nn_action)
             self.state_action = [nn_obs, nn_action]
 
+            self.mem_window.pop(0)
+            self.mem_window.append(float(nn_action[0]/3))
+
         self.steps += 1
         v_ref, phi_ref = self.modify_references(self.cur_nn_act, v_ref, phi_ref)
+
 
         a, d_dot = self.control_system(obs, v_ref, phi_ref)
 
@@ -290,6 +297,7 @@ class WillemsVehicle:
     def add_memory_entry(self, reward, done, s_prime, buffer):
         if reward !=0 or self.steps % self.slow_freq == 0:
             new_reward = self.update_reward(reward, self.state_action[1])
+            self.prev_nn_act = self.state_action[1][0]
 
             v_ref, d_ref = self.get_target_references(s_prime)
             nn_s_prime = self.transform_obs(s_prime, v_ref, d_ref)
@@ -311,7 +319,8 @@ class WillemsVehicle:
         elif d_action == 0:
             new_reward = 0
         else:
-            new_reward = 0 - d_action * beta
+            dd_action = abs(action[0] - self.prev_nn_act)
+            new_reward = 0 - d_action * beta - dd_action *beta
 
         self.reward_history.append(new_reward)
 
@@ -324,7 +333,7 @@ class WillemsVehicle:
         scaled_target_phi = phi_ref / max_angle
         nn_obs = [scaled_target_phi]
 
-        nn_obs = np.concatenate([nn_obs, obs[5:]])
+        nn_obs = np.concatenate([nn_obs, obs[5:], self.mem_window])
 
         return nn_obs
 
@@ -382,16 +391,18 @@ class RaceModVehicle:
         self.pind = 1
         self.target = None
         self.steps = 0
-        self.slow_freq = 10
+        self.slow_freq = 2
 
         self.obs_space = obs_space
         self.action_space = action_space
         self.center_act = (self.action_space - 1) / 2
-        self.agent = TrainWillemModDQN(obs_space, action_space, name)
+        self.agent = TrainWillemModDQN(obs_space+5, action_space, name)
 
         self.agent.try_load(load)
         self.state_action = None
         self.cur_nn_act = None
+
+        self.mem_window = [0, 0, 0, 0, 0]
 
         self.mod_history = []
         self.out_his = []
@@ -443,6 +454,10 @@ class RaceModVehicle:
             self.out_his.append(self.agent.get_out(nn_obs))
             self.mod_history.append(nn_action)
             self.state_action = [nn_obs, nn_action]
+
+            self.mem_window.pop(0)
+            self.mem_window.append(float(nn_action[0]/3))
+
         v_ref, phi_ref = self.modify_references(self.cur_nn_act, v_ref, phi_ref)
 
         self.steps += 1
@@ -470,7 +485,7 @@ class RaceModVehicle:
         scaled_target_phi = phi_ref / max_angle
         nn_obs = [scaled_target_phi]
 
-        nn_obs = np.concatenate([nn_obs, obs[5:]])
+        nn_obs = np.concatenate([nn_obs, obs[5:], self.mem_window])
 
         return nn_obs
 

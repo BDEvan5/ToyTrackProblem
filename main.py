@@ -101,8 +101,8 @@ def collect_willem_mod_observations(buffer, agent_name, n_itterations=5000):
         sys.stdout.flush()
     print(" ")
 
-def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
-    env_map = EnvironmentMap('TrainTrackFixed')
+def TrainWillemModAgentEps(agent_name, buffer, load=True):
+    env_map = EnvironmentMap('TrainTrackEmpty')
 
     env = F110Env(env_map)
     vehicle = WillemsVehicle(env_map, agent_name, 11, 3, load)
@@ -111,6 +111,7 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
     rewards = []
 
     # env_map.set_start()
+    env_map.generate_random_start()
     # env_map.random_obstacles()
     done, state, score = False, env.reset(None), 0.0
     wpts = vehicle.init_straight_plan()
@@ -122,8 +123,8 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
         vehicle.add_memory_entry(r, done, s_prime, buffer)
         
         score += r
-        # vehicle.agent.train_episodes(buffer)
-        vehicle.agent.train_modification(buffer)
+        vehicle.agent.train_episodes(buffer)
+        # vehicle.agent.train_modification(buffer)
 
         # env.render(False, wpts)
         state = s_prime
@@ -144,7 +145,7 @@ def TrainWillemModAgentEps(agent_name, buffer, i=0, load=True):
             env.render_snapshot(wpts=wpts, wait=False)
             if r == -1:
                 pass
-            # env_map.generate_random_start()^
+            env_map.generate_random_start()
             # env_map.set_start()
             # env_map.random_obstacles() 
             state = env.reset()
@@ -193,21 +194,19 @@ def view_nn(wait=True):
         
 
 
-def RunWillemModTraining(agent_name, start=0, n_runs=5, create=False):
+def RunWillemModTraining(agent_name, create=False):
     buffer = ReplayBufferDQN()
     total_rewards = []
 
     if create:
         # collect_willem_mod_observations(buffer, agent_name, 1000)
-        rewards = TrainWillemModAgentEps(agent_name, buffer, 0, False)
+        rewards = TrainWillemModAgentEps(agent_name, buffer, False)
         total_rewards += rewards
         # lib.plot(total_rewards, figure_n=3)
 
 
-    for i in range(start, start + n_runs):
-        print(f"Running batch: {i}")
-        rewards = TrainWillemModAgentEps(agent_name, buffer, i, True)
-        total_rewards += rewards
+    rewards = TrainWillemModAgentEps(agent_name, buffer, True)
+    total_rewards += rewards
 
         # lib.plot(total_rewards, figure_n=3)
 
@@ -421,7 +420,7 @@ def RaceRepTime(agent_name):
         print(f"Running lap: {i}")
         while not done:
             action = vehicle.act(state)
-            s_p, r, done, _ = env.step(action, updates=20)
+            s_p, r, done, _ = env.step(action, updates=20, race=True)
 
             state = s_p
             env.render(False, wpts)
@@ -445,10 +444,10 @@ def RaceModTime(agent_name):
         print(f"Running lap: {i}")
         while not done:
             action = vehicle.act(state)
-            s_p, r, done, _ = env.step(action, updates=20)
+            s_p, r, done, _ = env.step(action, updates=20, race=True)
 
             state = s_p
-            env.render(False, wpts)
+            # env.render(False, wpts)
 
         print(f"Lap time updates: {env.steps}")
         vehicle.show_history()
@@ -468,7 +467,7 @@ def RaceModTime(agent_name):
 """Total functions"""
 def WillemsMod():
     agent_name = "TestingWillem"
-    # RunWillemModTraining(agent_name, 0, 50, True)
+    # RunWillemModTraining(agent_name, True)
     # RunWillemModTraining(agent_name, 0, 50, False)
 
     # run_decision_training()

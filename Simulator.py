@@ -114,7 +114,7 @@ class F110Env:
 
         self.obs_space = len(self.get_state_obs())
 
-    def step(self, action, updates=10):
+    def step(self, action, updates=10, race=False):
         self.steps += 1
         self.action = action
         acceleration = action[0]
@@ -124,10 +124,12 @@ class F110Env:
         for _ in range(updates):
             self.car.update_kinematic_state(acceleration, steer_dot, self.timestep)
         
-        # self.check_done_reward()
+        if race:
+            self.reward += updates * self.timestep
+            self.check_done_race()
+        else:
+            self.check_done_reward()      
 
-        self.reward += updates * self.timestep
-        self.check_done_race()
 
         obs = self.get_state_obs()
         done = self.done
@@ -154,8 +156,8 @@ class F110Env:
             self.car.velocity = 0
             self.car.steering = 0
             th = lib.get_bearing(self.env_map.start, self.env_map.end) 
-            # self.car.theta = th + np.random.random() - 0.5
-            self.car.theta = 0
+            self.car.theta = th + np.random.random() - 0.5
+            # self.car.theta = 0
 
         
         return self.get_state_obs()
@@ -165,6 +167,7 @@ class F110Env:
         self.reward = 0
         self.car.prev_loc = [self.car.x, self.car.y]
         self.action_memory.clear()
+        self.done = False
 
     def get_state_obs(self):
         car_state = self.car.get_car_state()
