@@ -398,7 +398,7 @@ class RaceModVehicle:
         self.reward_history = []
 
     def init_race_plan(self):
-        self.env_map.obs_free_hm.show_map(False)
+        # self.env_map.obs_free_hm.show_map(False)
         fcn = self.env_map.obs_free_hm._check_line
         path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
         path = None
@@ -422,25 +422,28 @@ class RaceModVehicle:
                 pass
         self.wpts = np.asarray(new_pts)    
 
-        self.env_map.race_course.show_map(False, self.wpts)
+        # self.env_map.race_course.show_map(False, self.wpts)
 
         self.pind = 1
 
         return self.wpts
 
+    def reset_lap_count(self):
+        self.pind = 1
+
     def act(self, obs):
         v_ref, phi_ref = self.get_target_references(obs)
 
         """This is where the agent can be removed if needed"""
-        # if self.steps % self.slow_freq == 0:
-        #     nn_obs = self.transform_obs(obs, v_ref, phi_ref)
+        if self.steps % self.slow_freq == 0:
+            nn_obs = self.transform_obs(obs, v_ref, phi_ref)
 
-        #     nn_action = self.agent.act(nn_obs)
-        #     self.cur_nn_act = nn_action
-        #     self.out_his.append(self.agent.get_out(nn_obs))
-        #     self.mod_history.append(nn_action)
-        #     self.state_action = [nn_obs, nn_action]
-        # v_ref, phi_ref = self.modify_references(self.cur_nn_act, v_ref, phi_ref)
+            nn_action = self.agent.act(nn_obs)
+            self.cur_nn_act = nn_action
+            self.out_his.append(self.agent.get_out(nn_obs))
+            self.mod_history.append(nn_action)
+            self.state_action = [nn_obs, nn_action]
+        v_ref, phi_ref = self.modify_references(self.cur_nn_act, v_ref, phi_ref)
 
         self.steps += 1
 
@@ -450,7 +453,6 @@ class RaceModVehicle:
 
     def show_history(self):
         lib.plot_no_avg(self.mod_history, figure_n=1, title="Mod history")
-        # lib.plot_no_avg(self.reward_history, figure_n=2, title="Reward history")
         lib.plot_multi(self.out_his, "Outputs", figure_n=3)
 
         plt.figure(3)
@@ -499,7 +501,7 @@ class RaceModVehicle:
         L = 0.33
         d_ref = np.arctan(theta_dot * L / max(((obs[3], 1))))
         
-        kp_delta = 1
+        kp_delta = 2
         d_dot = (d_ref - obs[4]) * kp_delta
 
         a = np.clip(a, -8, 8)

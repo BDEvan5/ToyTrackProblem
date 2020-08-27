@@ -451,12 +451,16 @@ def RaceModTime(agent_name):
             env.render(False, wpts)
 
         print(f"Lap time updates: {env.steps}")
-        env.steps = 0
-        # don't reset env
-
         vehicle.show_history()
-        env.render_snapshot(wpts=wpts, wait=True)
+        env.render_snapshot(wpts=wpts, wait=False)
 
+        if r == -1:
+            state = env.reset(None)
+            done = False
+        
+        env.reset_lap()
+        vehicle.reset_lap_count()
+        done = False
 
 
 

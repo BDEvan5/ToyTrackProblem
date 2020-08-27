@@ -126,8 +126,8 @@ class F110Env:
         
         # self.check_done_reward()
 
-        self.check_done_race()
         self.reward += updates * self.timestep
+        self.check_done_race()
 
         obs = self.get_state_obs()
         done = self.done
@@ -154,7 +154,8 @@ class F110Env:
             self.car.velocity = 0
             self.car.steering = 0
             th = lib.get_bearing(self.env_map.start, self.env_map.end) 
-            self.car.theta = th + np.random.random() - 0.5
+            # self.car.theta = th + np.random.random() - 0.5
+            self.car.theta = 0
 
         
         return self.get_state_obs()
@@ -162,6 +163,8 @@ class F110Env:
     def reset_lap(self):
         self.steps = 0
         self.reward = 0
+        self.car.prev_loc = [self.car.x, self.car.y]
+        self.action_memory.clear()
 
     def get_state_obs(self):
         car_state = self.car.get_car_state()
@@ -189,7 +192,8 @@ class F110Env:
         if self.steps > 300:
             self.done = True
         start_y = self.env_map.start_y
-        if self.car.prev_loc[1] < start_y and self.car.y > start_y:
+        if self.car.prev_loc[1] < start_y and self.car.y > start_y and \
+            abs(self.car.x - 90) < 10:
             self.done = True
 
     
