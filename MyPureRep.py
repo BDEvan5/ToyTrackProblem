@@ -119,8 +119,10 @@ class SuperRepVehicle:
         self.nn_pind = 1
         self.nn_target = None
 
-        self.agent = SuperTrainRep(11, 1, agent_name)
+        self.agent = SuperTrainRep(11+5, 1, agent_name)
         self.agent.try_load(load)
+
+        self.mem_window = [0, 0, 0, 0, 0]
 
         self.nn_phi_history = []
         self.target_phi_history = []
@@ -164,41 +166,6 @@ class SuperRepVehicle:
 
         return self.wpts
 
-    def init_race_plan(self):
-        self.env_map.obs_free_hm.show_map(True)
-        fcn = self.env_map.obs_free_hm._check_line
-        path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
-        path = None
-
-        path_name = 'Maps/' + self.env_map.name + '_path.npy'
-        try:
-            path = np.load(path_name)
-        except:
-            path = path_finder.run_search(5)
-            np.save(path_name, path)
-
-        self.wpts = modify_path(path)
-
-        self.wpts = np.append(self.wpts, self.env_map.end)
-        self.wpts = np.reshape(self.wpts, (-1, 2))
-
-        new_pts = []
-        for wpt in self.wpts:
-            if not self.env_map.race_course._check_location(wpt):
-                new_pts.append(wpt)
-            else:
-                pass
-        self.wpts = np.asarray(new_pts)    
-
-        self.env_map.race_course.show_map(False, self.wpts)
-
-        self.pind = 1
-
-        self.target_phi_history.clear()
-        self.nn_phi_history.clear() 
-
-        return self.wpts
-
     def init_straight_plan(self):
         # this is when there are no known obs for training.
         start = self.env_map.start
@@ -229,6 +196,9 @@ class SuperRepVehicle:
         v_ref, target_phi = self.get_target_references(obs, self.target)
         self.target_phi_history.append(target_phi/ np.pi *2)
 
+        self.mem_window.pop(0)
+        self.mem_window.append(float(target_phi/np.pi * 2))
+
         # record values
         nn_obs = self.get_nn_vals(obs)
         nn_act = self.agent.act(nn_obs)[0] 
@@ -249,6 +219,9 @@ class SuperRepVehicle:
         # add target to record
         v_ref, target_phi = self.get_target_references(obs, self.target)
         self.target_phi_history.append(target_phi/ np.pi *2)
+
+        self.mem_window.pop(0)
+        self.mem_window.append(float(nn_act))
 
         nn_phi = nn_act * np.pi/2
 
@@ -280,7 +253,7 @@ class SuperRepVehicle:
         scaled_target_phi = target_phi_straight / max_angle
         nn_obs = [scaled_target_phi]
 
-        nn_obs = np.concatenate([nn_obs, obs[5:]])
+        nn_obs = np.concatenate([nn_obs, obs[5:], self.mem_window])
 
         return nn_obs
 
@@ -339,8 +312,10 @@ class RaceRepVehicle:
         self.pind = 1
         self.target = None
 
-        self.agent = SuperTrainRep(11, 1, agent_name)
+        self.agent = SuperTrainRep(11 + 5, 1, agent_name)
         self.agent.try_load(load)
+
+        self.mem_window = [0, 0, 0, 0, 0]
 
         self.nn_phi_history = []
         self.target_phi_history = []
@@ -372,13 +347,16 @@ class RaceRepVehicle:
                 pass
         self.wpts = np.asarray(new_pts)    
 
-        self.env_map.race_course.show_map(False, self.wpts)
+        # self.env_map.race_course.show_map(False, self.wpts)
 
         self.pind = 1
 
         self.nn_phi_history.clear() 
 
         return self.wpts
+
+    def reset_lap_count(self):
+        self.pind = 0
 
     def act(self, obs):
         self._set_targets(obs)
@@ -387,6 +365,9 @@ class RaceRepVehicle:
         nn_obs = self.get_nn_vals(obs)
         nn_act = self.agent.act(nn_obs)[0] 
         self.nn_phi_history.append(nn_act)
+
+        self.mem_window.pop(0)
+        self.mem_window.append(float(nn_act))
 
         nn_phi = nn_act * np.pi/2
 
@@ -416,7 +397,7 @@ class RaceRepVehicle:
         scaled_target_phi = target_phi_straight / max_angle
         nn_obs = [scaled_target_phi]
 
-        nn_obs = np.concatenate([nn_obs, obs[5:]])
+        nn_obs = np.concatenate([nn_obs, obs[5:], self.mem_window])
 
         return nn_obs
 

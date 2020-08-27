@@ -52,7 +52,7 @@ class PathFinder:
                 break
             self.generate_children()
             i += 1
-            self.plot_nodes()
+            # self.plot_nodes()
 
             if i % 100 == 0:
                 print(f"Search step: {i}")

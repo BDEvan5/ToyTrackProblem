@@ -307,7 +307,7 @@ def run_ep(vehicle, env, buffer):
     if r == -1:
         print(f"The vehicle has crashed: check this out")
         # plt.show()
-    print(f"Ep done in {env.steps} steps --> B Number: {buffer.ptr}")
+    print(f"Ep done in {env.steps} steps --> B Number: {buffer.length}")
 
 def test_rep(vehicle):
     print(f"Testing vehicle performance")
@@ -343,12 +343,14 @@ def RunRepTrain(agent_name, load):
 
     buffer = ReplayBufferSuper()
 
-    for i in range(10):
+    print(f"Creating data")
+    for i in range(100):
         run_ep(vehicle, env, buffer)
 
-        vehicle.agent.train(buffer)
+        vehicle.agent.train(buffer, 100)
     vehicle.agent.save()
 
+    print(f"Starting training")
     score, losses = 0, []
     for n in range(10000):
         l = vehicle.agent.train(buffer)
@@ -426,11 +428,12 @@ def RaceRepTime(agent_name):
             env.render(False, wpts)
 
         print(f"Lap time updates: {env.steps}")
-        env.steps = 0
-        # don't reset env
 
         vehicle.show_history()
         env.render_snapshot(wpts=wpts, wait=True)
+
+        vehicle.reset_lap_count()
+        env.reset_lap()
 
 def RaceModTime(agent_name):
     env_map = RaceMap('RaceTrack1000')
@@ -492,15 +495,16 @@ def SuperRep():
     # TrainRepAgent(agent_name, False)
     # TrainRepAgent(agent_name, True)
 
-    # RunRepTrain(agent_name, False)
+    RunRepTrain(agent_name, False)
     # RunRepTrain(agent_name, True)
 
     RaceRepTime(agent_name)
 
 if __name__ == "__main__":
     # simulation_test()
-    WillemsMod()
-    # SuperRep()
+
+    # WillemsMod()
+    SuperRep()
 
     # view_nn()
 
