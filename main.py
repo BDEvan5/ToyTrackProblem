@@ -437,11 +437,12 @@ def RaceModTime(agent_name):
     vehicle = RaceModVehicle(env_map, agent_name, 11, 3, True)
     env = F110Env(env_map)
 
-    # env_map.random_obstacles() # coming later
     wpts = vehicle.init_race_plan()
     done, state, score = False, env.reset(None), 0.0
     for i in range(10): # 10 laps
         print(f"Running lap: {i}")
+        env_map.random_obstacles() # coming later
+        # env_map.race_course.show_map(True)
         while not done:
             action = vehicle.act(state)
             s_p, r, done, _ = env.step(action, updates=20, race=True)

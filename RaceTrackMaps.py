@@ -87,14 +87,17 @@ class RaceMap:
         return new_map
  
     def random_obstacles(self):
-        self.race_course.race_map = np.zeros((100, 100))
-        obs_size = [3, 2] # representing cars 
+        map_name = 'Maps/' + self.name + '.npy'
+        map_array = np.load(map_name)
+        self.race_course = GeneralMap(map_array.T)
+
+        obs_size = [3, 5] # representing cars 
         obs_locs = []
         for i in range(5):
-            rands = lib.get_rand_ints(100, 0)
+            rands = lib.get_rand_ints(100-max(obs_size), 0)
             while self.obs_free_hm._check_location(rands):
                 # this ensures that the cars are on the track
-                rands = lib.get_rand_ints(100, 0)
+                rands = lib.get_rand_ints(100-max(obs_size), 0)
             obs_locs.append(rands)
         self.add_obs(obs_locs, obs_size)
 

@@ -198,7 +198,6 @@ class F110Env:
         if self.car.prev_loc[1] < start_y and self.car.y > start_y and \
             abs(self.car.x - 90) < 10:
             self.done = True
-
     
     def render(self, wait=False, wpts=None):
         car_x = int(self.car.x)
@@ -257,6 +256,8 @@ class F110Env:
             plt.show()
             
     def render_snapshot(self, wait=False, wpts=None):
+        self.race_map = self.env_map.race_course
+
         car_x = int(self.car.x)
         car_y = int(self.car.y)
         fig = plt.figure(4)
