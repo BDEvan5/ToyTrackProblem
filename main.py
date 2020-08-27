@@ -301,6 +301,7 @@ def run_ep(vehicle, env, buffer):
         s_p, r, done, _ = env.step(action, updates=20)
 
         state = s_p
+        # env.render()
     
     vehicle.show_history()
     env.render_snapshot(wpts=wpts)
@@ -339,15 +340,23 @@ def test_rep(vehicle):
 def RunRepTrain(agent_name, load):
     env_map = EnvironmentMap('TrainTrackEmpty')
     env = F110Env(env_map)
-    vehicle = SuperRepVehicle(env_map, agent_name, False)
+    vehicle = SuperRepVehicle(env_map, agent_name, load)
 
     buffer = ReplayBufferSuper()
 
     print(f"Creating data")
-    for i in range(100):
+    # for i in range(100):
+    i = 0
+    while buffer.length < 1000:
         run_ep(vehicle, env, buffer)
 
         vehicle.agent.train(buffer, 100)
+
+        if i % 5 == 0:
+            test_rep(vehicle)
+
+        i += 1
+
     vehicle.agent.save()
 
     print(f"Starting training")
@@ -495,7 +504,7 @@ def SuperRep():
     # TrainRepAgent(agent_name, False)
     # TrainRepAgent(agent_name, True)
 
-    RunRepTrain(agent_name, False)
+    # RunRepTrain(agent_name, False)
     # RunRepTrain(agent_name, True)
 
     RaceRepTime(agent_name)

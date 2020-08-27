@@ -194,15 +194,17 @@ class SuperRepVehicle:
         self._set_targets(obs)
 
         v_ref, target_phi = self.get_target_references(obs, self.target)
-        self.target_phi_history.append(target_phi/ np.pi *2)
-
-        self.mem_window.pop(0)
-        self.mem_window.append(float(target_phi/np.pi * 2))
+        normalised_target_phi = target_phi/ np.pi *2
+        self.target_phi_history.append(normalised_target_phi)
 
         # record values
         nn_obs = self.get_nn_vals(obs)
         nn_act = self.agent.act(nn_obs)[0] 
         self.nn_phi_history.append(nn_act)
+
+        self.mem_window.pop(0)
+        # self.mem_window.append(float(normalised_target_phi))
+        self.mem_window.append(float(nn_act))
 
         a, d_dot = self.control_system(obs, v_ref, target_phi)
 
@@ -356,7 +358,7 @@ class RaceRepVehicle:
         return self.wpts
 
     def reset_lap_count(self):
-        self.pind = 0
+        self.pind = 1
 
     def act(self, obs):
         self._set_targets(obs)
