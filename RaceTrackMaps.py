@@ -11,9 +11,11 @@ class RaceMap:
         self.name = name 
 
         self.obs_free_hm_name = 'Maps/' + self.name + '_heatmap_obs_free.npy'
+        self.obs_hm_name = 'Maps/' + self.name + '_heatmap.npy'
 
         self.race_course = None
         self.obs_free_hm = None
+        self.obs_hm = None
 
         self.start = None
         self.end = None
@@ -33,8 +35,16 @@ class RaceMap:
         self.start = [90, 51]
         self.end = [90, 45]
 
+        # self.start_x = [0, 50]
+        # self.start_y = 50
+
+        # self.start = [20, 51]
+        # self.end = [20, 45]
+
         obs_free_hm = self.create_hm(self.obs_free_hm_name)
         self.obs_free_hm = GeneralMap(obs_free_hm)
+
+        self.reset_map()
 
     def add_obs(self, obs_locs, obs_size):
         for obs in obs_locs:
@@ -55,10 +65,10 @@ class RaceMap:
             # print(f"Heatmap saved")
             return hm
 
-    def _set_up_heat_map(self):
+    def _set_up_heat_map(self, n=2):
         # print(f"Starting heatmap production")
         track_map = self.race_course.race_map
-        for i in range(2): 
+        for i in range(n): 
             new_map = np.zeros_like(track_map)
             # print(f"Map run: {i}")
             for i in range(1, 98 - 2):
@@ -95,7 +105,7 @@ class RaceMap:
         map_array = np.load(map_name)
         self.race_course = GeneralMap(map_array.T)
 
-        obs_size = [3, 5] # representing cars 
+        obs_size = [3, 3] # representing cars 
         obs_locs = []
         for i in range(5):
             rands = lib.get_rand_ints(100-max(obs_size), 0)
@@ -107,5 +117,8 @@ class RaceMap:
 
     def reset_map(self):
         pass
-        # self.random_obstacles()
+        self.random_obstacles()
+
+        obs_hm = self._set_up_heat_map(1)
+        self.obs_hm = GeneralMap(obs_hm)
 

@@ -12,7 +12,7 @@ import LibFunctions as lib
 
 from OptimalAgent import OptimalAgent
 from WillemsPureMod import ModRaceVehicle, ModTrainVehicle
-from MyPureRep import SuperTrainRep, SuperRepVehicle, RaceRepVehicle
+from MyPureRep import RepTrainVehicle, RepRaceVehicle
 
 
 def simulation_test():
@@ -116,7 +116,6 @@ def TrainModVehicle(agent_name, load=True):
 
     return rewards
 
-
 def RaceModVehicle(agent_name):
     env_map = RaceMap('RaceTrack1000')
     vehicle = ModRaceVehicle(agent_name, 11, 3, True)
@@ -147,13 +146,6 @@ def RaceModVehicle(agent_name):
         done = False
 
  
-
-
-
-
-
-
-
 
 
 """Training functions: PURE REP"""
@@ -237,15 +229,14 @@ def TrainRepAgent(agent_name, load):
 
 
 # new rep train functions
-def run_ep(vehicle, env, buffer):
-    # env.env_map.generate_random_start()
-    env.env_map.set_start()
-    wpts = vehicle.init_agent()
+def collect_rep_ep_obs(vehicle, env, buffer):
+    env.env_map.reset_map()
+    wpts = vehicle.init_plan(env.env_map)
     done, state, score = False, env.reset(None), 0.0
     while not done:
-        action = vehicle.opti_act(state)
+        action = vehicle.train_act(state)
         vehicle.add_mem_step(buffer, state)
-        s_p, r, done, _ = env.step(action, updates=20)
+        s_p, r, done, _ = env.step(action, updates=20, race=True)
 
         state = s_p
         # env.render()
@@ -254,54 +245,27 @@ def run_ep(vehicle, env, buffer):
     env.render_snapshot(wpts=wpts)
     if r == -1:
         print(f"The vehicle has crashed: check this out")
-        # plt.show()
     print(f"Ep done in {env.steps} steps --> B Number: {buffer.length}")
 
-def test_rep(vehicle):
-    print(f"Testing vehicle performance")
-    store_map = vehicle.env_map
-    env_map = EnvironmentMap('TrainTrackEmpty')
 
-    env = F110Env(env_map)
-    vehicle.env_map = env_map
-
-    env_map.generate_random_start()
-    wpts = vehicle.init_agent()
-    done, state, score = False, env.reset(None), 0.0
-    while not done:
-        action = vehicle.act(state)
-        s_p, r, done, _ = env.step(action, updates=20)
-        state = s_p
-        # env.render(False, wpts)
-
-    vehicle.show_history()
-    env.render_snapshot(wpts=wpts)
-    if r == -1:
-        print(f"The vehicle has crashed: check this out")
-        # plt.show()
-    print(f"Ep done in {env.steps} steps ")
-
-    vehicle.env_map = store_map
-
-def RunRepTrain(agent_name, load):
+def TrainRepVehicle(agent_name, load):
+    # racing track
+    env_map = RaceMap('RaceTrack1010')
+    # normal track
     # env_map = EnvironmentMap('TrainTrackEmpty')
-    env_map = RaceMap('RaceTrack1000')
-    env = F110Env(env_map)
-    vehicle = SuperRepVehicle(env_map, agent_name, load)
 
     buffer = ReplayBufferSuper()
+    env = F110Env(env_map)
+    vehicle = RepTrainVehicle(agent_name, load)
 
     print(f"Creating data")
-    # for i in range(100):
     i = 0
     while buffer.length < 1000:
-        run_ep(vehicle, env, buffer)
-
+        collect_rep_ep_obs(vehicle, env, buffer)
         vehicle.agent.train(buffer, 100)
 
         if i % 5 == 0:
-            test_rep(vehicle)
-
+            collect_rep_ep_obs(vehicle, env, buffer)
         i += 1
 
     vehicle.agent.save()
@@ -318,78 +282,31 @@ def RunRepTrain(agent_name, load):
             print(f"Loss: {score}")
             score = 0
 
-            test_rep(vehicle)
+            RaceRepVehicle(agent_name)
 
-
-
-def TestRepAgentTest(agent_name):
-    env_map = EnvironmentMap('TestTrack1000')
-
-    env = F110Env(env_map)
-    vehicle = SuperRepVehicle(env_map, agent_name)
-    
-    wpts = vehicle.init_agent()
-    done, state, score = False, env.reset(None), 0.0
-    # env.render(True, wpts)
-    while not done:
-
-        action = vehicle.act(state)
-        s_p, r, done, _ = env.step(action, updates=20)
-        state = s_p
-        env.render(False, wpts)
-
-    env.render_snapshot(wpts=wpts, wait=True)
-    if r == -1:
-        print(f"The vehicle has crashed: check this out")
-
-def TestRepAgentEmpty(agent_name):
-    env_map = EnvironmentMap('TrainTrackEmpty')
+def RaceRepVehicle(agent_name):
+    print(f"Testing vehicle performance")
+    # env_map = EnvironmentMap('TrainTrackEmpty')
+    env_map = RaceMap('RaceTrack1000')
 
     env = F110Env(env_map)
-    vehicle = SuperRepVehicle(env_map, agent_name, True)
-    
-    env_map.generate_random_start()
-    wpts = vehicle.init_agent()
-    # wpts = vehicle.init_straight_plan()
+    vehicle = RepRaceVehicle(agent_name, True)
+
+    env_map.reset_map()
+    wpts = vehicle.init_plan(env_map)
     done, state, score = False, env.reset(None), 0.0
-    # env.render(True, wpts)
     while not done:
         action = vehicle.act(state)
-        s_p, r, done, _ = env.step(action, updates=20)
+        s_p, r, done, _ = env.step(action, updates=20, race=True)
         state = s_p
-        env.render(False, wpts)
+        # env.render(False, wpts)
 
     vehicle.show_history()
-    env.render_snapshot(wpts=wpts, wait=True)
+    env.render_snapshot(wpts=wpts)
     if r == -1:
         print(f"The vehicle has crashed: check this out")
-
-"""Race functions"""
-def RaceRepTime(agent_name):
-    env_map = RaceMap('RaceTrack1000')
-    vehicle = RaceRepVehicle(env_map, agent_name, True)
-    env = F110Env(env_map)
-
-    # env_map.random_obstacles() # coming later
-    wpts = vehicle.init_race_plan()
-    done, state, score = False, env.reset(None), 0.0
-    for i in range(10): # 10 laps
-        print(f"Running lap: {i}")
-        while not done:
-            action = vehicle.act(state)
-            s_p, r, done, _ = env.step(action, updates=20, race=True)
-
-            state = s_p
-            env.render(False, wpts)
-
-        print(f"Lap time updates: {env.steps}")
-
-        vehicle.show_history()
-        env.render_snapshot(wpts=wpts, wait=True)
-
-        vehicle.reset_lap_count()
-        env.reset_lap()
-
+    plt.show()
+    print(f"Ep done in {env.steps} steps ")
 
 
 
@@ -405,26 +322,17 @@ def WillemsMod():
 def SuperRep():
     agent_name = "TestingRep"
 
-    for i in range(10):
-        pass
-        # TestRepAgentTest(agent_name)
-        # TestRepAgentEmpty(agent_name)
+    # TrainRepVehicle(agent_name, False)
+    # TrainRepVehicle(agent_name, True)
 
-    # TrainRepAgent(agent_name, False)
-    # TrainRepAgent(agent_name, True)
-
-    # RunRepTrain(agent_name, False)
-    # RunRepTrain(agent_name, True)
-
-    RaceRepTime(agent_name)
+    RaceRepVehicle(agent_name)
 
 if __name__ == "__main__":
     # simulation_test()
 
-    WillemsMod()
-    # SuperRep()
+    # WillemsMod()
+    SuperRep()
 
-    # view_nn()
 
 
 

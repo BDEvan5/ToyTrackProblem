@@ -192,12 +192,17 @@ class F110Env:
         if self.race_map._check_location([self.car.x, self.car.y]):
             self.done = True
             self.reward = -1
-        if self.steps > 300:
+        if self.steps > 400:
             self.done = True
         start_y = self.env_map.start_y
-        if self.car.prev_loc[1] < start_y and self.car.y > start_y and \
-            abs(self.car.x - 90) < 10:
-            self.done = True
+        # counter clock wise
+        if self.car.prev_loc[1] < start_y and self.car.y > start_y:
+            if abs(self.car.x - self.env_map.start[0]) < 10:
+                self.done = True
+        # clockwise
+        # if self.car.prev_loc[1] < start_y and self.car.y > start_y:
+        #     if abs(self.car.x - self.env_map.start[0]) < 10:
+        #         self.done = True
     
     def render(self, wait=False, wpts=None):
         car_x = int(self.car.x)
