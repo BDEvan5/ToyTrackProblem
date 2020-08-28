@@ -56,9 +56,8 @@ class TrainWillemModDQN:
         if random.random() < self.model.exploration_rate:
             return [random.randint(0, self.action_space-1)]
         else: 
-            obs_t = torch.from_numpy(obs).float()
-            a = self.greedy_action(obs_t)
-            return [a]
+            a = self.greedy_action(obs)
+            return a
 
     def get_out(self, obs):
         obs_t = torch.from_numpy(obs).float()
@@ -67,9 +66,11 @@ class TrainWillemModDQN:
         return out.detach().numpy()
 
     def greedy_action(self, obs):
-        out = self.model.forward(obs)
+        obs_t = torch.from_numpy(obs).float()
+        out = self.model.forward(obs_t)
         self.last_out = out
-        return out.argmax().item()
+        a = [out.argmax().item()]
+        return a
 
     def train_modification(self, buffer):
         """This is for single examples with no future values"""
@@ -150,6 +151,256 @@ class TrainWillemModDQN:
         print(f"Created new model")
 
 
+class ModBaseVehicle:
+    def __init__(self, name, obs_space, action_space, load):
+        self.env_map = None
+        self.wpts = None
+        self.path_name = None
+
+        self.pind = 1
+        self.target = None
+        self.steps = 0
+        self.slow_freq = 2
+
+        self.obs_space = obs_space
+        self.action_space = action_space
+        self.center_act = (self.action_space - 1) / 2
+        self.state_action = None
+        self.cur_nn_act = None
+        self.prev_nn_act = self.center_act
+        self.mem_window = [0, 0, 0, 0, 0]
+
+        self.agent = TrainWillemModDQN(obs_space+5, action_space, name)
+        self.agent.try_load(load)
+
+        self.mod_history = []
+        self.out_his = []
+        self.reward_history = []
+
+    def act(self, obs, greedy=False):
+        v_ref, phi_ref = self.get_target_references(obs)
+
+        """This is where the agent can be removed if needed"""
+        # if self.steps % self.slow_freq == 0:
+        if True:
+            nn_obs = self.transform_obs(obs, v_ref, phi_ref)
+
+            if not greedy:
+                nn_action = self.agent.act(nn_obs)
+            else:
+                nn_action = self.agent.greedy_action(nn_obs)
+            # nn_action = [1]
+            self.cur_nn_act = nn_action
+            self.out_his.append(self.agent.get_out(nn_obs))
+            self.mod_history.append(nn_action)
+            self.state_action = [nn_obs, nn_action]
+
+            self.mem_window.pop(0)
+            self.mem_window.append(float(nn_action[0]/3))
+
+        v_ref, phi_ref = self.modify_references(self.cur_nn_act, v_ref, phi_ref)
+
+        self.steps += 1
+
+        a, d_dot = self.control_system(obs, v_ref, phi_ref)
+
+        return [a, d_dot]
+
+    def show_vehicle_history(self):
+        lib.plot_no_avg(self.mod_history, figure_n=1, title="Mod history")
+        # lib.plot_no_avg(self.reward_history, figure_n=2, title="Reward history")
+        lib.plot_multi(self.out_his, "Outputs", figure_n=3)
+
+        plt.figure(3)
+        plt.plot(self.reward_history)
+
+        self.mod_history.clear()
+        self.out_his.clear()
+        self.reward_history.clear()
+        self.steps = 0
+
+    def transform_obs(self, obs, v_ref=None, phi_ref=None):
+        max_angle = np.pi/2
+        max_v = 7.5
+
+        scaled_target_phi = phi_ref / max_angle
+        nn_obs = [scaled_target_phi]
+
+        nn_obs = np.concatenate([nn_obs, obs[5:], self.mem_window])
+
+        return nn_obs
+
+    def modify_references(self, nn_action, v_ref, phi_ref):
+        d_phi = 0.7 # rad
+        phi_new = phi_ref + (nn_action[0] - self.center_act) * d_phi
+
+        v_ref_mod = v_ref
+
+        return v_ref_mod, phi_new
+
+    def get_target_references(self, obs):
+        self._set_target(obs)
+
+        v_ref = 7.5
+
+        th_target = lib.get_bearing(obs[0:2], self.target)
+        phi_ref = th_target - obs[2]
+        phi_ref = lib.limit_theta(phi_ref)
+
+        return v_ref, phi_ref
+
+    def control_system(self, obs, v_ref, phi_ref):
+        kp_a = 10
+        a = (v_ref - obs[3]) * kp_a
+
+        theta_dot = phi_ref * 1
+        L = 0.33
+        d_ref = np.arctan(theta_dot * L / max(((obs[3], 1))))
+        
+        kp_delta = 2
+        d_dot = (d_ref - obs[4]) * kp_delta
+
+        a = np.clip(a, -8, 8)
+        d_dot = np.clip(d_dot, -3.2, 3.2)
+
+        return a, d_dot
+
+    def _set_target(self, obs):
+        dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
+        shift_distance = 4
+        if dis_cur_target < shift_distance and self.pind < len(self.wpts)-1: # how close to say you were there
+            self.pind += 1
+        
+        self.target = self.wpts[self.pind]
+
+    def update_reward(self, reward, action):
+        beta = 0.1
+        d_action = abs(action[0] - self.center_act)
+        if reward == -1:
+            new_reward = -1
+        # elif reward == 1:
+        #     new_reward = 1
+        elif d_action == 0:
+            new_reward = 0
+        else:
+            dd_action = abs(action[0] - self.prev_nn_act)
+            new_reward = 0 - d_action * beta - dd_action *beta
+
+        self.reward_history.append(new_reward)
+
+        return new_reward
+
+    def add_memory_entry(self, reward, done, s_prime, buffer):
+        if reward !=0 or self.steps % self.slow_freq == 0:
+            new_reward = self.update_reward(reward, self.state_action[1])
+            self.prev_nn_act = self.state_action[1][0]
+
+            v_ref, d_ref = self.get_target_references(s_prime)
+            nn_s_prime = self.transform_obs(s_prime, v_ref, d_ref)
+            done_mask = 0.0 if done else 1.0
+
+            mem_entry = (self.state_action[0], self.state_action[1], new_reward, nn_s_prime, done_mask)
+
+            if new_reward != 0 or np.random.random() < 0.2: # save 20% of 1s
+            # if new_reward != 1:
+                buffer.put(mem_entry)
+
+
+class ModTrainVehicle(ModBaseVehicle):
+    def __init__(self, name, obs_space, action_space, load):
+        ModBaseVehicle.__init__(self, name, obs_space, action_space, load)
+
+    def init_plan(self, env_map=None):
+        if env_map is not None:
+            self.env_map = env_map
+            self.path_name = "Maps/" + self.env_map.name + "_path.npy"
+            
+        start = self.env_map.start
+        end = self.env_map.end
+
+        resolution = 10
+        dx, dy = lib.sub_locations(end, start)
+
+        n_pts = max((round(max((abs(dx), abs(dy))) / resolution), 3))
+        ddx = dx / (n_pts - 1)
+        ddy = dy / (n_pts - 1)
+
+        self.wpts = []
+        for i in range(n_pts):
+            wpt = lib.add_locations(start, [ddx, ddy], i)
+            if not self.env_map.race_course._check_location(wpt):
+                self.wpts.append(wpt)
+            else:
+                pass
+
+        self.reset_lap()
+
+        return self.wpts
+
+    def random_act(self, obs):
+        v_ref, d_ref = self.get_target_references(obs)
+
+        nn_obs = self.transform_obs(obs, v_ref, d_ref)
+        nn_action = [np.random.randint(0, self.action_space-1)]
+        v_ref, d_ref = self.modify_references(nn_action, v_ref, d_ref)
+
+        a, d_dot = self.control_system(obs, v_ref, d_ref)
+
+        a = np.clip(a, -8, 8)
+        d_dot = np.clip(d_dot, -3.2, 3.2)
+
+        self.state_action = [nn_obs, nn_action]
+
+        return [a, d_dot]
+
+    def reset_lap(self):
+        self.pind = 1
+
+class ModRaceVehicle(ModBaseVehicle):
+    def __init__(self, name, obs_space, action_space, load):
+        ModBaseVehicle.__init__(self, name, obs_space, action_space, load)
+
+    def init_plan(self, env_map=None):
+        if env_map is not None:
+            self.env_map = env_map
+            self.path_name = "Maps/" + self.env_map.name + "_path.npy"
+
+        fcn = self.env_map.obs_free_hm._check_line
+        path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
+        path = None
+
+        try:
+            path = np.load(self.path_name)
+        except:
+            path = path_finder.run_search(5)
+            np.save(self.path_name, path)
+
+        self.wpts = modify_path(path)
+
+        self.wpts = np.append(self.wpts, self.env_map.end)
+        self.wpts = np.reshape(self.wpts, (-1, 2))
+
+        new_pts = []
+        for wpt in self.wpts:
+            if not self.env_map.race_course._check_location(wpt):
+                new_pts.append(wpt)
+            else:
+                pass
+        self.wpts = np.asarray(new_pts)    
+
+        # self.env_map.race_course.show_map(False, self.wpts)
+
+        self.pind = 1
+
+        return self.wpts
+
+    def reset_lap(self):
+        self.pind = 1
+
+
+
+
+
 class WillemsVehicle:
     def __init__(self, env_map, name, obs_space, action_space, load=True):
         self.env_map = env_map
@@ -204,7 +455,11 @@ class WillemsVehicle:
 
         return self.wpts
 
-    def init_straight_plan(self):
+    def init_straight_plan(self, env_map=None):
+        if env_map is not None:
+            self.env_map = env_map
+            self.path_name = "Maps/" + self.env_map.name + "_path.npy"
+
         # this is when there are no known obs for training.
         start = self.env_map.start
         end = self.env_map.end

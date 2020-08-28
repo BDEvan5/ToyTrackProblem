@@ -27,7 +27,11 @@ class RaceMap:
         map_array = np.load(map_name)
         self.race_course = GeneralMap(map_array.T)
 
-        self.set_start()
+        self.start_x = [60, 100]
+        self.start_y = 50
+
+        self.start = [90, 51]
+        self.end = [90, 45]
 
         obs_free_hm = self.create_hm(self.obs_free_hm_name)
         self.obs_free_hm = GeneralMap(obs_free_hm)
@@ -101,12 +105,7 @@ class RaceMap:
             obs_locs.append(rands)
         self.add_obs(obs_locs, obs_size)
 
-    def set_start(self):
-        self.start_x = [60, 100]
-        self.start_y = 50
-
-        self.start = [90, 51]
-        self.end = [90, 45]
-
-
+    def reset_map(self):
+        pass
+        # self.random_obstacles()
 

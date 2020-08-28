@@ -11,7 +11,7 @@ from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper
 import LibFunctions as lib
 
 from OptimalAgent import OptimalAgent
-from WillemsPureMod import WillemsVehicle, TrainWillemModDQN, RaceModVehicle
+from WillemsPureMod import ModRaceVehicle, ModTrainVehicle
 from MyPureRep import SuperTrainRep, SuperRepVehicle, RaceRepVehicle
 
 
@@ -34,100 +34,62 @@ def simulation_test():
 
     print(f"Score: {score}")
 
-def willem_training():
-    env_map = EnvironmentMap('TrainTrackEmpty')
-
-    env = F110Env(env_map)
-    agent = WillemsVehicle(env_map)
-
-    env_map.generate_random_start()
-    done, state, score = False, env.reset(None), 0.0
-    wpts = agent.init_agent()
-    for n_ep in range(1000):
-        while not done:
-            action = agent.act(state)
-            s_p, r, done, _ = env.step(action, updates=20)
-            score += r
-            state = s_p
-
-            # env.render(True)
-            env.render(False, wpts)
-
-        print(f"Score: {score}")
-
-def single_evaluation_vehicle(vehicle):
-    env_map = EnvironmentMap('TestTrack1000')
-
-    env = F110Env(env_map)
-
-    done, state, score = False, env.reset(None), 0.0
-    wpts = vehicle.init_plan()
-    while not done:
-        action = vehicle.act(state)
-
-        s_p, r, done, _ = env.step(action, updates=20)
-        score += r
-        state = s_p
-
-        # env.render(True)
-        env.render(False, wpts)
-
-    print(f"Score: {score}")
-
 
 """Training functions: PURE MOD"""
 def collect_willem_mod_observations(buffer, agent_name, n_itterations=5000):
     env_map = EnvironmentMap('TrainTrackEmpty')
-
     env = F110Env(env_map)
-    vehicle = WillemsVehicle(env_map, agent_name, env.obs_space, 5, False)
+    vehicle = ModTrainVehicle(agent_name, env.obs_space, 3, False)
 
+    env_map.reset_map()
     done, state, score = False, env.reset(None), 0.0
-    wpts = vehicle.init_straight_plan()
+    wpts = vehicle.init_plan(env_map)
     for n in range(n_itterations):
         a = vehicle.random_act(state)
-        s_prime, r, done, _ = env.step(a, 50)
+        s_prime, r, done, _ = env.step(a, 20)
         vehicle.add_memory_entry(r, done, s_prime, buffer)
-        
         state = s_prime
         
         if done:
-            # env.render_snapshot(wpts=wpts)
-            env_map.generate_random_start()
+            env_map.reset_map()
             state = env.reset()
-            wpts = vehicle.init_straight_plan()
+            wpts = vehicle.init_plan()
 
         print("\rPopulating Buffer {}/{}.".format(n, n_itterations), end="")
         sys.stdout.flush()
     print(" ")
 
-def TrainWillemModAgentEps(agent_name, buffer, load=True):
-    env_map = EnvironmentMap('TrainTrackEmpty')
+def TrainModVehicle(agent_name, load=True):
+    buffer = ReplayBufferDQN()
+    # if not load:
+    #     collect_willem_mod_observations(buffer, agent_name, 1000)
+
+    # normal train env
+    # env_map = EnvironmentMap('TrainTrackEmpty')
+    # vehicle = ModTrainVehicle(agent_name, 11, 3, load)
+
+    # race train env
+    env_map = RaceMap('RaceTrack1000')
+    vehicle = ModRaceVehicle(agent_name, 11, 3, load)
 
     env = F110Env(env_map)
-    vehicle = WillemsVehicle(env_map, agent_name, 11, 3, load)
+
     
     print_n = 500
     rewards = []
 
-    # env_map.set_start()
-    env_map.generate_random_start()
-    # env_map.random_obstacles()
+    env_map.reset_map()
     done, state, score = False, env.reset(None), 0.0
-    wpts = vehicle.init_straight_plan()
+    wpts = vehicle.init_plan(env_map)
     for n in range(10000):
         a = vehicle.act(state)
-        s_prime, r, done, _ = env.step(a, 20)
+        s_prime, r, done, _ = env.step(a, 20, race=True)
 
-        # if n % 4 == 0 or r == -1:
         vehicle.add_memory_entry(r, done, s_prime, buffer)
-        
         score += r
-        vehicle.agent.train_episodes(buffer)
-        # vehicle.agent.train_modification(buffer)
-
-        # env.render(False, wpts)
         state = s_prime
+        
+        vehicle.agent.train_episodes(buffer)
 
         if n % print_n == 0 and n > 0:
             rewards.append(score)
@@ -141,74 +103,56 @@ def TrainWillemModAgentEps(agent_name, buffer, load=True):
             vehicle.agent.save()
         
         if done:
-            vehicle.show_vehcile_history()
+            vehicle.show_vehicle_history()
             env.render_snapshot(wpts=wpts, wait=False)
             if r == -1:
                 pass
-            env_map.generate_random_start()
-            # env_map.set_start()
-            # env_map.random_obstacles() 
+            env_map.reset_map()
+            vehicle.reset_lap()
             state = env.reset()
-            wpts = vehicle.init_straight_plan()
+            wpts = vehicle.init_plan()
 
     vehicle.agent.save()
 
     return rewards
 
-def view_nn(wait=True):
-    nn = TrainWillemModDQN(11, 5, "TestingWillem")
-    nn.try_load(True)
 
-    phi = [0]
-    beams = [1, 1, 1, 1, 0.1, 0.1, 0.1, 0.1, 1, 1]
-    obs = np.concatenate([phi, beams])
-    obs_t = torch.from_numpy(obs).float()
-    out = nn.model(obs_t)
-    print(f"Out: {out}")
+def RaceModVehicle(agent_name):
+    env_map = RaceMap('RaceTrack1000')
+    vehicle = ModRaceVehicle(agent_name, 11, 3, True)
+    env = F110Env(env_map)
 
-    car_x = 50
-    car_y = 10
-    fig = plt.figure(4)
-    plt.clf()  
-    plt.xlim(0, 100)
-    plt.ylim(0, 50)
+    wpts = vehicle.init_plan(env_map)
+    done, state, score = False, env.reset(None), 0.0
+    for i in range(10): # 10 laps
+        print(f"Running lap: {i}")
+        env_map.reset_map()
+        while not done:
+            action = vehicle.act(state, True)
+            s_p, r, done, _ = env.step(action, updates=20, race=True)
 
-    plt.plot(car_x, car_y, '+', markersize=16)
-    targ = [np.sin(phi), np.cos(phi)]
-    end = lib.add_locations([car_x, car_y], targ, 40)
-    plt.plot(end[0], end[1], 'x', markersize=20)
+            state = s_p
+            # env.render(False, wpts)
 
-    dth = np.pi / 9
-    for i in range(len(beams)):
-        angle = i * dth  - np.pi/2
-        fs = beams[i] * 30
-        dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
-        range_val = lib.add_locations([car_x, car_y], dx)
-        x = [car_x, range_val[0]]
-        y = [car_y, range_val[1]]
-        plt.plot(x, y)
+        print(f"Lap time updates: {env.steps}")
+        vehicle.show_vehicle_history()
+        env.render_snapshot(wpts=wpts, wait=False)
 
-    plt.pause(0.0001)
-    if wait:
-        plt.show()
+        if r == -1:
+            state = env.reset(None)
+            done = False
         
+        env.reset_lap()
+        vehicle.reset_lap()
+        done = False
+
+ 
 
 
-def RunWillemModTraining(agent_name, create=False):
-    buffer = ReplayBufferDQN()
-    total_rewards = []
-
-    if create:
-        # collect_willem_mod_observations(buffer, agent_name, 1000)
-        rewards = TrainWillemModAgentEps(agent_name, buffer, False)
-        total_rewards += rewards
-        # lib.plot(total_rewards, figure_n=3)
 
 
-    rewards = TrainWillemModAgentEps(agent_name, buffer, True)
-    total_rewards += rewards
 
-        # lib.plot(total_rewards, figure_n=3)
+
 
 
 
@@ -291,8 +235,11 @@ def TrainRepAgent(agent_name, load):
 
     agent.save()
 
+
+# new rep train functions
 def run_ep(vehicle, env, buffer):
-    env.env_map.generate_random_start()
+    # env.env_map.generate_random_start()
+    env.env_map.set_start()
     wpts = vehicle.init_agent()
     done, state, score = False, env.reset(None), 0.0
     while not done:
@@ -336,9 +283,9 @@ def test_rep(vehicle):
 
     vehicle.env_map = store_map
 
-
 def RunRepTrain(agent_name, load):
-    env_map = EnvironmentMap('TrainTrackEmpty')
+    # env_map = EnvironmentMap('TrainTrackEmpty')
+    env_map = RaceMap('RaceTrack1000')
     env = F110Env(env_map)
     vehicle = SuperRepVehicle(env_map, agent_name, load)
 
@@ -372,7 +319,6 @@ def RunRepTrain(agent_name, load):
             score = 0
 
             test_rep(vehicle)
-
 
 
 
@@ -444,54 +390,17 @@ def RaceRepTime(agent_name):
         vehicle.reset_lap_count()
         env.reset_lap()
 
-def RaceModTime(agent_name):
-    env_map = RaceMap('RaceTrack1000')
-    vehicle = RaceModVehicle(env_map, agent_name, 11, 3, True)
-    env = F110Env(env_map)
-
-    wpts = vehicle.init_race_plan()
-    done, state, score = False, env.reset(None), 0.0
-    for i in range(10): # 10 laps
-        print(f"Running lap: {i}")
-        env_map.random_obstacles() # coming later
-        # env_map.race_course.show_map(True)
-        while not done:
-            action = vehicle.act(state)
-            s_p, r, done, _ = env.step(action, updates=20, race=True)
-
-            state = s_p
-            # env.render(False, wpts)
-
-        print(f"Lap time updates: {env.steps}")
-        vehicle.show_history()
-        env.render_snapshot(wpts=wpts, wait=False)
-
-        if r == -1:
-            state = env.reset(None)
-            done = False
-        
-        env.reset_lap()
-        vehicle.reset_lap_count()
-        done = False
-
 
 
 
 """Total functions"""
 def WillemsMod():
     agent_name = "TestingWillem"
-    # RunWillemModTraining(agent_name, True)
-    # RunWillemModTraining(agent_name, 0, 50, False)
+    
+    # TrainModVehicle(agent_name, False)
+    # TrainModVehicle(agent_name, True)
 
-    # run_decision_training()
-
-    # env_map = EnvironmentMap('TestTrack1000')
-
-    # env = F110Env(env_map)
-    # vehicle = WillemsVehicle(env_map, agent_name, env.obs_space, 5, False)
-    # single_evaluation_vehicle(vehicle)
-
-    RaceModTime(agent_name)
+    RaceModVehicle(agent_name)
 
 def SuperRep():
     agent_name = "TestingRep"
@@ -512,8 +421,8 @@ def SuperRep():
 if __name__ == "__main__":
     # simulation_test()
 
-    # WillemsMod()
-    SuperRep()
+    WillemsMod()
+    # SuperRep()
 
     # view_nn()
 
