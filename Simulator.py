@@ -168,6 +168,7 @@ class F110Env:
         self.car.prev_loc = [self.car.x, self.car.y]
         self.action_memory.clear()
         self.done = False
+        self.race_map = self.env_map.race_course
 
     def get_state_obs(self):
         car_state = self.car.get_car_state()
@@ -189,7 +190,9 @@ class F110Env:
             self.done = True
 
     def check_done_race(self):
-        if self.race_map._check_location([self.car.x, self.car.y]):
+        pt = [self.car.x, self.car.y]
+        res = self.race_map._check_location(pt)
+        if res:
             self.done = True
             self.reward = -1
         if self.steps > 400:
@@ -261,7 +264,7 @@ class F110Env:
             plt.show()
             
     def render_snapshot(self, wait=False, wpts=None):
-        self.race_map = self.env_map.race_course
+        # self.race_map = self.env_map.race_course
 
         car_x = int(self.car.x)
         car_y = int(self.car.y)

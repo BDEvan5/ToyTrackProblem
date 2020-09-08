@@ -370,6 +370,7 @@ class ModRaceVehicle(ModBaseVehicle):
         path = None
 
         try:
+            # raise Exception
             path = np.load(self.path_name)
         except:
             path = path_finder.run_search(5)

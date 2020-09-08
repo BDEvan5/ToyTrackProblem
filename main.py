@@ -118,6 +118,7 @@ def TrainModVehicle(agent_name, load=True):
 
 def RaceModVehicle(agent_name):
     env_map = RaceMap('RaceTrack1000')
+    # env_map = RaceMap('RaceTrack1020')
     vehicle = ModRaceVehicle(agent_name, 11, 3, True)
     env = F110Env(env_map)
 
@@ -126,13 +127,14 @@ def RaceModVehicle(agent_name):
     for i in range(10): # 10 laps
         print(f"Running lap: {i}")
         env_map.reset_map()
+        # env.render(False, wpts)
         while not done:
             action = vehicle.act(state, True)
             s_p, r, done, _ = env.step(action, updates=20, race=True)
 
             state = s_p
             # env.render(False, wpts)
-
+        # env.render(False, wpts)
         print(f"Lap time updates: {env.steps}")
         vehicle.show_vehicle_history()
         env.render_snapshot(wpts=wpts, wait=False)
@@ -287,7 +289,8 @@ def TrainRepVehicle(agent_name, load):
 def RaceRepVehicle(agent_name):
     print(f"Testing vehicle performance")
     # env_map = EnvironmentMap('TrainTrackEmpty')
-    env_map = RaceMap('RaceTrack1000')
+    # env_map = RaceMap('RaceTrack1000')
+    env_map = RaceMap('RaceTrack1020')
 
     env = F110Env(env_map)
     vehicle = RepRaceVehicle(agent_name, True)
@@ -330,8 +333,8 @@ def SuperRep():
 if __name__ == "__main__":
     # simulation_test()
 
-    # WillemsMod()
-    SuperRep()
+    WillemsMod()
+    # SuperRep()
 
 
 
