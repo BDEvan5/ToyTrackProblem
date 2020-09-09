@@ -129,7 +129,7 @@ class F110Env:
             self.check_done_race()
         else:
             self.check_done_reward()      
-
+        # self.check_done_reward_track_train()
 
         obs = self.get_state_obs()
         done = self.done
@@ -143,6 +143,7 @@ class F110Env:
         self.done = False
         self.action_memory = []
         self.steps = 0
+        self.race_map = self.env_map.race_course
         
         if poses is not None:
             self.car.x = poses['x']
@@ -188,6 +189,20 @@ class F110Env:
             self.reward = 1
         if self.steps > 100:
             self.done = True
+
+    def check_done_reward_track_train(self):
+        self.reward = 0 # normal
+        if self.race_map._check_location([self.car.x, self.car.y]):
+            self.done = True
+            self.reward = -1
+        if self.steps > 100:
+            self.done = True
+        start_y = self.env_map.start_y
+        # counter clock wise
+        if self.car.prev_loc[1] < start_y and self.car.y > start_y:
+            if abs(self.car.x - self.env_map.start[0]) < 10:
+                self.done = True
+        # clockwise
 
     def check_done_race(self):
         pt = [self.car.x, self.car.y]

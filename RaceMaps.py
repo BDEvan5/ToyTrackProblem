@@ -162,7 +162,8 @@ class EnvironmentMap:
         self.end = [50, 85]
 
     def reset_map(self):
-        self.generate_random_start()
+        # self.generate_random_start()
+        self.random_obstacles()
 
 
 class MapYamlEditor:

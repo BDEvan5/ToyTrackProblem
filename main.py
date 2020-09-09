@@ -69,7 +69,8 @@ def TrainModVehicle(agent_name, load=True):
     # vehicle = ModTrainVehicle(agent_name, 11, 3, load)
 
     # race train env
-    env_map = RaceMap('RaceTrack1000')
+    # env_map = RaceMap('RaceTrack1000')
+    env_map = EnvironmentMap('TrainTrack2000')
     vehicle = ModRaceVehicle(agent_name, 11, 3, load)
 
     env = F110Env(env_map)
@@ -81,9 +82,9 @@ def TrainModVehicle(agent_name, load=True):
     env_map.reset_map()
     done, state, score = False, env.reset(None), 0.0
     wpts = vehicle.init_plan(env_map)
-    for n in range(10000):
+    for n in range(100000):
         a = vehicle.act(state)
-        s_prime, r, done, _ = env.step(a, 20, race=True)
+        s_prime, r, done, _ = env.step(a, 30, race=False)
 
         vehicle.add_memory_entry(r, done, s_prime, buffer)
         score += r
@@ -113,6 +114,15 @@ def TrainModVehicle(agent_name, load=True):
             wpts = vehicle.init_plan()
 
     vehicle.agent.save()
+
+    plt.figure(1)
+    plt.savefig('Figure 1')
+    plt.figure(2)
+    plt.savefig('Figure 2')
+    plt.figure(3)
+    plt.savefig('Figure 3')
+    plt.figure(4)
+    plt.savefig('Figure 4')
 
     return rewards
 
@@ -318,9 +328,9 @@ def WillemsMod():
     agent_name = "TestingWillem"
     
     # TrainModVehicle(agent_name, False)
-    # TrainModVehicle(agent_name, True)
+    TrainModVehicle(agent_name, True)
 
-    RaceModVehicle(agent_name)
+    # RaceModVehicle(agent_name)
 
 def SuperRep():
     agent_name = "TestingRep"

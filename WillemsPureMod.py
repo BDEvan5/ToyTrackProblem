@@ -160,7 +160,7 @@ class ModBaseVehicle:
         self.pind = 1
         self.target = None
         self.steps = 0
-        self.slow_freq = 2
+        self.slow_freq = 1
 
         self.obs_space = obs_space
         self.action_space = action_space
@@ -231,7 +231,7 @@ class ModBaseVehicle:
         return nn_obs
 
     def modify_references(self, nn_action, v_ref, phi_ref):
-        d_phi = 0.7 # rad
+        d_phi = 0.5 # rad
         phi_new = phi_ref + (nn_action[0] - self.center_act) * d_phi
 
         v_ref_mod = v_ref

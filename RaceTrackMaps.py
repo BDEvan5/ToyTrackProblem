@@ -107,7 +107,7 @@ class RaceMap:
 
         obs_size = [3, 3] # representing cars 
         obs_locs = []
-        for i in range(10):
+        for i in range(20):
             rands = lib.get_rand_ints(100-max(obs_size), 0)
             while self.obs_free_hm._check_location(rands):
                 # this ensures that the cars are on the track
