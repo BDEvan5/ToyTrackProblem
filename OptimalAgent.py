@@ -2,6 +2,7 @@ import numpy as np
 
 from PathFinder import PathFinder, modify_path
 import LibFunctions as lib
+from TrajOpti import get_min_curve_pts
 
 
 class OptimalAgent:
@@ -13,37 +14,43 @@ class OptimalAgent:
         self.pind = 1
         self.target = None
 
+    # def init_agent(self):
+    #     # self.race_map.show_hm()
+    #     try:
+    #         # raise Exception
+    #         self.wpts = np.load(self.path_name)
+    #     except:
+    #         fcn = self.env_map.obs_hm._check_line
+    #         path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
+    #         path = path_finder.run_search(5)
+    #         # self.env_map.obs_hm.show_map(path)
+    #         path = modify_path(path)
+    #         self.wpts = path
+    #         np.save(self.path_name, self.wpts)
+    #         print("Path Generated")
+
+    #     self.wpts = np.append(self.wpts, self.env_map.end)
+    #     self.wpts = np.reshape(self.wpts, (-1, 2))
+
+    #     new_pts = []
+    #     for wpt in self.wpts:
+    #         if not self.env_map.race_course._check_location(wpt):
+    #             new_pts.append(wpt)
+    #         else:
+    #             pass
+    #     self.wpts = np.asarray(new_pts)    
+
+    #     # self.env_map.race_course.show_map(self.wpts)
+
+    #     self.pind = 1
+
+    #     return self.wpts
+
     def init_agent(self):
-        # self.race_map.show_hm()
-        try:
-            # raise Exception
-            self.wpts = np.load(self.path_name)
-        except:
-            fcn = self.env_map.obs_hm._check_line
-            path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
-            path = path_finder.run_search(5)
-            # self.env_map.obs_hm.show_map(path)
-            path = modify_path(path)
-            self.wpts = path
-            np.save(self.path_name, self.wpts)
-            print("Path Generated")
-
-        self.wpts = np.append(self.wpts, self.env_map.end)
-        self.wpts = np.reshape(self.wpts, (-1, 2))
-
-        new_pts = []
-        for wpt in self.wpts:
-            if not self.env_map.race_course._check_location(wpt):
-                new_pts.append(wpt)
-            else:
-                pass
-        self.wpts = np.asarray(new_pts)    
-
-        # self.env_map.race_course.show_map(self.wpts)
+        wpts = get_min_curve_pts()
 
         self.pind = 1
-
-        return self.wpts
+        
     
     def act(self, obs):
         # v_ref, d_ref = self.get_corridor_references(obs)
