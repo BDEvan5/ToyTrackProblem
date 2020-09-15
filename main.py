@@ -5,7 +5,9 @@ import sys
 import torch
 
 from Simulator import F110Env, CorridorAction
+from SimulatorTrack import TrackSim
 from RaceMaps import EnvironmentMap, RaceMap
+from TrackMap import TrackMap
 from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper
 import LibFunctions as lib
 
@@ -15,16 +17,16 @@ from MyPureRep import RepTrainVehicle, RepRaceVehicle
 
 
 def OptiStd():
-    env_map = EnvironmentMap('TestTrack1000')
+    env_map = TrackMap()
 
-    env = F110Env(env_map)
+    env = TrackSim(env_map)
     agent = OptimalAgent(env_map)
 
     done, state, score = False, env.reset(None), 0.0
     wpts = agent.init_agent()
     while not done:
         action = agent.act(state)
-        s_p, r, done, _ = env.step(action, updates=20)
+        s_p, r, done, _ = env.step(action, updates=30)
         score += r
         state = s_p
 
@@ -32,6 +34,7 @@ def OptiStd():
         env.render(False, wpts)
 
     print(f"Score: {score}")
+    env.render_snapshot(wait=True)
 
 
 """Training functions: PURE MOD"""

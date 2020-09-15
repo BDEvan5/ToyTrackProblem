@@ -57,7 +57,7 @@ class OptimalAgent:
         v_ref = 6
 
         th_target = lib.get_bearing(obs[0:2], self.target)
-        theta_dot = th_target - obs[2]
+        theta_dot = lib.sub_angles_complex(th_target, obs[2])
         theta_dot = lib.limit_theta(theta_dot)
 
         L = 0.33
@@ -147,7 +147,7 @@ def MinCurvatureTrajectory(track):
     
     }
 
-    S = ca.nlpsol('S', 'ipopt', nlp)
+    S = ca.nlpsol('S', 'ipopt', nlp, {'ipopt':{'print_level':0}})
 
     ones = np.ones(N)
     n0 = ones*0
@@ -171,7 +171,7 @@ def MinCurvatureTrajectory(track):
     n_set = np.array(x_opt[:N])
     thetas = np.array(x_opt[1*N:2*(N-1)])
 
-    lib.plot_race_line(np.array(track), n_set, wait=True)
+    # lib.plot_race_line(np.array(track), n_set, wait=True)
 
     return n_set
 

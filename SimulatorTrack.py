@@ -95,7 +95,7 @@ class ScanSimulator:
         self._check_location = check_fcn
 
 
-class F110Env:
+class TrackSim:
     def __init__(self, env_map):
         self.timestep = 0.01
 
@@ -103,7 +103,7 @@ class F110Env:
 
         self.car = CarModel()
         self.scan_sim = ScanSimulator(10, np.pi*2/3)
-        self.scan_sim.set_map(self.race_map._check_location)
+        self.scan_sim.set_map(self.env_map._check_location)
 
         self.done = False
         self.reward = 0
@@ -113,7 +113,7 @@ class F110Env:
 
         self.obs_space = len(self.get_state_obs())
 
-    def step(self, action, updates=10, race=False):
+    def step(self, action, updates=10):
         self.steps += 1
         self.action = action
         acceleration = action[0]
@@ -122,13 +122,8 @@ class F110Env:
         self.car.prev_loc = [self.car.x, self.car.y]
         for _ in range(updates):
             self.car.update_kinematic_state(acceleration, steer_dot, self.timestep)
-        
-        if race:
-            self.reward += updates * self.timestep
-            self.check_done_race()
-        else:
-            self.check_done_reward()      
-        # self.check_done_reward_track_train()
+         
+        self.check_done_reward_track_train()
 
         obs = self.get_state_obs()
         done = self.done
@@ -142,17 +137,13 @@ class F110Env:
         self.done = False
         self.action_memory = []
         self.steps = 0
-        self.race_map = self.env_map.race_course
         
         self.car.x = self.env_map.start[0]
         self.car.y = self.env_map.start[1]
         self.car.velocity = 0
         self.car.steering = 0
-        th = lib.get_bearing(self.env_map.start, self.env_map.end) 
-        self.car.theta = th + np.random.random() - 0.5
-            # self.car.theta = 0
+        self.car.theta = 0
 
-        
         return self.get_state_obs()
 
     def reset_lap(self):
@@ -161,7 +152,6 @@ class F110Env:
         self.car.prev_loc = [self.car.x, self.car.y]
         self.action_memory.clear()
         self.done = False
-        self.race_map = self.env_map.race_course
 
     def get_state_obs(self):
         car_state = self.car.get_car_state()
@@ -171,57 +161,35 @@ class F110Env:
 
         return state
 
-    def check_done_reward(self):
-        self.reward = 0 # normal
-        if self.race_map._check_location([self.car.x, self.car.y]):
-            self.done = True
-            self.reward = -1
-        if lib.get_distance([self.car.x, self.car.y], self.env_map.end) < 10:
-            self.done = True
-            self.reward = 1
-        if self.steps > 100:
-            self.done = True
-
     def check_done_reward_track_train(self):
         self.reward = 0 # normal
-        if self.race_map._check_location([self.car.x, self.car.y]):
+        if self.env_map._check_location([self.car.x, self.car.y]):
             self.done = True
             self.reward = -1
-        if self.steps > 100:
+        if self.steps > 300:
             self.done = True
-        start_y = self.env_map.start_y
-        # counter clock wise
+        start_y = self.env_map.start[1]
         if self.car.prev_loc[1] < start_y and self.car.y > start_y:
             if abs(self.car.x - self.env_map.start[0]) < 10:
                 self.done = True
-        # clockwise
 
-    def check_done_race(self):
-        pt = [self.car.x, self.car.y]
-        res = self.race_map._check_location(pt)
-        if res:
-            self.done = True
-            self.reward = -1
-        if self.steps > 400:
-            self.done = True
-        start_y = self.env_map.start_y
-        # counter clock wise
-        if self.car.prev_loc[1] < start_y and self.car.y > start_y:
-            if abs(self.car.x - self.env_map.start[0]) < 10:
-                self.done = True
-        # clockwise
-        # if self.car.prev_loc[1] < start_y and self.car.y > start_y:
-        #     if abs(self.car.x - self.env_map.start[0]) < 10:
-        #         self.done = True
-    
     def render(self, wait=False, wpts=None):
         car_x = int(self.car.x)
         car_y = int(self.car.y)
         fig = plt.figure(4)
         plt.clf()  
-        plt.imshow(self.race_map.race_map.T, origin='lower')
-        plt.xlim(0, self.race_map.map_width)
-        plt.ylim(-10, self.race_map.map_height)
+
+        c_line = self.env_map.track_pts
+        track = self.env_map.track
+        l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
+        r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
+
+        # plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
+        plt.plot(l_line[:, 0], l_line[:, 1], linewidth=1)
+        plt.plot(r_line[:, 0], r_line[:, 1], linewidth=1)
+
+
+
         plt.plot(self.env_map.start[0], self.env_map.start[1], '*', markersize=12)
 
         plt.plot(self.env_map.end[0], self.env_map.end[1], '*', markersize=12)
@@ -245,8 +213,8 @@ class F110Env:
                 xs.append(pt[0])
                 ys.append(pt[1])
         
-            # plt.plot(xs, ys)
-            plt.plot(xs, ys, 'x', markersize=20)
+            plt.plot(xs, ys)
+            # plt.plot(xs, ys, 'x', markersize=20)
 
         s = f"Reward: [{self.reward:.1f}]" 
         plt.text(100, 80, s)
@@ -277,9 +245,15 @@ class F110Env:
         car_y = int(self.car.y)
         fig = plt.figure(4)
         plt.clf()  
-        plt.imshow(self.race_map.race_map.T, origin='lower')
-        plt.xlim(0, self.race_map.map_width)
-        plt.ylim(-10, self.race_map.map_height)
+        c_line = self.env_map.track_pts
+        track = self.env_map.track
+        l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
+        r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
+
+        # plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
+        plt.plot(l_line[:, 0], l_line[:, 1], linewidth=1)
+        plt.plot(r_line[:, 0], r_line[:, 1], linewidth=1)
+
         plt.plot(self.env_map.start[0], self.env_map.start[1], '*', markersize=12)
 
         plt.plot(self.env_map.end[0], self.env_map.end[1], '*', markersize=12)
@@ -303,8 +277,8 @@ class F110Env:
                 xs.append(pt[0])
                 ys.append(pt[1])
         
-            # plt.plot(xs, ys)
-            plt.plot(xs, ys, 'x', markersize=20)
+            plt.plot(xs, ys)
+            # plt.plot(xs, ys, 'x', markersize=20)
 
         s = f"Reward: [{self.reward:.1f}]" 
         plt.text(100, 80, s)

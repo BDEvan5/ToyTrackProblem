@@ -7,8 +7,8 @@ import LibFunctions as lib
 
 
 class TrackMap:
-    def __init__(self, csv_map="RaceTrack1000_abscissa.csv"):
-        self.csv_name = csv_map
+    def __init__(self, csv_map="TrackMap1000.csv"):
+        self.name = csv_map
 
         self.track = None
         self.track_pts = None
@@ -16,10 +16,14 @@ class TrackMap:
         self.ws = None
         self.N = None
 
+        self.start = None
+        self.end = None
+
+        self.load_map()
 
     def load_map(self):
         track = []
-        filename = 'Maps/' + self.csv_name
+        filename = 'Maps/' + self.name
         with open(filename, 'r') as csvfile:
             csvFile = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)  
         
@@ -35,11 +39,15 @@ class TrackMap:
         self.nvecs = track[:, 2: 4]
         self.ws = track[:, 4:6]
 
+        self.start = self.track_pts[0]
+        self.end = self.track_pts[-1]
+
     def find_nearest_point(self, x):
         distances = []
-        for i in range(len(N)):
+        for i in range(self.N):
             d = lib.get_distance(self.track_pts[i], x)
-        nearest_idx = np.argmin(d)
+            distances.append(d)
+        nearest_idx = np.argmin(np.array(distances))
 
         return nearest_idx
 
