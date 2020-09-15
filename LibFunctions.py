@@ -191,7 +191,24 @@ def plot_multi(value_array, title="Results", figure_n=2, ylim=[-1, 1]):
     # plt.plot(values)
     plt.pause(0.0001)
 
+def plot_race_line(track, nset=None, wait=False):
+    c_line = track[:, 0:2]
+    l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
+    r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
 
+    plt.figure(1)
+    plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
+    plt.plot(l_line[:, 0], l_line[:, 1], linewidth=1)
+    plt.plot(r_line[:, 0], r_line[:, 1], linewidth=1)
+
+    if nset is not None:
+        deviation = np.array([track[:, 2] * nset[:, 0], track[:, 3] * nset[:, 0]]).T
+        r_line = track[:, 0:2] + deviation
+        plt.plot(r_line[:, 0], r_line[:, 1], linewidth=3)
+
+    plt.pause(0.0001)
+    if wait:
+        plt.show()
 
 """Testing"""
 def test():

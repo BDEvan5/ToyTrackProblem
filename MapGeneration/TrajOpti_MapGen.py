@@ -127,10 +127,7 @@ def run_map_gen():
 
     return track
 
-def MinCurvature():
-    track = run_map_gen()
-    txs = track[:, 0]
-    tys = track[:, 1]
+def MinCurvatureTrajectory(track):
     nvecs = track[:, 2:4]
     th_ns = [lib.get_bearing([0, 0], nvecs[i, 0:2]) for i in range(len(nvecs))]
 
@@ -223,10 +220,10 @@ def MinCurvature():
     return n_set
 
 def get_min_curve_pts():
-    n_set = MinCurvature()
     track = run_map_gen()
+    n_set = MinCurvatureTrajectory(track)
 
-    deviation = np.array([track[:, 2] * nset[:, 0], track[:, 3] * nset[:, 0]]).T
+    deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
     r_line = track[:, 0:2] + deviation
 
     return r_line
@@ -235,6 +232,7 @@ def get_min_curve_pts():
 
 if __name__ == "__main__":
     # run_map_gen()
-    MinCurvature()
+    get_min_curve_pts()
+    # MinCurvatureTrajectory()
 
 
