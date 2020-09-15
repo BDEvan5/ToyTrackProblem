@@ -84,6 +84,13 @@ def set_widths(track, width=5):
 
     ls, rs = [width], [width]
     for i in range(N-2):
+        # dw = (lib.get_bearing(track[i, 0:2], track[i+1, 0:2]) - lib.get_bearing(track[i+1, 0:2], track[i+2, 0:2])) / (np.pi/2)
+        # wl = width + dw
+        # wr = width - dw
+
+        # ls.append(wl)
+        # rs.append(wr)
+
         ls.append(width)
         rs.append(width)
 
@@ -107,14 +114,14 @@ def save_map(track, name):
 
 
 def run_map_gen():
-    N = 200
+    N = 100
     path = load_track()
     path = interp_track(path, N)
 
     track = create_nvecs(path)
     track = set_widths(track, 5)
 
-    plot_race_line(track, wait=True)
+    plot_race_line(track, wait=False)
 
     save_map(track, "TrackMap1000.csv")
 
@@ -157,24 +164,31 @@ def MinCurvature():
     im = ca.Function('im', [th1_f, th2_f], [-ca.cos(th1_f)*ca.sin(th2_f) + ca.sin(th1_f)*ca.cos(th2_f)])
 
     sub_cmplx = ca.Function('a_cpx', [th1_f, th2_f], [ca.atan(im(th1_f, th2_f)/real(th1_f, th2_f))])
-    get_th_n = ca.Function('gth', [th_f], [sub_cmplx(ca.pi*np.ones(N-1), sub_cmplx(th_f, th_ns[:-1]))])
     
+    get_th_n = ca.Function('gth', [th_f], [sub_cmplx(ca.pi*np.ones(N-1), sub_cmplx(th_f, th_ns[:-1]))])
     d_n = ca.Function('d_n', [n_f_a, th_f], [track_length(n_f_a)/ca.tan(get_th_n(th_f))])
 
+    # objective
+    real1 = ca.Function('real1', [th1_f1, th2_f1], [ca.cos(th1_f1)*ca.cos(th2_f1) + ca.sin(th1_f1)*ca.sin(th2_f1)])
+    im1 = ca.Function('im1', [th1_f1, th2_f1], [-ca.cos(th1_f1)*ca.sin(th2_f1) + ca.sin(th1_f1)*ca.cos(th2_f1)])
+
+    sub_cmplx1 = ca.Function('a_cpx1', [th1_f1, th2_f1], [ca.atan2(im1(th1_f1, th2_f1),real1(th1_f1, th2_f1))])
+    
     # define symbols
     n = ca.MX.sym('n', N)
-    th = ca.MX.sym('th', N)
+    th = ca.MX.sym('th', N-1)
 
 
     nlp = {\
     'x': ca.vertcat(n, th),
-    'f': ca.sumsqr(sub_cmplx(th[1:], th[:-1])), 
+    'f': ca.sumsqr(sub_cmplx1(th[1:], th[:-1])), 
+    # 'f': ca.sumsqr(track_length(n)), 
     'g': ca.vertcat(
                 # dynamic constraints
-                n[1:] - (n[:-1] + d_n(n, th[:-1])),
+                n[1:] - (n[:-1] + d_n(n, th)),
 
                 # boundary constraints
-                n[0], th[0],
+                n[0], #th[0],
                 n[-1], #th[-1],
             ) \
     
@@ -190,20 +204,19 @@ def MinCurvature():
         th_00 = lib.get_bearing(track[i, 0:2], track[i+1, 0:2])
         th0.append(th_00)
 
-    th0.append(0)
     th0 = np.array(th0)
 
     x0 = ca.vertcat(n0, th0)
 
-    lbx = [-n_max] * N + [-np.pi]*N 
-    ubx = [n_max] * N + [np.pi]*N 
+    lbx = [-n_max] * N + [-np.pi]*(N-1) 
+    ubx = [n_max] * N + [np.pi]*(N-1) 
 
     r = S(x0=x0, lbg=0, ubg=0, lbx=lbx, ubx=ubx)
 
     x_opt = r['x']
 
     n_set = np.array(x_opt[:N])
-    thetas = np.array(x_opt[1*N:2*N])
+    thetas = np.array(x_opt[1*N:2*(N-1)])
 
     plot_race_line(np.array(track), n_set, wait=True)
 
