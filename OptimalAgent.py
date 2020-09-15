@@ -77,8 +77,12 @@ class OptimalAgent:
     def _set_target(self, obs):
         dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
         shift_distance = 5
-        if dis_cur_target < shift_distance and self.pind < len(self.wpts)-2: # how close to say you were there
-            self.pind += 1
+        if dis_cur_target < shift_distance: # how close to say you were there
+            if self.pind < len(self.wpts)-2:
+                self.pind += 1
+            else:
+                self.pind = 0
+
         
         self.target = self.wpts[self.pind]
 

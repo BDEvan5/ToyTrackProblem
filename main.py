@@ -31,7 +31,7 @@ def OptiStd():
         state = s_p
 
         # env.render(True)
-        env.render(False, wpts)
+        # env.render(False, wpts)
 
     print(f"Score: {score}")
     env.render_snapshot(wait=True)
