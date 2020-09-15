@@ -5,8 +5,7 @@ import sys
 import torch
 
 from Simulator import F110Env, CorridorAction
-from RaceMaps import EnvironmentMap
-from RaceTrackMaps import RaceMap
+from RaceMaps import EnvironmentMap, RaceMap
 from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper
 import LibFunctions as lib
 
@@ -15,7 +14,7 @@ from WillemsPureMod import ModRaceVehicle, ModTrainVehicle
 from MyPureRep import RepTrainVehicle, RepRaceVehicle
 
 
-def simulation_test():
+def OptiStd():
     env_map = EnvironmentMap('TestTrack1000')
 
     env = F110Env(env_map)
@@ -340,11 +339,14 @@ def SuperRep():
 
     RaceRepVehicle(agent_name)
 
+
+
 if __name__ == "__main__":
     # simulation_test()
 
-    WillemsMod()
+    # WillemsMod()
     # SuperRep()
+    OptiStd()
 
 
 

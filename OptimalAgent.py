@@ -47,9 +47,11 @@ class OptimalAgent:
     #     return self.wpts
 
     def init_agent(self):
-        wpts = get_min_curve_pts()
+        self.wpts = get_min_curve_pts()
 
         self.pind = 1
+
+        return self.wpts
         
     
     def act(self, obs):
