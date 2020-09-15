@@ -19,6 +19,8 @@ class TrackMap:
         self.start = None
         self.end = None
 
+        self.obs_map = None
+
         self.load_map()
 
     def load_map(self):
@@ -57,4 +59,22 @@ class TrackMap:
         if dis > self.ws[idx, 0]:
             return True
         return False
+
+    def random_obs(self, n=10):
+        self.obs_map = np.zeros((100, 100))
+        obs_size = [2, 3]
+        rands = np.random.randint(1, self.N-1, n)
+        obs_locs = []
+        for i in range(n):
+            # obs_locs.append(lib.get_rand_ints(40, 25))
+            pt = self.track_pts[rands[i]][:, None]
+            obs_locs.append(pt[:, 0])
+
+        for obs in obs_locs:
+            for i in range(obs_size[0]):
+                for j in range(obs_size[1]):
+                    x = int(round(i + obs[0]))
+                    y = int(round(j + obs[1]))
+                    self.obs_map[x, y] = 1
+
 

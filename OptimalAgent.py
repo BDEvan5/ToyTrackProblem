@@ -1,5 +1,6 @@
 import numpy as np 
 import casadi as ca 
+from matplotlib import pyplot as plt
 
 
 import LibFunctions as lib
@@ -17,7 +18,7 @@ class OptimalAgent:
 
     def init_agent(self):
         track = self.env_map.track
-        n_set = MinCurvatureTrajectory(track)
+        n_set = MinCurvatureTrajectory(track, self.env_map.obs_map)
 
         deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
         r_line = track[:, 0:2] + deviation
@@ -88,9 +89,20 @@ class OptimalAgent:
 
 
 
-def MinCurvatureTrajectory(track):
+def MinCurvatureTrajectory(track, obs_map=None):
     nvecs = track[:, 2:4]
     th_ns = [lib.get_bearing([0, 0], nvecs[i, 0:2]) for i in range(len(nvecs))]
+
+    # xgrid = np.linspace(0, 100, 100)
+    # ygrid = np.linspace(0, 100, 100)
+    # data_flat = obs_map.ravel(order='F')
+    # lut = ca.interpolant('lut', 'bspline', [xgrid, ygrid], data_flat)
+
+    # plt.figure(1)
+    # plt.imshow(obs_map, origin='lower')
+    # plt.pause(0.001)
+
+    # print(lut([45, 43]))
 
     n_max = 3
     N = len(track)
@@ -143,6 +155,7 @@ def MinCurvatureTrajectory(track):
     'g': ca.vertcat(
                 # dynamic constraints
                 n[1:] - (n[:-1] + d_n(n, th)),
+                # lut(ca.horzcat(o_x_s(n[:-1]), o_y_s(n[:-1])).T).T,
 
                 # boundary constraints
                 n[0], #th[0],
@@ -151,7 +164,7 @@ def MinCurvatureTrajectory(track):
     
     }
 
-    S = ca.nlpsol('S', 'ipopt', nlp, {'ipopt':{'print_level':0}})
+    S = ca.nlpsol('S', 'ipopt', nlp, {'ipopt':{'print_level':3}})
 
     ones = np.ones(N)
     n0 = ones*0
@@ -168,6 +181,10 @@ def MinCurvatureTrajectory(track):
     lbx = [-n_max] * N + [-np.pi]*(N-1) 
     ubx = [n_max] * N + [np.pi]*(N-1) 
 
+    lbg = [0] * (N-1) + [0] * (N-1) + [0] * 2
+    ubg = [0] * (N-1) + [0.1] * (N-1) + [0] * 2
+
+    # r = S(x0=x0, lbg=lbg, ubg=ubg, lbx=lbx, ubx=ubx)
     r = S(x0=x0, lbg=0, ubg=0, lbx=lbx, ubx=ubx)
 
     x_opt = r['x']
@@ -175,7 +192,7 @@ def MinCurvatureTrajectory(track):
     n_set = np.array(x_opt[:N])
     thetas = np.array(x_opt[1*N:2*(N-1)])
 
-    # lib.plot_race_line(np.array(track), n_set, wait=True)
+    lib.plot_race_line(np.array(track), n_set, wait=True)
 
     return n_set
 

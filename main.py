@@ -19,6 +19,7 @@ from MyPureRep import RepTrainVehicle, RepRaceVehicle
 def OptiStd():
     env_map = TrackMap()
 
+    env_map.random_obs()
     env = TrackSim(env_map)
     agent = OptimalAgent(env_map)
 
