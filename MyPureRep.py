@@ -199,8 +199,6 @@ class RepBaseVehicle:
 
 
 
-
-
 class RepTrainVehicle(RepBaseVehicle):
     def __init__(self, agent_name, load):
         RepBaseVehicle.__init__(self, agent_name, load)

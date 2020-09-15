@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from PathFinder import PathFinder, modify_path
+from MinCurveTrajPlanner import MinCurvatureTrajectory
 import LibFunctions as lib
 from CommonTestUtils import ReplayBufferDQN
 
@@ -164,7 +164,7 @@ class ModBaseVehicle:
 
         self.obs_space = obs_space
         self.action_space = action_space
-        self.center_act = (self.action_space - 1) / 2
+        self.center_act = int((self.action_space - 1) / 2)
         self.state_action = None
         self.cur_nn_act = None
         self.prev_nn_act = self.center_act
@@ -180,10 +180,10 @@ class ModBaseVehicle:
     def act(self, obs, greedy=False):
         v_ref, phi_ref = self.get_target_references(obs)
 
+        nn_obs = self.transform_obs(obs, v_ref, phi_ref)
         """This is where the agent can be removed if needed"""
-        # if self.steps % self.slow_freq == 0:
-        if True:
-            nn_obs = self.transform_obs(obs, v_ref, phi_ref)
+        agent_on = True
+        if agent_on:
 
             if not greedy:
                 nn_action = self.agent.act(nn_obs)
@@ -191,12 +191,15 @@ class ModBaseVehicle:
                 nn_action = self.agent.greedy_action(nn_obs)
             # nn_action = [1]
             self.cur_nn_act = nn_action
-            self.out_his.append(self.agent.get_out(nn_obs))
-            self.mod_history.append(nn_action)
-            self.state_action = [nn_obs, nn_action]
+        else:
+            self.cur_nn_act = [self.center_act]
 
-            self.mem_window.pop(0)
-            self.mem_window.append(float(nn_action[0]/3))
+        self.out_his.append(self.agent.get_out(nn_obs))
+        self.mod_history.append(self.cur_nn_act)
+        self.state_action = [nn_obs, self.cur_nn_act]
+
+        self.mem_window.pop(0)
+        self.mem_window.append(float(self.cur_nn_act[0]/3))
 
         v_ref, phi_ref = self.modify_references(self.cur_nn_act, v_ref, phi_ref)
 
@@ -244,8 +247,7 @@ class ModBaseVehicle:
         v_ref = 7.5
 
         th_target = lib.get_bearing(obs[0:2], self.target)
-        phi_ref = th_target - obs[2]
-        phi_ref = lib.limit_theta(phi_ref)
+        phi_ref = lib.sub_angles_complex(th_target, obs[2])
 
         return v_ref, phi_ref
 
@@ -257,7 +259,7 @@ class ModBaseVehicle:
         L = 0.33
         d_ref = np.arctan(theta_dot * L / max(((obs[3], 1))))
         
-        kp_delta = 2
+        kp_delta = 5
         d_dot = (d_ref - obs[4]) * kp_delta
 
         a = np.clip(a, -8, 8)
@@ -267,9 +269,11 @@ class ModBaseVehicle:
 
     def _set_target(self, obs):
         dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-        shift_distance = 4
-        if dis_cur_target < shift_distance and self.pind < len(self.wpts)-1: # how close to say you were there
+        shift_distance = 5
+        if dis_cur_target < shift_distance: # how close to say you were there
             self.pind += 1
+            if self.pind == len(self.wpts)-1:
+                self.pind = 1
         
         self.target = self.wpts[self.pind]
 
@@ -310,30 +314,16 @@ class ModTrainVehicle(ModBaseVehicle):
     def __init__(self, name, obs_space, action_space, load):
         ModBaseVehicle.__init__(self, name, obs_space, action_space, load)
 
-    def init_plan(self, env_map=None):
-        if env_map is not None:
-            self.env_map = env_map
-            self.path_name = "Maps/" + self.env_map.name + "_path.npy"
-            
-        start = self.env_map.start
-        end = self.env_map.end
+    def init_plan(self, env_map):
+        self.env_map = env_map
+        track = self.env_map.track
+        n_set = MinCurvatureTrajectory(track, self.env_map.obs_map)
 
-        resolution = 10
-        dx, dy = lib.sub_locations(end, start)
+        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+        r_line = track[:, 0:2] + deviation
+        self.wpts = r_line
 
-        n_pts = max((round(max((abs(dx), abs(dy))) / resolution), 3))
-        ddx = dx / (n_pts - 1)
-        ddy = dy / (n_pts - 1)
-
-        self.wpts = []
-        for i in range(n_pts):
-            wpt = lib.add_locations(start, [ddx, ddy], i)
-            if not self.env_map.race_course._check_location(wpt):
-                self.wpts.append(wpt)
-            else:
-                pass
-
-        self.reset_lap()
+        self.pind = 1
 
         return self.wpts
 
@@ -356,40 +346,19 @@ class ModTrainVehicle(ModBaseVehicle):
     def reset_lap(self):
         self.pind = 1
 
+
 class ModRaceVehicle(ModBaseVehicle):
     def __init__(self, name, obs_space, action_space, load):
         ModBaseVehicle.__init__(self, name, obs_space, action_space, load)
 
-    def init_plan(self, env_map=None):
-        if env_map is not None:
-            self.env_map = env_map
-            self.path_name = "Maps/" + self.env_map.name + "_path.npy"
+    def init_plan(self, env_map):
+        self.env_map = env_map
+        track = self.env_map.track
+        n_set = MinCurvatureTrajectory(track, self.env_map.obs_map)
 
-        fcn = self.env_map.obs_free_hm._check_line
-        path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
-        path = None
-
-        try:
-            # raise Exception
-            path = np.load(self.path_name)
-        except:
-            path = path_finder.run_search(5)
-            np.save(self.path_name, path)
-
-        self.wpts = modify_path(path)
-
-        self.wpts = np.append(self.wpts, self.env_map.end)
-        self.wpts = np.reshape(self.wpts, (-1, 2))
-
-        new_pts = []
-        for wpt in self.wpts:
-            if not self.env_map.race_course._check_location(wpt):
-                new_pts.append(wpt)
-            else:
-                pass
-        self.wpts = np.asarray(new_pts)    
-
-        # self.env_map.race_course.show_map(False, self.wpts)
+        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+        r_line = track[:, 0:2] + deviation
+        self.wpts = r_line
 
         self.pind = 1
 
