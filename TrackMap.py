@@ -46,6 +46,8 @@ class TrackMap:
         self.start = self.track_pts[0]
         self.end = self.track_pts[-1]
 
+        self.random_obs()
+
     def find_nearest_point(self, x):
         distances = []
         for i in range(self.N):
@@ -94,4 +96,11 @@ class TrackMap:
             print("Scan map ready")
 
     def check_scan_location(self, x):
-        return self.scan_map[int(x[0]), int(x[1])]
+        if self.scan_map[int(x[0]), int(x[1])]:
+            return True
+        if self.obs_map[int(x[0]), int(x[1])]:
+            return True
+        return False
+
+    def reset_map(self):
+        self.random_obs(10)

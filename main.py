@@ -84,6 +84,7 @@ def TrainModVehicle(agent_name, load=True):
         score += r
         state = s_prime
         
+        env.render(False)
         vehicle.agent.train_episodes(buffer)
 
         if n % print_n == 0 and n > 0:
@@ -102,7 +103,7 @@ def TrainModVehicle(agent_name, load=True):
             env.render_snapshot(wpts=wpts, wait=False)
             if r == -1:
                 pass
-            # env_map.reset_map()
+            env_map.reset_map()
             vehicle.reset_lap()
             state = env.reset()
             wpts = vehicle.init_plan(env_map)

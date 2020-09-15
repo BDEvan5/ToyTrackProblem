@@ -163,7 +163,7 @@ class TrackSim:
 
     def check_done_reward_track_train(self):
         self.reward = 0 # normal
-        if self.env_map._check_location([self.car.x, self.car.y]):
+        if self.env_map.check_scan_location([self.car.x, self.car.y]):
             self.done = True
             self.reward = -1
         if self.steps > 300:
@@ -188,7 +188,7 @@ class TrackSim:
         plt.plot(l_line[:, 0], l_line[:, 1], linewidth=1)
         plt.plot(r_line[:, 0], r_line[:, 1], linewidth=1)
 
-
+        plt.imshow(self.env_map.obs_map.T, origin='lower')
 
         plt.plot(self.env_map.start[0], self.env_map.start[1], '*', markersize=12)
 
@@ -253,6 +253,7 @@ class TrackSim:
         # plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
         plt.plot(l_line[:, 0], l_line[:, 1], linewidth=1)
         plt.plot(r_line[:, 0], r_line[:, 1], linewidth=1)
+        plt.imshow(self.env_map.obs_map, origin='lower')
 
         plt.plot(self.env_map.start[0], self.env_map.start[1], '*', markersize=12)
 
