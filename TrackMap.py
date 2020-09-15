@@ -7,7 +7,7 @@ import LibFunctions as lib
 
 
 class TrackMap:
-    def __init__(self, csv_map="TrackMap1000.csv"):
+    def __init__(self, csv_map="TrackMap1000"):
         self.name = csv_map
 
         self.track = None
@@ -20,12 +20,14 @@ class TrackMap:
         self.end = None
 
         self.obs_map = None
+        self.scan_map = None
 
         self.load_map()
+        self.set_up_scan_map()
 
     def load_map(self):
         track = []
-        filename = 'Maps/' + self.name
+        filename = 'Maps/' + self.name + ".csv"
         with open(filename, 'r') as csvfile:
             csvFile = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)  
         
@@ -77,4 +79,19 @@ class TrackMap:
                     y = int(round(j + obs[1]))
                     self.obs_map[x, y] = 1
 
+    def set_up_scan_map(self):
+        try:
+            self.scan_map = np.load("scan_map.npy")
+        except:
+            resolution = 100
+            self.scan_map = np.zeros((resolution, resolution))
+            for i in range(resolution):
+                for j in range(resolution):
+                    if self._check_location([i, j]):
+                        self.scan_map[i, j] = 1
+            np.save("scan_map", self.scan_map)
 
+            print("Scan map ready")
+
+    def check_scan_location(self, x):
+        return self.scan_map[int(x[0]), int(x[1])]

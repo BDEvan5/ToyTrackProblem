@@ -254,7 +254,7 @@ def collect_rep_ep_obs(vehicle, env, buffer):
         s_p, r, done, _ = env.step(action, updates=20)
 
         state = s_p
-        env.render(True)
+        # env.render(True)
     
     vehicle.show_history()
     env.render_snapshot(wpts=wpts)
@@ -301,19 +301,17 @@ def TrainRepVehicle(agent_name, load):
 
 def RaceRepVehicle(agent_name):
     print(f"Testing vehicle performance")
-    # env_map = EnvironmentMap('TrainTrackEmpty')
-    # env_map = RaceMap('RaceTrack1000')
-    env_map = RaceMap('RaceTrack1020')
+    env_map = TrackMap('TrackMap1000')
 
-    env = F110Env(env_map)
+    env = TrackSim(env_map)
     vehicle = RepRaceVehicle(agent_name, True)
 
-    env_map.reset_map()
+    # env_map.reset_map()
     wpts = vehicle.init_plan(env_map)
     done, state, score = False, env.reset(None), 0.0
     while not done:
         action = vehicle.act(state)
-        s_p, r, done, _ = env.step(action, updates=20, race=True)
+        s_p, r, done, _ = env.step(action, updates=20)
         state = s_p
         # env.render(False, wpts)
 
@@ -325,7 +323,7 @@ def RaceRepVehicle(agent_name):
     print(f"Ep done in {env.steps} steps ")
 
 def trainRepTrack(agent_name, load=False):
-    env_map = TrackMap('TrackMap1000.csv')
+    env_map = TrackMap('TrackMap1000')
 
     buffer = ReplayBufferSuper()
     env = TrackSim(env_map)

@@ -103,7 +103,7 @@ class TrackSim:
 
         self.car = CarModel()
         self.scan_sim = ScanSimulator(10, np.pi*2/3)
-        self.scan_sim.set_map(self.env_map._check_location)
+        self.scan_sim.set_map(self.env_map.check_scan_location)
 
         self.done = False
         self.reward = 0
