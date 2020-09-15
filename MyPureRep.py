@@ -6,7 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from PathFinder import PathFinder, modify_path
+# from PathFinder import PathFinder, modify_path
+from MinCurveTrajPlanner import MinCurvatureTrajectory
 import LibFunctions as lib
 
 
@@ -208,68 +209,87 @@ class RepTrainVehicle(RepBaseVehicle):
         self.train_pind = 1
         self.train_target = None
       
-    def init_plan(self, env_map=None):
-        if env_map is not None:
-            self.env_map = env_map
-            self.path_name = "Maps/" + self.env_map.name + "_path.npy"
+    # def init_plan(self, env_map=None):
+    #     if env_map is not None:
+    #         self.env_map = env_map
+    #         self.path_name = "Maps/" + self.env_map.name + "_path.npy"
 
-        # self.env_map.obs_hm.show_map(True)
-        fcn = self.env_map.obs_hm._check_line
-        path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
-        path = None
-        while path is None:
-            try:
-                path = path_finder.run_search(5)
-            except AssertionError:
-                # self.env_map.obs_hm.show_map(True)
-                print(f"Search Problem: generating new start")
-                self.env_map.reset_map()
+    #     # self.env_map.obs_hm.show_map(True)
+    #     fcn = self.env_map.obs_hm._check_line
+    #     path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
+    #     path = None
+    #     while path is None:
+    #         try:
+    #             path = path_finder.run_search(5)
+    #         except AssertionError:
+    #             # self.env_map.obs_hm.show_map(True)
+    #             print(f"Search Problem: generating new start")
+    #             self.env_map.reset_map()
 
-        self.wpts = modify_path(path)
+    #     self.wpts = modify_path(path)
 
-        self.wpts = np.append(self.wpts, self.env_map.end)
-        self.wpts = np.reshape(self.wpts, (-1, 2))
+    #     self.wpts = np.append(self.wpts, self.env_map.end)
+    #     self.wpts = np.reshape(self.wpts, (-1, 2))
 
-        new_pts = []
-        for wpt in self.wpts:
-            if not self.env_map.race_course._check_location(wpt):
-                new_pts.append(wpt)
-            else:
-                pass
-        self.wpts = np.asarray(new_pts)    
+    #     new_pts = []
+    #     for wpt in self.wpts:
+    #         if not self.env_map.race_course._check_location(wpt):
+    #             new_pts.append(wpt)
+    #         else:
+    #             pass
+    #     self.wpts = np.asarray(new_pts)    
 
-        # self.env_map.race_course.show_map(False, self.wpts)
+    #     # self.env_map.race_course.show_map(False, self.wpts)
 
-        self.init_train_plan()     
-        self.reset_lap()   
+    #     self.init_train_plan()     
+    #     self.reset_lap()   
 
-        return self.wpts
+    #     return self.wpts
 
-    def init_train_plan(self):
-        fcn = self.env_map.obs_hm._check_line
-        path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
-        path = None
-        while path is None:
-            try:
-                path = path_finder.run_search(5)
-            except AssertionError:
-                print(f"Search Problem: generating new start")
-                self.env_map.generate_random_start()
+    # def init_train_plan(self):
+    #     fcn = self.env_map.obs_hm._check_line
+    #     path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
+    #     path = None
+    #     while path is None:
+    #         try:
+    #             path = path_finder.run_search(5)
+    #         except AssertionError:
+    #             print(f"Search Problem: generating new start")
+    #             self.env_map.generate_random_start()
 
-        self.train_wpts = modify_path(path)
+    #     self.train_wpts = modify_path(path)
 
-        self.train_wpts = np.append(self.train_wpts, self.env_map.end)
-        self.train_wpts = np.reshape(self.train_wpts, (-1, 2))
+    #     self.train_wpts = np.append(self.train_wpts, self.env_map.end)
+    #     self.train_wpts = np.reshape(self.train_wpts, (-1, 2))
 
-        new_pts = []
-        for wpt in self.train_wpts:
-            if not self.env_map.race_course._check_location(wpt):
-                new_pts.append(wpt)
-            else:
-                pass
-        self.train_wpts = np.asarray(new_pts)    
+    #     new_pts = []
+    #     for wpt in self.train_wpts:
+    #         if not self.env_map.race_course._check_location(wpt):
+    #             new_pts.append(wpt)
+    #         else:
+    #             pass
+    #     self.train_wpts = np.asarray(new_pts)    
 
-        # self.env_map.race_course.show_map(False, self.train_wpts)     
+    #     # self.env_map.race_course.show_map(False, self.train_wpts)     
+
+    #     return self.wpts
+
+    def init_plan(self, env_map):
+        self.env_map = env_map
+        track = env_map.track
+        n_set = MinCurvatureTrajectory(track, env_map.obs_map)
+
+        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+        r_line = track[:, 0:2] + deviation
+        self.wpts = r_line
+
+        self.train_wpts = r_line # using the same wpts
+
+        self.train_phi_history.clear()
+        self.nn_phi_history.clear()
+
+        self.pind = 1
+        self.train_pind = 1
 
         return self.wpts
 
@@ -377,333 +397,351 @@ class RepRaceVehicle(RepBaseVehicle):
 
 
 
-class SuperRepVehicle:
-    def __init__(self, env_map, agent_name="Testing", load=True):
-        self.env_map = env_map
+# class RepTrainVehicle:
+#     def __init__(self, env_map, agent_name="Testing", load=True):
+#         self.env_map = env_map
         
-        self.wpts = None
-        self.pind = 1
-        self.target = None
+#         self.wpts = None
+#         self.pind = 1
+#         self.target = None
 
-        self.nn_wpts = None
-        self.nn_pind = 1
-        self.nn_target = None
+#         self.nn_wpts = None
+#         self.nn_pind = 1
+#         self.nn_target = None
 
-        self.agent = SuperTrainRep(11+5, 1, agent_name)
-        self.agent.try_load(load)
+#         self.agent = SuperTrainRep(11+5, 1, agent_name)
+#         self.agent.try_load(load)
 
-        self.mem_window = [0, 0, 0, 0, 0]
+#         self.mem_window = [0, 0, 0, 0, 0]
 
-        self.nn_phi_history = []
-        self.target_phi_history = []
+#         self.nn_phi_history = []
+#         self.target_phi_history = []
         
 
-        self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
+#         self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
 
-    def init_agent(self):
-        fcn = self.env_map.obs_hm._check_line
-        path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
-        path = None
-        while path is None:
-            try:
-                path = path_finder.run_search(5)
-            except AssertionError:
-                print(f"Search Problem: generating new start")
-                self.env_map.generate_random_start()
+#     # def init_agent(self):
+#     #     fcn = self.env_map.obs_hm._check_line
+#     #     path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
+#     #     path = None
+#     #     while path is None:
+#     #         try:
+#     #             path = path_finder.run_search(5)
+#     #         except AssertionError:
+#     #             print(f"Search Problem: generating new start")
+#     #             self.env_map.generate_random_start()
 
-        self.wpts = modify_path(path)
+#     #     self.wpts = modify_path(path)
 
-        self.wpts = np.append(self.wpts, self.env_map.end)
-        self.wpts = np.reshape(self.wpts, (-1, 2))
+#     #     self.wpts = np.append(self.wpts, self.env_map.end)
+#     #     self.wpts = np.reshape(self.wpts, (-1, 2))
 
-        new_pts = []
-        for wpt in self.wpts:
-            if not self.env_map.race_course._check_location(wpt):
-                new_pts.append(wpt)
-            else:
-                pass
-        self.wpts = np.asarray(new_pts)    
+#     #     new_pts = []
+#     #     for wpt in self.wpts:
+#     #         if not self.env_map.race_course._check_location(wpt):
+#     #             new_pts.append(wpt)
+#     #         else:
+#     #             pass
+#     #     self.wpts = np.asarray(new_pts)    
 
-        # self.env_map.race_course.show_map(False, self.wpts)
+#     #     # self.env_map.race_course.show_map(False, self.wpts)
 
-        self.pind = 1
+#     #     self.pind = 1
 
-        self.target_phi_history.clear()
-        self.nn_phi_history.clear()
+#     #     self.target_phi_history.clear()
+#     #     self.nn_phi_history.clear()
 
-        self.init_straight_plan()        
+#     #     self.init_straight_plan()        
 
-        return self.wpts
+#     #     return self.wpts
 
-    def init_straight_plan(self):
-        # this is when there are no known obs for training.
-        start = self.env_map.start
-        end = self.env_map.end
+#     def init_agent(self):
+#         track = self.env_map.track
+#         n_set = MinCurvatureTrajectory(track, self.env_map.obs_map)
 
-        resolution = 10
-        dx, dy = lib.sub_locations(end, start)
+#         deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+#         r_line = track[:, 0:2] + deviation
+#         self.wpts = r_line
 
-        n_pts = max((round(max((abs(dx), abs(dy))) / resolution), 3))
-        ddx = dx / (n_pts - 1)
-        ddy = dy / (n_pts - 1)
+#         self.nn_wpts = r_line # using the same wpts
 
-        self.nn_wpts = []
-        for i in range(n_pts):
-            pt = lib.add_locations(start, [ddx, ddy], i)
-            self.nn_wpts.append(pt)
+#         self.target_phi_history.clear()
+#         self.nn_phi_history.clear()
 
-        self.nn_pind = 1
+#         self.pind = 1
+#         self.nn_pind = 1
 
-        self.target_phi_history.clear()
-        self.nn_phi_history.clear()
+#         return self.wpts
 
-        return self.nn_wpts
+#     # def init_straight_plan(self):
+#     #     # this is when there are no known obs for training.
+#     #     start = self.env_map.start
+#     #     end = self.env_map.end
 
-    def opti_act(self, obs):
-        self._set_targets(obs)
+#     #     resolution = 10
+#     #     dx, dy = lib.sub_locations(end, start)
 
-        v_ref, target_phi = self.get_target_references(obs, self.target)
-        normalised_target_phi = target_phi/ np.pi *2
-        self.target_phi_history.append(normalised_target_phi)
+#     #     n_pts = max((round(max((abs(dx), abs(dy))) / resolution), 3))
+#     #     ddx = dx / (n_pts - 1)
+#     #     ddy = dy / (n_pts - 1)
 
-        # record values
-        nn_obs = self.get_nn_vals(obs)
-        nn_act = self.agent.act(nn_obs)[0] 
-        self.nn_phi_history.append(nn_act)
+#     #     self.nn_wpts = []
+#     #     for i in range(n_pts):
+#     #         pt = lib.add_locations(start, [ddx, ddy], i)
+#     #         self.nn_wpts.append(pt)
 
-        self.mem_window.pop(0)
-        # self.mem_window.append(float(normalised_target_phi))
-        self.mem_window.append(float(nn_act))
+#     #     self.nn_pind = 1
 
-        a, d_dot = self.control_system(obs, v_ref, target_phi)
+#     #     self.target_phi_history.clear()
+#     #     self.nn_phi_history.clear()
 
-        return [a, d_dot]
+#     #     return self.nn_wpts
 
-    def act(self, obs):
-        self._set_targets(obs)
+#     def opti_act(self, obs):
+#         self._set_targets(obs)
+
+#         v_ref, target_phi = self.get_target_references(obs, self.target)
+#         normalised_target_phi = target_phi/ np.pi *2
+#         self.target_phi_history.append(normalised_target_phi)
+
+#         # record values
+#         nn_obs = self.get_nn_vals(obs)
+#         nn_act = self.agent.act(nn_obs)[0] 
+#         self.nn_phi_history.append(nn_act)
+
+#         self.mem_window.pop(0)
+#         # self.mem_window.append(float(normalised_target_phi))
+#         self.mem_window.append(float(nn_act))
+
+#         a, d_dot = self.control_system(obs, v_ref, target_phi)
+
+#         return [a, d_dot]
+
+#     def act(self, obs):
+#         self._set_targets(obs)
         
-        v_ref = 6
-        nn_obs = self.get_nn_vals(obs)
-        nn_act = self.agent.act(nn_obs)[0] 
-        self.nn_phi_history.append(nn_act)
+#         v_ref = 6
+#         nn_obs = self.get_nn_vals(obs)
+#         nn_act = self.agent.act(nn_obs)[0] 
+#         self.nn_phi_history.append(nn_act)
 
-        # add target to record
-        v_ref, target_phi = self.get_target_references(obs, self.target)
-        self.target_phi_history.append(target_phi/ np.pi *2)
+#         # add target to record
+#         v_ref, target_phi = self.get_target_references(obs, self.target)
+#         self.target_phi_history.append(target_phi/ np.pi *2)
 
-        self.mem_window.pop(0)
-        self.mem_window.append(float(nn_act))
+#         self.mem_window.pop(0)
+#         self.mem_window.append(float(nn_act))
 
-        nn_phi = nn_act * np.pi/2
+#         nn_phi = nn_act * np.pi/2
 
-        a, d_dot = self.control_system(obs, v_ref, nn_phi)
+#         a, d_dot = self.control_system(obs, v_ref, nn_phi)
 
 
-        return [a, d_dot]
+#         return [a, d_dot]
 
-    def show_history(self):
-        plt.figure(1)
-        plt.clf()        
-        plt.title('History')
-        plt.xlabel('Episode')
-        plt.ylabel('Duration')
+#     def show_history(self):
+#         plt.figure(1)
+#         plt.clf()        
+#         plt.title('History')
+#         plt.xlabel('Episode')
+#         plt.ylabel('Duration')
 
-        plt.plot(self.nn_phi_history)
-        plt.plot(self.target_phi_history)
+#         plt.plot(self.nn_phi_history)
+#         plt.plot(self.target_phi_history)
 
-        plt.legend(['NN', 'Target'])
-        plt.ylim([-1.1, 1.1])
+#         plt.legend(['NN', 'Target'])
+#         plt.ylim([-1.1, 1.1])
 
-        plt.pause(0.001)
+#         plt.pause(0.001)
 
-    def get_nn_vals(self, obs):
-        v_ref, target_phi_straight = self.get_target_references(obs, self.env_map.end)
+#     def get_nn_vals(self, obs):
+#         v_ref, target_phi_straight = self.get_target_references(obs, self.env_map.end)
 
-        max_angle = np.pi
+#         max_angle = np.pi
 
-        scaled_target_phi = target_phi_straight / max_angle
-        nn_obs = [scaled_target_phi]
+#         scaled_target_phi = target_phi_straight / max_angle
+#         nn_obs = [scaled_target_phi]
 
-        nn_obs = np.concatenate([nn_obs, obs[5:], self.mem_window])
+#         nn_obs = np.concatenate([nn_obs, obs[5:], self.mem_window])
 
-        return nn_obs
+#         return nn_obs
 
-    def add_mem_step(self, buffer, obs):
-        nn_state = self.get_nn_vals(obs)
-        v, target_phi = self.get_target_references(obs, self.target)
-        data = (nn_state, [target_phi/np.pi*2])
-        buffer.add(data)
+#     def add_mem_step(self, buffer, obs):
+#         nn_state = self.get_nn_vals(obs)
+#         v, target_phi = self.get_target_references(obs, self.target)
+#         data = (nn_state, [target_phi/np.pi*2])
+#         buffer.add(data)
 
-    def get_target_references(self, obs, target):
-        v_ref = 6
+#     def get_target_references(self, obs, target):
+#         v_ref = 6
 
-        th_target = lib.get_bearing(obs[0:2], target)
-        target_phi = th_target - obs[2]
-        target_phi = lib.limit_theta(target_phi)
+#         th_target = lib.get_bearing(obs[0:2], target)
+#         target_phi = th_target - obs[2]
+#         target_phi = lib.limit_theta(target_phi)
 
-        return v_ref, target_phi
+#         return v_ref, target_phi
 
-    def control_system(self, obs, v_ref, phi_ref):
-        kp_a = 10
-        a = (v_ref - obs[3]) * kp_a
+#     def control_system(self, obs, v_ref, phi_ref):
+#         kp_a = 10
+#         a = (v_ref - obs[3]) * kp_a
 
-        theta_dot = phi_ref * 1
-        L = 0.33
-        d_ref = np.arctan(theta_dot * L / max(((obs[3], 1))))
+#         theta_dot = phi_ref * 1
+#         L = 0.33
+#         d_ref = np.arctan(theta_dot * L / max(((obs[3], 1))))
         
-        kp_delta = 5
-        d_dot = (d_ref - obs[4]) * kp_delta
+#         kp_delta = 5
+#         d_dot = (d_ref - obs[4]) * kp_delta
 
-        a = np.clip(a, -8, 8)
-        d_dot = np.clip(d_dot, -3.2, 3.2)
+#         a = np.clip(a, -8, 8)
+#         d_dot = np.clip(d_dot, -3.2, 3.2)
 
-        return a, d_dot
+#         return a, d_dot
 
-    def _set_targets(self, obs):
-        dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-        shift_distance = 5
-        if dis_cur_target < shift_distance and self.pind < len(self.wpts)-2: # how close to say you were there
-            self.pind += 1
+#     def _set_targets(self, obs):
+#         dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
+#         shift_distance = 5
+#         if dis_cur_target < shift_distance and self.pind < len(self.wpts)-2: # how close to say you were there
+#             self.pind += 1
         
-        self.target = self.wpts[self.pind]
+#         self.target = self.wpts[self.pind]
 
-        dis_cur_target = lib.get_distance(self.nn_wpts[self.nn_pind], obs[0:2])
-        shift_distance = 5
-        if dis_cur_target < shift_distance and self.nn_pind < len(self.nn_wpts)-2: # how close to say you were there
-            self.nn_pind += 1
+#         dis_cur_target = lib.get_distance(self.nn_wpts[self.nn_pind], obs[0:2])
+#         shift_distance = 5
+#         if dis_cur_target < shift_distance and self.nn_pind < len(self.nn_wpts)-2: # how close to say you were there
+#             self.nn_pind += 1
         
-        self.nn_target = self.nn_wpts[self.nn_pind]
+#         self.nn_target = self.nn_wpts[self.nn_pind]
 
 
-class RaceRepVehicle:
-    def __init__(self, env_map, agent_name="Testing", load=True):
-        self.env_map = env_map
+# class RepRaceVehicle:
+#     def __init__(self, env_map, agent_name="Testing", load=True):
+#         self.env_map = env_map
         
-        self.wpts = None
-        self.pind = 1
-        self.target = None
+#         self.wpts = None
+#         self.pind = 1
+#         self.target = None
 
-        self.agent = SuperTrainRep(11 + 5, 1, agent_name)
-        self.agent.try_load(load)
+#         self.agent = SuperTrainRep(11 + 5, 1, agent_name)
+#         self.agent.try_load(load)
 
-        self.mem_window = [0, 0, 0, 0, 0]
+#         self.mem_window = [0, 0, 0, 0, 0]
 
-        self.nn_phi_history = []
-        self.target_phi_history = []
+#         self.nn_phi_history = []
+#         self.target_phi_history = []
         
-        self.path_name = 'Maps/' + self.env_map.name + '_path.npy' # move to setup call
+#         self.path_name = 'Maps/' + self.env_map.name + '_path.npy' # move to setup call
 
-    def init_race_plan(self):
-        self.env_map.obs_free_hm.show_map(False)
-        fcn = self.env_map.obs_free_hm._check_line
-        path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
-        path = None
+#     def init_race_plan(self):
+#         self.env_map.obs_free_hm.show_map(False)
+#         fcn = self.env_map.obs_free_hm._check_line
+#         path_finder = PathFinder(fcn, self.env_map.start, self.env_map.end)
+#         path = None
 
-        try:
-            path = np.load(self.path_name)
-        except:
-            path = path_finder.run_search(5)
-            np.save(self.path_name, path)
+#         try:
+#             path = np.load(self.path_name)
+#         except:
+#             path = path_finder.run_search(5)
+#             np.save(self.path_name, path)
 
-        self.wpts = modify_path(path)
+#         self.wpts = modify_path(path)
 
-        self.wpts = np.append(self.wpts, self.env_map.end)
-        self.wpts = np.reshape(self.wpts, (-1, 2))
+#         self.wpts = np.append(self.wpts, self.env_map.end)
+#         self.wpts = np.reshape(self.wpts, (-1, 2))
 
-        new_pts = []
-        for wpt in self.wpts:
-            if not self.env_map.race_course._check_location(wpt):
-                new_pts.append(wpt)
-            else:
-                pass
-        self.wpts = np.asarray(new_pts)    
+#         new_pts = []
+#         for wpt in self.wpts:
+#             if not self.env_map.race_course._check_location(wpt):
+#                 new_pts.append(wpt)
+#             else:
+#                 pass
+#         self.wpts = np.asarray(new_pts)    
 
-        # self.env_map.race_course.show_map(False, self.wpts)
+#         # self.env_map.race_course.show_map(False, self.wpts)
 
-        self.pind = 1
+#         self.pind = 1
 
-        self.nn_phi_history.clear() 
+#         self.nn_phi_history.clear() 
 
-        return self.wpts
+#         return self.wpts
 
-    def reset_lap_count(self):
-        self.pind = 1
+#     def reset_lap_count(self):
+#         self.pind = 1
 
-    def act(self, obs):
-        self._set_targets(obs)
+#     def act(self, obs):
+#         self._set_targets(obs)
         
-        v_ref = 6
-        nn_obs = self.get_nn_vals(obs)
-        nn_act = self.agent.act(nn_obs)[0] 
-        self.nn_phi_history.append(nn_act)
+#         v_ref = 6
+#         nn_obs = self.get_nn_vals(obs)
+#         nn_act = self.agent.act(nn_obs)[0] 
+#         self.nn_phi_history.append(nn_act)
 
-        self.mem_window.pop(0)
-        self.mem_window.append(float(nn_act))
+#         self.mem_window.pop(0)
+#         self.mem_window.append(float(nn_act))
 
-        nn_phi = nn_act * np.pi/2
+#         nn_phi = nn_act * np.pi/2
 
-        a, d_dot = self.control_system(obs, v_ref, nn_phi)
+#         a, d_dot = self.control_system(obs, v_ref, nn_phi)
 
-        return [a, d_dot]
+#         return [a, d_dot]
 
-    def show_history(self):
-        plt.figure(1)
-        plt.clf()        
-        plt.title('History')
-        plt.xlabel('Episode')
-        plt.ylabel('Duration')
+#     def show_history(self):
+#         plt.figure(1)
+#         plt.clf()        
+#         plt.title('History')
+#         plt.xlabel('Episode')
+#         plt.ylabel('Duration')
 
-        plt.plot(self.nn_phi_history)
+#         plt.plot(self.nn_phi_history)
 
-        plt.legend(['NN', 'Target'])
-        plt.ylim([-1.1, 1.1])
+#         plt.legend(['NN', 'Target'])
+#         plt.ylim([-1.1, 1.1])
 
-        plt.pause(0.001)
+#         plt.pause(0.001)
 
-    def get_nn_vals(self, obs):
-        v_ref, target_phi_straight = self.get_target_references(obs, self.target)
+#     def get_nn_vals(self, obs):
+#         v_ref, target_phi_straight = self.get_target_references(obs, self.target)
 
-        max_angle = np.pi
+#         max_angle = np.pi
 
-        scaled_target_phi = target_phi_straight / max_angle
-        nn_obs = [scaled_target_phi]
+#         scaled_target_phi = target_phi_straight / max_angle
+#         nn_obs = [scaled_target_phi]
 
-        nn_obs = np.concatenate([nn_obs, obs[5:], self.mem_window])
+#         nn_obs = np.concatenate([nn_obs, obs[5:], self.mem_window])
 
-        return nn_obs
+#         return nn_obs
 
-    def get_target_references(self, obs, target):
-        v_ref = 6
+#     def get_target_references(self, obs, target):
+#         v_ref = 6
 
-        th_target = lib.get_bearing(obs[0:2], target)
-        target_phi = th_target - obs[2]
-        target_phi = lib.limit_theta(target_phi)
+#         th_target = lib.get_bearing(obs[0:2], target)
+#         target_phi = th_target - obs[2]
+#         target_phi = lib.limit_theta(target_phi)
 
-        return v_ref, target_phi
+#         return v_ref, target_phi
 
-    def control_system(self, obs, v_ref, phi_ref):
-        kp_a = 10
-        a = (v_ref - obs[3]) * kp_a
+#     def control_system(self, obs, v_ref, phi_ref):
+#         kp_a = 10
+#         a = (v_ref - obs[3]) * kp_a
 
-        theta_dot = phi_ref * 1
-        L = 0.33
-        d_ref = np.arctan(theta_dot * L / max(((obs[3], 1))))
+#         theta_dot = phi_ref * 1
+#         L = 0.33
+#         d_ref = np.arctan(theta_dot * L / max(((obs[3], 1))))
         
-        kp_delta = 5
-        d_dot = (d_ref - obs[4]) * kp_delta
+#         kp_delta = 5
+#         d_dot = (d_ref - obs[4]) * kp_delta
 
-        a = np.clip(a, -8, 8)
-        d_dot = np.clip(d_dot, -3.2, 3.2)
+#         a = np.clip(a, -8, 8)
+#         d_dot = np.clip(d_dot, -3.2, 3.2)
 
-        return a, d_dot
+#         return a, d_dot
 
-    def _set_targets(self, obs):
-        dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-        shift_distance = 5
-        if dis_cur_target < shift_distance and self.pind < len(self.wpts)-2: # how close to say you were there
-            self.pind += 1
+#     def _set_targets(self, obs):
+#         dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
+#         shift_distance = 5
+#         if dis_cur_target < shift_distance and self.pind < len(self.wpts)-2: # how close to say you were there
+#             self.pind += 1
         
-        self.target = self.wpts[self.pind]
+#         self.target = self.wpts[self.pind]
 
 
 

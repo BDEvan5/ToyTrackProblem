@@ -245,16 +245,16 @@ def TrainRepAgent(agent_name, load):
 
 # new rep train functions
 def collect_rep_ep_obs(vehicle, env, buffer):
-    env.env_map.reset_map()
+    # env.env_map.reset_map()
     wpts = vehicle.init_plan(env.env_map)
     done, state, score = False, env.reset(None), 0.0
     while not done:
         action = vehicle.train_act(state)
         vehicle.add_mem_step(buffer, state)
-        s_p, r, done, _ = env.step(action, updates=20, race=True)
+        s_p, r, done, _ = env.step(action, updates=20)
 
         state = s_p
-        # env.render()
+        env.render(True)
     
     vehicle.show_history()
     env.render_snapshot(wpts=wpts)
@@ -324,6 +324,39 @@ def RaceRepVehicle(agent_name):
     plt.show()
     print(f"Ep done in {env.steps} steps ")
 
+def trainRepTrack(agent_name, load=False):
+    env_map = TrackMap('TrackMap1000.csv')
+
+    buffer = ReplayBufferSuper()
+    env = TrackSim(env_map)
+    vehicle = RepTrainVehicle(agent_name, load)
+
+    print(f"Creating data")
+    i = 0
+    while buffer.length < 1000:
+        collect_rep_ep_obs(vehicle, env, buffer)
+        vehicle.agent.train(buffer, 100)
+
+        if i % 5 == 0:
+            collect_rep_ep_obs(vehicle, env, buffer)
+        i += 1
+
+    vehicle.agent.save()
+
+    print(f"Starting training")
+    score, losses = 0, []
+    for n in range(10000):
+        l = vehicle.agent.train(buffer)
+        score += l 
+
+        if n % 100 == 1:
+            losses.append(score)
+            vehicle.agent.save()
+            print(f"Loss: {score}")
+            score = 0
+
+            RaceRepVehicle(agent_name)
+
 
 
 """Total functions"""
@@ -341,7 +374,9 @@ def SuperRep():
     # TrainRepVehicle(agent_name, False)
     # TrainRepVehicle(agent_name, True)
 
-    RaceRepVehicle(agent_name)
+    trainRepTrack(agent_name, False)
+
+    # RaceRepVehicle(agent_name)
 
 
 
@@ -349,8 +384,8 @@ if __name__ == "__main__":
     # simulation_test()
 
     # WillemsMod()
-    # SuperRep()
-    OptiStd()
+    SuperRep()
+    # OptiStd()
 
 
 
