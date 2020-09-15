@@ -7,7 +7,7 @@ import csv
 import LibFunctions as lib 
 
 
-def load_track(filename='TrajOpt/RaceTrack1000_abscissa.csv', show=True):
+def load_track(filename='Maps/RaceTrack1000_abscissa.csv', show=True):
     track = []
     with open(filename, 'r') as csvfile:
         csvFile = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)  
@@ -30,7 +30,7 @@ def interp_track(track, N):
 
     ds = length / N
 
-    no_points_interp = math.ceil(dists_cum[-1] / (ds/5)) + 1
+    no_points_interp = math.ceil(dists_cum[-1] / (ds)) + 1
     dists_interp = np.linspace(0.0, dists_cum[-1], no_points_interp)
 
     interp_track = np.zeros((no_points_interp, 2))
@@ -41,29 +41,22 @@ def interp_track(track, N):
 
 def get_nvec(x0, x2):
     th = lib.get_bearing(x0, x2)
-    new_th = th + np.pi/2
+    new_th = lib.add_angles_complex(th, np.pi/2)
     nvec = lib.theta_to_xy(new_th)
 
     return nvec
 
 def create_nvecs(track):
-    N = 100
-    seg_lengths = np.sqrt(np.sum(np.power(np.diff(track[:, :2], axis=0), 2), axis=1))
-    length = sum(seg_lengths)
-    ds = length / N
+    N = len(track)
 
-    new_track, nvecs = [], []
-    new_track.append(track[0, :])
-    nvecs.append(get_nvec(track[0, :], track[1, :]))
-    s = 0
-    for i in range(len(track)-1):
-        s = lib.get_distance(new_track[-1], track[i, :])
-        if s > ds:
-            nvec = get_nvec(new_track[-1], track[min((i+5, len(track)-1)), :])
-            nvecs.append(nvec)
-            new_track.append(track[i])
+    nvecs = []
+    nvecs.append(get_nvec(track[0, 0:2], track[1, 0:2]))
+    for i in range(1, N-1):
+        nvec = get_nvec(track[i-1, 0:2], track[i+1, 0:2])
+        nvecs.append(nvec)
+    nvecs.append(get_nvec(track[-2, 0:2], track[-1, 0:2]))
 
-    return_track = np.concatenate([new_track, nvecs], axis=-1)
+    return_track = np.concatenate([track, nvecs], axis=-1)
 
     return return_track
 
@@ -104,6 +97,14 @@ def set_widths(track, width=5):
 
     return new_track
 
+def save_map(track, name):
+    filename = 'Maps/' + name
+
+    with open(filename, 'w') as csvfile:
+        csvFile = csv.writer(csvfile)
+        csvFile.writerows(track)
+
+
 
 def run_map_gen():
     N = 200
@@ -113,7 +114,9 @@ def run_map_gen():
     track = create_nvecs(path)
     track = set_widths(track, 5)
 
-    # plot_race_line(track, wait=True)
+    plot_race_line(track, wait=True)
+
+    save_map(track, "TrackMap1000.csv")
 
     return track
 
