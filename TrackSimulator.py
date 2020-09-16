@@ -189,6 +189,8 @@ class TrackSim:
         plt.plot(r_line[:, 0], r_line[:, 1], linewidth=1)
 
         plt.imshow(self.env_map.obs_map.T, origin='lower')
+        plt.xlim((0, 10))
+        plt.ylim((0, 10))
 
         plt.plot(self.env_map.start[0], self.env_map.start[1], '*', markersize=12)
 
@@ -253,7 +255,10 @@ class TrackSim:
         # plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
         plt.plot(l_line[:, 0], l_line[:, 1], linewidth=1)
         plt.plot(r_line[:, 0], r_line[:, 1], linewidth=1)
-        plt.imshow(self.env_map.obs_map.T, origin='lower')
+        # plt.imshow(self.env_map.obs_map.T, origin='lower', extent=(0, 100,  0, 100), aspect='auto')
+
+        plt.xlim((0, 10))
+        plt.ylim((0, 10))
 
         plt.plot(self.env_map.start[0], self.env_map.start[1], '*', markersize=12)
 

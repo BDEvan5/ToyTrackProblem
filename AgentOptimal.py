@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 
 
 import LibFunctions as lib
-from TrajectoryPlanner import MinCurvatureTrajectory
+from TrajectoryPlanner import MinCurvatureTrajectory, generate_velocities
 
 
 
@@ -12,6 +12,7 @@ class OptimalAgent:
     def __init__(self, env_map):
         self.env_map = env_map
         self.wpts = None
+        self.vpts = None
 
         self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
         self.pind = 1
@@ -23,7 +24,10 @@ class OptimalAgent:
 
         deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
         r_line = track[:, 0:2] + deviation
+
         self.wpts = r_line
+        self.vpts = generate_velocities(r_line)
+        # self.wpts = r_line
 
         self.pind = 1
 
@@ -56,9 +60,10 @@ class OptimalAgent:
     def get_target_references(self, obs):
         self._set_target(obs)
 
-        v_ref = 6
+        # v_ref = 6
+        v_ref = self.vpts[self.pind]
 
-        th_target = lib.get_bearing(obs[0:2], self.target)
+        th_target = lib.get_bearing(obs[0:2], self.wpts[self.pind])
         theta_dot = lib.sub_angles_complex(th_target, obs[2])
         theta_dot = lib.limit_theta(theta_dot)
 
@@ -86,7 +91,7 @@ class OptimalAgent:
                 self.pind = 0
 
         
-        self.target = self.wpts[self.pind]
+        # self.target = self.wpts[self.pind]
 
 
 

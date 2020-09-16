@@ -21,6 +21,7 @@ class TrackMap:
 
         self.obs_map = None
         self.scan_map = None
+        self.obs_res = 0.1
 
         self.load_map()
         self.set_up_scan_map()
@@ -66,7 +67,7 @@ class TrackMap:
 
     def random_obs(self, n=10):
         self.obs_map = np.zeros((100, 100))
-        obs_size = [2, 3]
+        obs_size = [2, 3] 
         rands = np.random.randint(1, self.N-1, n)
         obs_locs = []
         for i in range(n):
@@ -75,30 +76,37 @@ class TrackMap:
             obs_locs.append(pt[:, 0])
 
         for obs in obs_locs:
-            for i in range(obs_size[0]):
-                for j in range(obs_size[1]):
-                    x = int(round(i + obs[0]))
-                    y = int(round(j + obs[1]))
+            for i in range(0, obs_size[0]):
+                for j in range(0, obs_size[1]):
+                    x = int(round(i + obs[0])) 
+                    y = int(round(j + obs[1])) 
                     self.obs_map[x, y] = 1
 
     def set_up_scan_map(self):
         try:
+            # raise Exception
             self.scan_map = np.load("Maps/scan_map.npy")
         except:
             resolution = 100
             self.scan_map = np.zeros((resolution, resolution))
             for i in range(resolution):
                 for j in range(resolution):
-                    if self._check_location([i, j]):
+                    ii = i*self.obs_res
+                    jj = j*self.obs_res
+                    if self._check_location([ii, jj]):
                         self.scan_map[i, j] = 1
             np.save("Maps/scan_map", self.scan_map)
 
             print("Scan map ready")
+        plt.imshow(self.scan_map)
+        plt.show()
 
-    def check_scan_location(self, x):
-        if self.scan_map[int(x[0]), int(x[1])]:
+    def check_scan_location(self, x_in):
+        y = int(x_in[1] / self.obs_res)
+        x = int(x_in[0] / self.obs_res)
+        if self.scan_map[x, y]:
             return True
-        if self.obs_map[int(x[0]), int(x[1])]:
+        if self.obs_map[x, y]:
             return True
         return False
 

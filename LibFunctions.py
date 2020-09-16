@@ -32,12 +32,6 @@ def get_gradient(x1=[0, 0], x2=[0, 0]):
         return t / b
     return 1000000 # near infinite gradient. 
 
-def get_angle(x1, x2, x3):
-    m1 = get_gradient(x1, x2)
-    m2 = get_gradient(x2, x3)
-    angle = abs(np.arctan(m1) - np.arctan(m2))
-    return angle
-
 def transform_coords(x=[0, 0], theta=np.pi):
     # i want this function to transform coords from one coord system to another
     new_x = x[0] * np.cos(theta) - x[1] * np.sin(theta)
@@ -72,6 +66,15 @@ def get_bearing(x1=[0, 0], x2=[0, 0]):
             th_start_end = - np.pi/2 - th_start_end
 
     return th_start_end
+
+"""Consider moving to this for more robust solution"""
+# def get_bearing1(x0, x1):
+#     dy = x1[1] - x0[1]
+#     dx = x1[0] - x0[0]
+
+#     bearing = np.arctan2(dy, dx)
+
+#     return bearing
 
 def find_sign(x):
     if x == 0:

@@ -8,17 +8,6 @@ def MinCurvatureTrajectory(track, obs_map=None):
     nvecs = track[:, 2:4]
     th_ns = [lib.get_bearing([0, 0], nvecs[i, 0:2]) for i in range(len(nvecs))]
 
-    # xgrid = np.linspace(0, 100, 100)
-    # ygrid = np.linspace(0, 100, 100)
-    # data_flat = obs_map.ravel(order='F')
-    # lut = ca.interpolant('lut', 'bspline', [xgrid, ygrid], data_flat)
-
-    # plt.figure(1)
-    # plt.imshow(obs_map, origin='lower')
-    # plt.pause(0.001)
-
-    # print(lut([45, 43]))
-
     n_max = 3
     N = len(track)
 
@@ -70,7 +59,6 @@ def MinCurvatureTrajectory(track, obs_map=None):
     'g': ca.vertcat(
                 # dynamic constraints
                 n[1:] - (n[:-1] + d_n(n, th)),
-                # lut(ca.horzcat(o_x_s(n[:-1]), o_y_s(n[:-1])).T).T,
 
                 # boundary constraints
                 n[0], #th[0],
@@ -96,10 +84,6 @@ def MinCurvatureTrajectory(track, obs_map=None):
     lbx = [-n_max] * N + [-np.pi]*(N-1) 
     ubx = [n_max] * N + [np.pi]*(N-1) 
 
-    # lbg = [0] * (N-1) + [0] * (N-1) + [0] * 2
-    # ubg = [0] * (N-1) + [0.1] * (N-1) + [0] * 2
-
-    # r = S(x0=x0, lbg=lbg, ubg=ubg, lbx=lbx, ubx=ubx)
     r = S(x0=x0, lbg=0, ubg=0, lbx=lbx, ubx=ubx)
 
     x_opt = r['x']
@@ -107,7 +91,58 @@ def MinCurvatureTrajectory(track, obs_map=None):
     n_set = np.array(x_opt[:N])
     thetas = np.array(x_opt[1*N:2*(N-1)])
 
-    # lib.plot_race_line(np.array(track), n_set, wait=True)
+    lib.plot_race_line(np.array(track), n_set, wait=True)
 
     return n_set
+
+
+def generate_velocities(wpts):
+    N = len(wpts)
+
+    bearings = [lib.get_bearing(wpts[i], wpts[i+1]) for i in range(N-1)]
+    dths = [abs(lib.sub_angles_complex(bearings[i+1], bearings[i])) for i in range(N-2)]
+    dths.insert(0, 0.001)
+    dths.append(0.001)
+    dxs = [lib.get_distance(wpts[i], wpts[i+1]) for i in range(N-1)]
+
+    max_v = 7.5
+    max_a = 7.5
+    min_a = -8.5
+    mass = 3.74
+    l = 0.33
+    mu = 0.523
+    mu_sf = 0.9*mu
+
+    f_max_steer = mu_sf * mass
+
+    # plt.plot(dths)
+    # plt.show()
+
+    max_vs = [min(f_max_steer/(mass*dths[i]), max_v) for i in range(N)]
+
+    v_outs = [max_vs[-1]]
+    for i in reversed(range(N-1)):
+        v_min = v_outs[-1] - 2 * max_a * dxs[i]
+        v_max = v_outs[-1] - 2 * min_a * dxs[i]
+        v = max_vs[i+1]
+        v = np.clip(v, v_min, v_max)
+        v_outs.append(v)
+
+    v_outs = np.array(v_outs)
+
+    return v_outs
+    # max_vs = np.array(max_vs)
+    # print(max_vs)
+    # plt.figure(1)
+    # plt.plot(max_vs)
+    # plt.pause(0.001)
+    # plt.figure(2)
+    # plt.plot(v_outs)
+    # plt.pause(0.001)
+    # plt.figure(3)
+    # plt.plot(v_outs[1:] - v_outs[:-1])
+    # plt.plot(max_vs[1:] - max_vs[:-1])
+    # plt.show()
+
+
 
