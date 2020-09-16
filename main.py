@@ -14,7 +14,7 @@ from AgentMod import ModRaceVehicle, ModTrainVehicle
 from AgentRep import RepTrainVehicle, RepRaceVehicle
 
 
-def OptiStd():
+def RunOptimalAgent():
     env_map = TrackMap()
 
     env_map.random_obs()
@@ -231,7 +231,7 @@ def TrainRepTrack(agent_name, load=False):
 
 
 """Total functions"""
-def WillemsMod():
+def RunModAgent():
     agent_name = "TestingWillem"
     
     # TrainModVehicle(agent_name, False)
@@ -239,7 +239,7 @@ def WillemsMod():
 
     # RaceModVehicle(agent_name)
 
-def SuperRep():
+def RunRepAgent():
     agent_name = "TestingRep"
 
     TrainRepTrack(agent_name, False)
@@ -250,11 +250,10 @@ def SuperRep():
 
 
 if __name__ == "__main__":
-    # simulation_test()
 
-    WillemsMod()
-    # SuperRep()
-    # OptiStd()
+    # RunModAgent()
+    # RunRepAgent()
+    RunOptimalAgent()
 
 
 
