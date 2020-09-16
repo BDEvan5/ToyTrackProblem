@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 # from PathFinder import PathFinder, modify_path
-from MinCurveTrajPlanner import MinCurvatureTrajectory
+from TrajectoryPlanner import MinCurvatureTrajectory
 import LibFunctions as lib
 
 

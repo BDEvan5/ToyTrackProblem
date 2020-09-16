@@ -4,16 +4,14 @@ import sys
 
 import torch
 
-from Simulator import F110Env, CorridorAction
-from SimulatorTrack import TrackSim
-from RaceMaps import EnvironmentMap, RaceMap
-from TrackMap import TrackMap
+from TrackSimulator import TrackSim
+from RaceTrackMap import TrackMap
 from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper
 import LibFunctions as lib
 
-from OptimalAgent import OptimalAgent
-from WillemsPureMod import ModRaceVehicle, ModTrainVehicle
-from MyPureRep import RepTrainVehicle, RepRaceVehicle
+from AgentOptimal import OptimalAgent
+from AgentMod import ModRaceVehicle, ModTrainVehicle
+from AgentRep import RepTrainVehicle, RepRaceVehicle
 
 
 def OptiStd():

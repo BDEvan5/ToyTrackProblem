@@ -7,9 +7,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from MinCurveTrajPlanner import MinCurvatureTrajectory
+from TrajectoryPlanner import MinCurvatureTrajectory
 import LibFunctions as lib
-from CommonTestUtils import ReplayBufferDQN
 
 #Hyperparameters
 GAMMA = 0.95

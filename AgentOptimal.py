@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 
 
 import LibFunctions as lib
-from MinCurveTrajPlanner import MinCurvatureTrajectory
+from TrajectoryPlanner import MinCurvatureTrajectory
 
 
 

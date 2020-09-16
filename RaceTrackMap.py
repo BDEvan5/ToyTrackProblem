@@ -83,7 +83,7 @@ class TrackMap:
 
     def set_up_scan_map(self):
         try:
-            self.scan_map = np.load("scan_map.npy")
+            self.scan_map = np.load("Maps/scan_map.npy")
         except:
             resolution = 100
             self.scan_map = np.zeros((resolution, resolution))
@@ -91,7 +91,7 @@ class TrackMap:
                 for j in range(resolution):
                     if self._check_location([i, j]):
                         self.scan_map[i, j] = 1
-            np.save("scan_map", self.scan_map)
+            np.save("Maps/scan_map", self.scan_map)
 
             print("Scan map ready")
 
