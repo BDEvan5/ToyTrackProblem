@@ -84,7 +84,7 @@ def TrainModVehicle(agent_name, load=True):
         score += r
         state = s_prime
         
-        env.render(False)
+        # env.render(False)
         vehicle.agent.train_episodes(buffer)
 
         if n % print_n == 0 and n > 0:
