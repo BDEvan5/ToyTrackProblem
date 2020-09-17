@@ -61,7 +61,7 @@ class TrackMap:
     def _check_location(self, x):
         idx = self.find_nearest_point(x)
         dis = lib.get_distance(self.track_pts[idx], x)
-        if dis > self.ws[idx, 0]:
+        if dis > self.ws[idx, 0] * 1.3:
             return True
         return False
 
@@ -98,12 +98,12 @@ class TrackMap:
             np.save("Maps/scan_map", self.scan_map)
 
             print("Scan map ready")
-        plt.imshow(self.scan_map)
-        plt.show()
+        # plt.imshow(self.scan_map.T)
+        # plt.show()
 
     def check_scan_location(self, x_in):
-        y = int(x_in[1] / self.obs_res)
-        x = int(x_in[0] / self.obs_res)
+        y = int(min(x_in[1] / self.obs_res, 99))
+        x = int(min(x_in[0] / self.obs_res, 99))
         if self.scan_map[x, y]:
             return True
         if self.obs_map[x, y]:

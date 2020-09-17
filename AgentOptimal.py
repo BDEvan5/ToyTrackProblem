@@ -26,7 +26,8 @@ class OptimalAgent:
         r_line = track[:, 0:2] + deviation
 
         self.wpts = r_line
-        self.vpts = generate_velocities(r_line)
+
+        # self.vpts = generate_velocities(r_line)
         # self.wpts = r_line
 
         self.pind = 1
@@ -60,15 +61,16 @@ class OptimalAgent:
     def get_target_references(self, obs):
         self._set_target(obs)
 
-        # v_ref = 6
-        v_ref = self.vpts[self.pind]
+        v_ref = 6
+        # v_ref = self.vpts[self.pind]
 
-        th_target = lib.get_bearing(obs[0:2], self.wpts[self.pind])
-        theta_dot = lib.sub_angles_complex(th_target, obs[2])
-        theta_dot = lib.limit_theta(theta_dot)
+        target = self.wpts[self.pind]
+        th_target = lib.get_bearing(obs[0:2], target)
+        alpha = lib.sub_angles_complex(th_target, obs[2])
 
-        L = 0.33
-        delta_ref = np.arctan(theta_dot * L / (obs[3]+0.001))
+        # pure pursuit
+        ld = lib.get_distance(obs[0:2], target)
+        delta_ref = np.arctan(2*0.33*np.sin(alpha)/ld)
 
         return v_ref, delta_ref
 
@@ -76,17 +78,18 @@ class OptimalAgent:
         kp_a = 10
         a = (v_ref - obs[3]) * kp_a
         
-        kp_delta = 5
+        kp_delta = 20
         d_dot = (d_ref - obs[4]) * kp_delta
 
         return a, d_dot
 
     def _set_target(self, obs):
         dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-        shift_distance = 5
-        if dis_cur_target < shift_distance: # how close to say you were there
+        shift_distance = 1
+        while dis_cur_target < shift_distance: # how close to say you were there
             if self.pind < len(self.wpts)-2:
                 self.pind += 1
+                dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
             else:
                 self.pind = 0
 

@@ -23,17 +23,18 @@ def RunOptimalAgent():
 
     done, state, score = False, env.reset(None), 0.0
     wpts = agent.init_agent()
+    # env.render(True, wpts)
     while not done:
         action = agent.act(state)
-        s_p, r, done, _ = env.step(action, updates=30)
+        s_p, r, done, _ = env.step(action, updates=1)
         score += r
         state = s_p
 
         # env.render(True)
-        # env.render(False, wpts)
+        env.render(False, wpts)
 
     print(f"Score: {score}")
-    env.render_snapshot(wait=True)
+    env.render_snapshot(wait=True, wpts=wpts)
 
 
 """Training functions: PURE MOD"""

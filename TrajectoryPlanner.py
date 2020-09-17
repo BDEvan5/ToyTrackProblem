@@ -5,6 +5,9 @@ from matplotlib import pyplot as plt
 import LibFunctions as lib 
 
 def MinCurvatureTrajectory(track, obs_map=None):
+    # track[:, 0:2] = track[:, 0:2] * 10
+    w_min = - track[:, 4]
+    w_max = track[:, 5]
     nvecs = track[:, 2:4]
     th_ns = [lib.get_bearing([0, 0], nvecs[i, 0:2]) for i in range(len(nvecs))]
 
@@ -81,8 +84,10 @@ def MinCurvatureTrajectory(track, obs_map=None):
 
     x0 = ca.vertcat(n0, th0)
 
-    lbx = [-n_max] * N + [-np.pi]*(N-1) 
-    ubx = [n_max] * N + [np.pi]*(N-1) 
+    # lbx = [-n_max] * N + [-np.pi]*(N-1) 
+    # ubx = [n_max] * N + [np.pi]*(N-1) 
+    lbx = list(w_min) + [-np.pi]*(N-1) 
+    ubx = list(w_max) + [np.pi]*(N-1) 
 
     r = S(x0=x0, lbg=0, ubg=0, lbx=lbx, ubx=ubx)
 
@@ -91,7 +96,7 @@ def MinCurvatureTrajectory(track, obs_map=None):
     n_set = np.array(x_opt[:N])
     thetas = np.array(x_opt[1*N:2*(N-1)])
 
-    lib.plot_race_line(np.array(track), n_set, wait=True)
+    # lib.plot_race_line(np.array(track), n_set, wait=True)
 
     return n_set
 

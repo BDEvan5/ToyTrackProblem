@@ -11,6 +11,7 @@ class CarModel:
         self.theta = 0
         self.velocity = 0
         self.steering = 0
+        self.th_dot = 0
 
         self.prev_loc = 0
 
@@ -33,7 +34,9 @@ class CarModel:
         self.x = self.x + self.velocity * np.sin(self.theta) * dt
         self.y = self.y + self.velocity * np.cos(self.theta) * dt
         theta_dot = self.velocity / self.wheelbase * np.tan(self.steering)
-        self.theta = self.theta + theta_dot * dt
+        self.th_dot = theta_dot
+        dth = theta_dot * dt
+        self.theta = lib.add_angles_complex(self.theta, dth)
 
         a = np.clip(a, self.max_decel, self.max_a)
         d_dot = np.clip(d_dot, -self.max_d_dot, self.max_d_dot)
@@ -43,8 +46,6 @@ class CarModel:
 
         self.steering = np.clip(self.steering, -self.max_steer, self.max_steer)
         self.velocity = np.clip(self.velocity, -self.max_v, self.max_v)
-
-        self.theta = lib.limit_theta(self.theta)
 
     def get_car_state(self):
         state = []
@@ -112,6 +113,7 @@ class TrackSim:
         self.steps = 0
 
         self.obs_space = len(self.get_state_obs())
+        self.ds = 10
 
     def step(self, action, updates=10):
         self.steps += 1
@@ -166,7 +168,7 @@ class TrackSim:
         if self.env_map.check_scan_location([self.car.x, self.car.y]):
             self.done = True
             self.reward = -1
-        if self.steps > 300:
+        if self.steps > 1000:
             self.done = True
         start_y = self.env_map.start[1]
         if self.car.prev_loc[1] < start_y and self.car.y > start_y:
@@ -185,35 +187,34 @@ class TrackSim:
         r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
 
         # plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
-        plt.plot(l_line[:, 0], l_line[:, 1], linewidth=1)
-        plt.plot(r_line[:, 0], r_line[:, 1], linewidth=1)
+        plt.plot(l_line[:, 0]*self.ds, l_line[:, 1]*self.ds, linewidth=1)
+        plt.plot(r_line[:, 0]*self.ds, r_line[:, 1]*self.ds, linewidth=1)
 
-        plt.imshow(self.env_map.obs_map.T, origin='lower')
-        plt.xlim((0, 10))
-        plt.ylim((0, 10))
+        # plt.imshow(self.env_map.obs_map.T, origin='lower')
+        plt.imshow(self.env_map.scan_map.T, origin='lower')
 
-        plt.plot(self.env_map.start[0], self.env_map.start[1], '*', markersize=12)
+        plt.plot(self.env_map.start[0]*self.ds, self.env_map.start[1]*self.ds, '*', markersize=12)
 
-        plt.plot(self.env_map.end[0], self.env_map.end[1], '*', markersize=12)
-        plt.plot(self.car.x, self.car.y, '+', markersize=16)
+        plt.plot(self.env_map.end[0]*self.ds, self.env_map.end[1]*self.ds, '*', markersize=12)
+        plt.plot(self.car.x*self.ds, self.car.y*self.ds, '+', markersize=16)
 
         for i in range(self.scan_sim.number_of_beams):
             angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
             fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations([self.car.x, self.car.y], dx)
-            x = [car_x, range_val[0]]
-            y = [car_y, range_val[1]]
+            x = [self.car.x*self.ds, range_val[0]*self.ds]
+            y = [self.car.y*self.ds, range_val[1]*self.ds]
             plt.plot(x, y)
 
         for pos in self.action_memory:
-            plt.plot(pos[0], pos[1], 'x', markersize=6)
+            plt.plot(pos[0]*self.ds, pos[1]*self.ds, 'x', markersize=6)
 
         if wpts is not None:
             xs, ys = [], []
             for pt in wpts:
-                xs.append(pt[0])
-                ys.append(pt[1])
+                xs.append(pt[0]*self.ds)
+                ys.append(pt[1]*self.ds)
         
             plt.plot(xs, ys)
             # plt.plot(xs, ys, 'x', markersize=20)
@@ -232,6 +233,8 @@ class TrackSim:
         plt.text(100, 50, s) 
         s = f"Delta x100: [{(self.car.steering*100):.2f}]"
         plt.text(100, 45, s) 
+        s = f"Theta Dot: [{(self.car.th_dot):.2f}]"
+        plt.text(100, 40, s) 
 
         s = f"Steps: {self.steps}"
         plt.text(100, 35, s)
@@ -253,35 +256,32 @@ class TrackSim:
         r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
 
         # plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
-        plt.plot(l_line[:, 0], l_line[:, 1], linewidth=1)
-        plt.plot(r_line[:, 0], r_line[:, 1], linewidth=1)
-        # plt.imshow(self.env_map.obs_map.T, origin='lower', extent=(0, 100,  0, 100), aspect='auto')
+        plt.plot(l_line[:, 0]*self.ds, l_line[:, 1]*self.ds, linewidth=1)
+        plt.plot(r_line[:, 0]*self.ds, r_line[:, 1]*self.ds, linewidth=1)
+        plt.imshow(self.env_map.scan_map.T, origin='lower')
 
-        plt.xlim((0, 10))
-        plt.ylim((0, 10))
+        plt.plot(self.env_map.start[0]*self.ds, self.env_map.start[1]*self.ds, '*', markersize=12)
 
-        plt.plot(self.env_map.start[0], self.env_map.start[1], '*', markersize=12)
-
-        plt.plot(self.env_map.end[0], self.env_map.end[1], '*', markersize=12)
-        plt.plot(self.car.x, self.car.y, '+', markersize=16)
+        plt.plot(self.env_map.end[0]*self.ds, self.env_map.end[1]*self.ds, '*', markersize=12)
+        plt.plot(self.car.x*self.ds, self.car.y*self.ds, '+', markersize=16)
 
         for i in range(self.scan_sim.number_of_beams):
             angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
             fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations([self.car.x, self.car.y], dx)
-            x = [car_x, range_val[0]]
-            y = [car_y, range_val[1]]
+            x = [car_x*self.ds, range_val[0]*self.ds]
+            y = [car_y*self.ds, range_val[1]*self.ds]
             plt.plot(x, y)
 
         for pos in self.action_memory:
-            plt.plot(pos[0], pos[1], 'x', markersize=6)
+            plt.plot(pos[0]*self.ds, pos[1]*self.ds, 'x', markersize=6)
 
         if wpts is not None:
             xs, ys = [], []
             for pt in wpts:
-                xs.append(pt[0])
-                ys.append(pt[1])
+                xs.append(pt[0]*self.ds)
+                ys.append(pt[1]*self.ds)
         
             plt.plot(xs, ys)
             # plt.plot(xs, ys, 'x', markersize=20)
