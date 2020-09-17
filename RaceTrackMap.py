@@ -61,7 +61,7 @@ class TrackMap:
     def _check_location(self, x):
         idx = self.find_nearest_point(x)
         dis = lib.get_distance(self.track_pts[idx], x)
-        if dis > self.ws[idx, 0] * 1.3:
+        if dis > self.ws[idx, 0] * 1.5:
             return True
         return False
 

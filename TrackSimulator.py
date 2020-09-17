@@ -115,6 +115,9 @@ class TrackSim:
         self.obs_space = len(self.get_state_obs())
         self.ds = 10
 
+        self.steer_history = []
+        self.velocity_history = []
+
     def step(self, action, updates=10):
         self.steps += 1
         self.action = action
@@ -126,6 +129,8 @@ class TrackSim:
             self.car.update_kinematic_state(acceleration, steer_dot, self.timestep)
          
         self.check_done_reward_track_train()
+        self.steer_history.append(steer_dot)
+        self.velocity_history.append(self.car.velocity)
 
         obs = self.get_state_obs()
         done = self.done
@@ -147,6 +152,15 @@ class TrackSim:
         self.car.theta = 0
 
         return self.get_state_obs()
+
+    def show_history(self):
+        plt.figure(3)
+        plt.plot(self.steer_history)
+        plt.pause(0.001)
+        plt.figure(2)
+        plt.plot(self.velocity_history)
+        plt.pause(0.001)
+        self.velocity_history.clear()
 
     def reset_lap(self):
         self.steps = 0

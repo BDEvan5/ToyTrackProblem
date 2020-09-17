@@ -27,7 +27,10 @@ class OptimalAgent:
 
         self.wpts = r_line
 
-        # self.vpts = generate_velocities(r_line)
+        self.vpts = generate_velocities(r_line)
+        plt.figure(5)
+        plt.plot(self.vpts)
+        plt.pause(0.001)
         # self.wpts = r_line
 
         self.pind = 1
@@ -61,8 +64,8 @@ class OptimalAgent:
     def get_target_references(self, obs):
         self._set_target(obs)
 
-        v_ref = 6
-        # v_ref = self.vpts[self.pind]
+        # v_ref = 3
+        v_ref = self.vpts[self.pind]
 
         target = self.wpts[self.pind]
         th_target = lib.get_bearing(obs[0:2], target)
@@ -78,7 +81,7 @@ class OptimalAgent:
         kp_a = 10
         a = (v_ref - obs[3]) * kp_a
         
-        kp_delta = 20
+        kp_delta = 40
         d_dot = (d_ref - obs[4]) * kp_delta
 
         return a, d_dot

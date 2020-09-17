@@ -31,9 +31,10 @@ def RunOptimalAgent():
         state = s_p
 
         # env.render(True)
-        env.render(False, wpts)
+        # env.render(False, wpts)
 
     print(f"Score: {score}")
+    env.show_history()
     env.render_snapshot(wait=True, wpts=wpts)
 
 
