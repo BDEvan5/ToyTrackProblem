@@ -29,6 +29,7 @@ class CarModel:
         self.max_a = 7.5
         self.max_decel = -8.5
         self.max_v = 7.5
+        self.max_friction_force = self.mass * self.mu * 9.81
 
     def update_kinematic_state(self, a, d_dot, dt):
         self.x = self.x + self.velocity * np.sin(self.theta) * dt
@@ -117,6 +118,8 @@ class TrackSim:
 
         self.steer_history = []
         self.velocity_history = []
+        self.done_reason = ""
+        self.y_forces = []
 
     def step(self, action, updates=10):
         self.steps += 1
@@ -155,12 +158,19 @@ class TrackSim:
 
     def show_history(self):
         plt.figure(3)
+        plt.title("Steer history")
         plt.plot(self.steer_history)
         plt.pause(0.001)
         plt.figure(2)
+        plt.title("Velocity history")
         plt.plot(self.velocity_history)
         plt.pause(0.001)
         self.velocity_history.clear()
+        plt.figure(1)
+        plt.title("Forces history")
+        plt.plot(self.y_forces)
+        plt.pause(0.001)
+        self.y_forces.clear()
 
     def reset_lap(self):
         self.steps = 0
@@ -182,12 +192,21 @@ class TrackSim:
         if self.env_map.check_scan_location([self.car.x, self.car.y]):
             self.done = True
             self.reward = -1
-        if self.steps > 1000:
+            self.done_reason = f"Crash obstacle: [{self.car.x}, {self.car.y}]"
+        horizontal_force = self.car.mass * self.car.th_dot * self.car.velocity
+        self.y_forces.append(horizontal_force)
+        if horizontal_force > self.car.max_friction_force:
             self.done = True
+            self.reward = -1
+            self.done_reason = f"Friction limit reached: {horizontal_force} > {self.car.max_friction_force}"
+        if self.steps > 2000:
+            self.done = True
+            self.done_reason = f"Max steps"
         start_y = self.env_map.start[1]
         if self.car.prev_loc[1] < start_y and self.car.y > start_y:
             if abs(self.car.x - self.env_map.start[0]) < 10:
                 self.done = True
+                self.done_reason = f"Lap complete"
 
     def render(self, wait=False, wpts=None):
         car_x = int(self.car.x)
@@ -314,6 +333,9 @@ class TrackSim:
         plt.text(100, 50, s) 
         s = f"Delta x100: [{(self.car.steering*100):.2f}]"
         plt.text(100, 45, s) 
+        s = f"Done reason: {self.done_reason}"
+        plt.text(100, 40, s) 
+        
 
         s = f"Steps: {self.steps}"
         plt.text(100, 35, s)

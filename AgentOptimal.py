@@ -27,10 +27,16 @@ class OptimalAgent:
 
         self.wpts = r_line
 
-        self.vpts = generate_velocities(r_line)
-        plt.figure(5)
-        plt.plot(self.vpts)
-        plt.pause(0.001)
+        ths = [lib.get_bearing(r_line[i], r_line[i+1]) for i in range(len(r_line)-1)]
+        alphas = [lib.sub_angles_complex(ths[i+1], ths[i]) for i in range(len(ths)-1)]
+        lds = [lib.get_distance(r_line[i], r_line[i+1]) for i in range(1, len(r_line)-1)]
+
+        self.deltas = np.arctan(2*0.33*np.sin(alphas)/lds)
+
+        # self.vpts = generate_velocities(r_line)
+        # plt.figure(5)
+        # plt.plot(self.vpts)
+        # plt.pause(0.001)
         # self.wpts = r_line
 
         self.pind = 1
@@ -64,9 +70,6 @@ class OptimalAgent:
     def get_target_references(self, obs):
         self._set_target(obs)
 
-        # v_ref = 3
-        v_ref = self.vpts[self.pind]
-
         target = self.wpts[self.pind]
         th_target = lib.get_bearing(obs[0:2], target)
         alpha = lib.sub_angles_complex(th_target, obs[2])
@@ -74,6 +77,18 @@ class OptimalAgent:
         # pure pursuit
         ld = lib.get_distance(obs[0:2], target)
         delta_ref = np.arctan(2*0.33*np.sin(alpha)/ld)
+
+        # ds = self.deltas[self.pind:self.pind+1]
+        ds = self.deltas[min(self.pind, len(self.deltas)-1)]
+        max_d = abs(ds)
+        # max_d = max(abs(ds))
+
+        max_friction_force = 3.74 * 9.81 * 0.523 
+        d_plan = max(abs(delta_ref), abs(obs[4]), max_d)
+        theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
+        v_ref = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
+        v_ref = min(v_ref, 8.5)
+        # v_ref = 3
 
         return v_ref, delta_ref
 
