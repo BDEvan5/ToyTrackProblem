@@ -85,8 +85,9 @@ class TrackMap:
         return False
 
     def random_obs(self, n=10):
-        self.obs_map = np.zeros((100, 100))
-        obs_size = [2, 3] 
+        resolution = 100
+        self.obs_map = np.zeros((resolution, resolution))
+        obs_size = [3, 4]
         rands = np.random.randint(1, self.N-1, n)
         obs_locs = []
         for i in range(n):
@@ -97,8 +98,8 @@ class TrackMap:
         for obs in obs_locs:
             for i in range(0, obs_size[0]):
                 for j in range(0, obs_size[1]):
-                    x = int(round(i + obs[0])) 
-                    y = int(round(j + obs[1])) 
+                    x = min(int(round(i + obs[0]/ self.obs_res)), 99)
+                    y = min(int(round(j + obs[1]/ self.obs_res)), 99)
                     self.obs_map[x, y] = 1
 
     def set_up_scan_map(self):
@@ -119,6 +120,10 @@ class TrackMap:
             print("Scan map ready")
         # plt.imshow(self.scan_map.T)
         # plt.show()
+
+    def get_show_map(self):
+        ret_map  = np.clip(self.obs_map + self.scan_map, 0 , 1)
+        return ret_map
 
     def check_scan_location(self, x_in):
         y = int(min(x_in[1] / self.obs_res, 99))

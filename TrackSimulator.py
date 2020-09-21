@@ -291,7 +291,8 @@ class TrackSim:
         # plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
         plt.plot(l_line[:, 0]*self.ds, l_line[:, 1]*self.ds, linewidth=1)
         plt.plot(r_line[:, 0]*self.ds, r_line[:, 1]*self.ds, linewidth=1)
-        plt.imshow(self.env_map.scan_map.T, origin='lower')
+        ret_map = self.env_map.get_show_map()
+        plt.imshow(ret_map.T, origin='lower')
 
         plt.plot(self.env_map.start[0]*self.ds, self.env_map.start[1]*self.ds, '*', markersize=12)
 
