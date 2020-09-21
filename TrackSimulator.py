@@ -279,8 +279,8 @@ class TrackSim:
     def render_snapshot(self, wait=False, wpts=None):
         # self.race_map = self.env_map.race_course
 
-        car_x = int(self.car.x)
-        car_y = int(self.car.y)
+        car_x = int(self.car.x*self.ds)
+        car_y = int(self.car.y*self.ds)
         fig = plt.figure(4)
         plt.clf()  
         c_line = self.env_map.track_pts
@@ -304,8 +304,8 @@ class TrackSim:
             fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations([self.car.x, self.car.y], dx)
-            x = [car_x*self.ds, range_val[0]*self.ds]
-            y = [car_y*self.ds, range_val[1]*self.ds]
+            x = [car_x, range_val[0]*self.ds]
+            y = [car_y, range_val[1]*self.ds]
             plt.plot(x, y)
 
         for pos in self.action_memory:

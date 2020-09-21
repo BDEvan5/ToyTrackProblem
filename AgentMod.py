@@ -256,7 +256,7 @@ class BaseModAgent:
         lib.plot_multi(self.out_his, "Outputs", figure_n=3)
 
         plt.figure(3)
-        plt.plot(self.reward_history)
+        plt.plot(self.reward_history, linewidth=2)
 
     def transform_obs(self, obs, v_ref=None, phi_ref=None):
         max_angle = np.pi/2
@@ -292,6 +292,8 @@ class ModVehicleTrain(BaseModAgent):
         self.current_v_ref = None
         self.current_phi_ref = None
 
+        self.mem_save = True
+
     def act(self, obs, greedy=False):
         if self.steps % 10 == 0:
             v_ref, phi_ref = self.get_target_references(obs)
@@ -321,6 +323,8 @@ class ModVehicleTrain(BaseModAgent):
             self.current_v_ref = v_ref
             self.current_phi_ref = phi_ref
 
+            self.mem_save = True
+
         self.steps += 1
 
         a, d_dot = self.control_system(obs)
@@ -345,7 +349,7 @@ class ModVehicleTrain(BaseModAgent):
         return new_reward
 
     def add_memory_entry(self, reward, done, s_prime, buffer):
-        if reward !=0:
+        if self.mem_save:
             new_reward = self.update_reward(reward, self.state_action[1])
             self.prev_nn_act = self.state_action[1][0]
 
@@ -355,8 +359,10 @@ class ModVehicleTrain(BaseModAgent):
 
             mem_entry = (self.state_action[0], self.state_action[1], new_reward, nn_s_prime, done_mask)
 
-            if new_reward != 0 or np.random.random() < 0.2: 
-                buffer.put(mem_entry)
+            # if new_reward != 0 or np.random.random() < 0.2: 
+            buffer.put(mem_entry)
+
+            self.mem_save = False
 
 
 class ModVehicleTest(BaseModAgent):

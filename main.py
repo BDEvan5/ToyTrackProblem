@@ -232,8 +232,8 @@ def TrainRepTrack(agent_name, load=False):
 def RunModAgent():
     agent_name = "TestingWillem"
     
-    # TrainModVehicle(agent_name, False)
-    TrainModVehicle(agent_name, True)
+    TrainModVehicle(agent_name, False)
+    # TrainModVehicle(agent_name, True)
 
     # RaceModVehicle(agent_name)
 
