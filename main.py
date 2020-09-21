@@ -249,9 +249,9 @@ def RunRepAgent():
 
 if __name__ == "__main__":
 
-    # RunModAgent()
+    RunModAgent()
     # RunRepAgent()
-    RunOptimalAgent()
+    # RunOptimalAgent()
 
 
 
