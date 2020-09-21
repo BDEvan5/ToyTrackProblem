@@ -17,7 +17,6 @@ from AgentRep import RepTrainVehicle, RepRaceVehicle
 def RunOptimalAgent():
     env_map = TrackMap()
 
-    env_map.random_obs()
     env = TrackSim(env_map)
     agent = OptimalAgent()
 
@@ -250,9 +249,9 @@ def RunRepAgent():
 
 if __name__ == "__main__":
 
-    RunModAgent()
+    # RunModAgent()
     # RunRepAgent()
-    # RunOptimalAgent()
+    RunOptimalAgent()
 
 
 

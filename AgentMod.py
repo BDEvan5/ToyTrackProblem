@@ -446,7 +446,10 @@ class BaseModAgent:
 
         return v_ref, delta_ref
 
-    def control_system(self, obs, v_ref, d_ref):
+    def control_system(self, obs):
+        v_ref = self.current_v_ref
+        d_ref = self.current_phi_ref
+
         kp_a = 10
         a = (v_ref - obs[3]) * kp_a
         
@@ -504,34 +507,41 @@ class ModVehicleTrain(BaseModAgent):
     def __init__(self, name, load):
         BaseModAgent.__init__(self, name, load)
 
+        self.current_v_ref = None
+        self.current_phi_ref = None
+
     def act(self, obs, greedy=False):
-        v_ref, phi_ref = self.get_target_references(obs)
+        if self.steps % 10 == 0:
+            v_ref, phi_ref = self.get_target_references(obs)
 
-        nn_obs = self.transform_obs(obs, v_ref, phi_ref)
-        """This is where the agent can be removed if needed"""
-        agent_on = True
-        if agent_on:
-            if not greedy:
-                nn_action = self.agent.act(nn_obs)
+            nn_obs = self.transform_obs(obs, v_ref, phi_ref)
+            """This is where the agent can be removed if needed"""
+            agent_on = True
+            if agent_on:
+                if not greedy:
+                    nn_action = self.agent.act(nn_obs)
+                else:
+                    nn_action = self.agent.greedy_action(nn_obs)
+                self.cur_nn_act = nn_action
             else:
-                nn_action = self.agent.greedy_action(nn_obs)
-            self.cur_nn_act = nn_action
-        else:
-            self.cur_nn_act = [self.center_act]
+                self.cur_nn_act = [self.center_act]
 
-        # add to the histories
-        self.out_his.append(self.agent.get_out(nn_obs))
-        self.mod_history.append(self.cur_nn_act)
-        self.state_action = [nn_obs, self.cur_nn_act]
+            # add to the histories
+            self.out_his.append(self.agent.get_out(nn_obs))
+            self.mod_history.append(self.cur_nn_act)
+            self.state_action = [nn_obs, self.cur_nn_act]
 
-        self.mem_window.pop(0)
-        self.mem_window.append(float(self.cur_nn_act[0]/self.action_space)) # normalises it.
+            self.mem_window.pop(0)
+            self.mem_window.append(float(self.cur_nn_act[0]/self.action_space)) # normalises it.
 
-        v_ref, phi_ref = self.modify_references(self.cur_nn_act, v_ref, phi_ref)
+            v_ref, phi_ref = self.modify_references(self.cur_nn_act, v_ref, phi_ref)
+
+            self.current_v_ref = v_ref
+            self.current_phi_ref = phi_ref
 
         self.steps += 1
 
-        a, d_dot = self.control_system(obs, v_ref, phi_ref)
+        a, d_dot = self.control_system(obs)
 
         return [a, d_dot]
 

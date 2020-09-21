@@ -16,6 +16,10 @@ class OptimalAgent:
 
         self.pind = 1
         self.target = None
+        self.steps = 0
+
+        self.current_v_ref = None
+        self.current_phi_ref = None
 
     def init_agent(self, env_map):
         self.env_map = env_map
@@ -35,9 +39,14 @@ class OptimalAgent:
         return self.wpts
          
     def act(self, obs):
-        # v_ref, d_ref = self.get_corridor_references(obs)
-        v_ref, d_ref = self.get_target_references(obs)
-        a, d_dot = self.control_system(obs, v_ref, d_ref)
+        if self.steps %10 == 0:
+            # v_ref, d_ref = self.get_corridor_references(obs)
+            v_ref, d_ref = self.get_target_references(obs)
+            self.current_v_ref = v_ref
+            self.current_phi_ref = d_ref
+
+        a, d_dot = self.control_system(obs)
+        self.steps += 1
 
         a = np.clip(a, -8, 8)
         d_dot = np.clip(d_dot, -3.2, 3.2)
@@ -73,7 +82,7 @@ class OptimalAgent:
         max_d = abs(ds)
         # max_d = max(abs(ds))
 
-        max_friction_force = 3.74 * 9.81 * 0.523 
+        max_friction_force = 3.74 * 9.81 * 0.523 *0.9
         d_plan = max(abs(delta_ref), abs(obs[4]), max_d)
         theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
         v_ref = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
@@ -82,7 +91,10 @@ class OptimalAgent:
 
         return v_ref, delta_ref
 
-    def control_system(self, obs, v_ref, d_ref):
+    def control_system(self, obs):
+        v_ref = self.current_v_ref
+        d_ref = self.current_phi_ref
+
         kp_a = 10
         a = (v_ref - obs[3]) * kp_a
         

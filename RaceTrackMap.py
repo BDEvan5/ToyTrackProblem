@@ -48,7 +48,7 @@ class TrackMap:
         self.start = self.track_pts[0]
         self.end = self.track_pts[-1]
 
-        self.random_obs()
+        self.random_obs(0)
 
     def get_min_curve_path(self):
         path_name = 'Maps/' + self.name + "_path.npy"
