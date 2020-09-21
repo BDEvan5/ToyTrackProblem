@@ -180,7 +180,7 @@ class AutoAgentBase:
         self.current_v_ref = None
         self.current_d_ref = None
 
-        self.agent = TD3(11, 1, 0.4, name)
+        self.agent = TD3(21, 1, 0.4, name)
         self.agent.try_load(load)
 
     def init_agent(self, env_map):
@@ -211,10 +211,8 @@ class AutoAgentBase:
         ld = lib.get_distance(obs[0:2], target)
         delta_ref = np.arctan(2*0.33*np.sin(alpha)/ld)
 
-        # ds = self.deltas[self.pind:self.pind+1]
         ds = self.deltas[min(self.pind, len(self.deltas)-1)]
         max_d = abs(ds)
-        # max_d = max(abs(ds))
 
         max_friction_force = 3.74 * 9.81 * 0.523 *0.7
         d_plan = max(abs(delta_ref), abs(obs[4]), max_d)
@@ -250,6 +248,7 @@ class AutoAgentBase:
     def transform_obs(self, obs):
         _, d_ref = self.get_target_references(obs)
         new_obs = np.append(obs[5:], d_ref)
+        new_obs = np.concatenate([new_obs, self.mem_window])
 
         return new_obs
 
@@ -266,6 +265,8 @@ class AutoTrainVehicle(AutoAgentBase):
         self.nn_history = []
         self.d_ref_hisotry = []
 
+        self.mem_window = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
     def act(self, obs):
         nn_obs = self.transform_obs(obs)
         v_ref, d_ref = self.get_target_references(obs)
@@ -274,6 +275,8 @@ class AutoTrainVehicle(AutoAgentBase):
         self.last_obs = nn_obs
 
         self.current_d_ref = self.agent.select_action(nn_obs)[0]
+        self.mem_window.pop(0)
+        self.mem_window.append(self.current_d_ref)
         self.nn_history.append(self.current_d_ref)
         self.last_action = self.current_d_ref
 

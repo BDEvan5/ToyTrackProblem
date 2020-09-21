@@ -303,7 +303,8 @@ def RunRepAgent():
 def RunAutoAgent():
     agent_name = "TestingAuto"
 
-    TrainAutoVehicle(agent_name, False)
+    # TrainAutoVehicle(agent_name, False)
+    TrainAutoVehicle(agent_name, True)
 
 
 if __name__ == "__main__":
