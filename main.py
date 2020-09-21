@@ -274,7 +274,7 @@ def TrainAutoVehicle(agent_name, load):
         # env.render(False, wpts)
 
         if done:
-            print(f"#{i}: Ep done in {env.steps} steps --> Buffer: {buffer.ptr} ")
+            print(f"#{i}: Ep done in {env.steps} steps --> Buffer: {len(buffer.storage)} ")
             vehicle.show_history()
             env.render_snapshot(wpts=wpts, wait=False)
             env.reset()
