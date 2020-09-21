@@ -10,7 +10,7 @@ from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper
 import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
-from AgentMod import ModRaceVehicle, ModTrainVehicle
+from AgentMod import ModVehicleTest, ModVehicleTrain
 from AgentRep import RepTrainVehicle, RepRaceVehicle
 
 
@@ -66,16 +66,15 @@ def TrainModVehicle(agent_name, load=True):
     buffer = ReplayBufferDQN()
 
     env_map = TrackMap('TrackMap1000')
-    vehicle = ModTrainVehicle(agent_name, 11, 3, load)
+    vehicle = ModVehicleTrain(agent_name, load)
 
     env = TrackSim(env_map)
 
     print_n = 500
     rewards = []
 
-    # env_map.reset_map()
     done, state, score = False, env.reset(None), 0.0
-    wpts = vehicle.init_plan(env_map)
+    wpts = vehicle.init_agent(env_map)
     for n in range(100000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a, 1)
@@ -101,12 +100,10 @@ def TrainModVehicle(agent_name, load=True):
         if done:
             vehicle.show_vehicle_history()
             env.render_snapshot(wpts=wpts, wait=False)
-            if r == -1:
-                pass
+
             env_map.reset_map()
             vehicle.reset_lap()
             state = env.reset()
-            wpts = vehicle.init_plan(env_map)
 
     vehicle.agent.save()
 
@@ -253,9 +250,9 @@ def RunRepAgent():
 
 if __name__ == "__main__":
 
-    # RunModAgent()
+    RunModAgent()
     # RunRepAgent()
-    RunOptimalAgent()
+    # RunOptimalAgent()
 
 
 

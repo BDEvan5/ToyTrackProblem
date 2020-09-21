@@ -11,9 +11,9 @@ from TrajectoryPlanner import MinCurvatureTrajectory, generate_velocities
 class OptimalAgent:
     def __init__(self):
         self.env_map = None
+        self.path_name = None
         self.wpts = None
 
-        self.path_name = None
         self.pind = 1
         self.target = None
 
