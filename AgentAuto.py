@@ -389,7 +389,7 @@ class AutoTrainVehicle(AutoAgentBase):
         if reward == -1:
             new_reward = -1
         else:
-            new_reward = 0.1 - abs(action) * 0.005
+            new_reward = 0.01 - abs(action) * 0.005
 
         self.reward_history.append(new_reward)
 
@@ -401,13 +401,14 @@ class AutoTrainVehicle(AutoAgentBase):
         plt.plot(self.d_ref_hisotry)
         plt.plot(self.nn_history)
         plt.title("NN and d ref hisotry")
+        plt.legend(['D_ref', 'NN'])
         plt.pause(0.001)
 
-        plt.figure(3)
-        plt.clf()
-        plt.plot(self.reward_history)
-        plt.title("Reward history")
-        plt.pause(0.001)
+        # plt.figure(3)
+        # plt.clf()
+        # plt.plot(self.reward_history)
+        # plt.title("Reward history")
+        # plt.pause(0.001)
 
     def reset_lap(self):
         self.pind = 1

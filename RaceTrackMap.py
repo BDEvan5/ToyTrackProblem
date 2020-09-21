@@ -45,7 +45,7 @@ class TrackMap:
         self.nvecs = track[:, 2: 4]
         self.ws = track[:, 4:6]
 
-        self.start = self.track_pts[0]
+        self.start = self.track_pts[0] - 0.1
         self.end = self.track_pts[-1]
 
         self.random_obs(0)
@@ -66,7 +66,6 @@ class TrackMap:
             print(f"Path saved: min curve")
 
         return path
-
 
     def find_nearest_point(self, x):
         distances = []

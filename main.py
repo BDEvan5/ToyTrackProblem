@@ -269,18 +269,17 @@ def TrainAutoVehicle(agent_name, load):
         s_p, r, done, _ = env.step(action, updates=1)
         state = s_p
 
-
         vehicle.add_memory_entry(buffer, r, s_p, done)
-        vehicle.agent.train(buffer, 5)
+        vehicle.agent.train(buffer, 1)
         # env.render(False, wpts)
 
         if done:
+            print(f"#{i}: Ep done in {env.steps} steps --> Buffer: {buffer.ptr} ")
             vehicle.show_history()
             env.render_snapshot(wpts=wpts, wait=False)
             env.reset()
             vehicle.reset_lap()
-
-            print(f"Ep done in {env.steps} steps ")
+            vehicle.agent.save()
 
 
 
