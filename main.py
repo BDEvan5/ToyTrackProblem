@@ -6,12 +6,13 @@ import torch
 
 from TrackSimulator import TrackSim
 from RaceTrackMap import TrackMap
-from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper
+from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper, ReplayBufferAuto
 import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
 from AgentRep import RepTrainVehicle, RepRaceVehicle
+from AgentAuto import AutoTrainVehicle
 
 
 def RunOptimalAgent():
@@ -251,6 +252,37 @@ def TrainRepTrack(agent_name, load=False):
             RaceRepVehicle(agent_name)
 
 
+"""Training for AUTO agent"""
+def TrainAutoVehicle(agent_name, load):
+    print(f"Training Auto Vehicle performance")
+    env_map = TrackMap('TrackMap1000')
+    buffer = ReplayBufferAuto()
+
+    env = TrackSim(env_map)
+    vehicle = AutoTrainVehicle(agent_name, load)
+
+    # env_map.reset_map()
+    wpts = vehicle.init_agent(env_map)
+    done, state, score = False, env.reset(None), 0.0
+    for i in range(100000):
+        action = vehicle.act(state)
+        s_p, r, done, _ = env.step(action, updates=1)
+        state = s_p
+
+
+        vehicle.add_memory_entry(buffer, r, s_p, done)
+        vehicle.agent.train(buffer, 5)
+        # env.render(False, wpts)
+
+        if done:
+            vehicle.show_history()
+            env.render_snapshot(wpts=wpts, wait=False)
+            env.reset()
+            vehicle.reset_lap()
+
+            print(f"Ep done in {env.steps} steps ")
+
+
 
 """Total functions"""
 def RunModAgent():
@@ -269,15 +301,19 @@ def RunRepAgent():
 
     # RaceRepVehicle(agent_name)
 
+def RunAutoAgent():
+    agent_name = "TestingAuto"
+
+    TrainAutoVehicle(agent_name, False)
 
 
 if __name__ == "__main__":
 
     # RunModAgent()
     # RunRepAgent()
-    # RunOptimalAgent()
+    RunAutoAgent()
     RunOptimalControlAgent()
-
+    # RunOptimalAgent()
 
 
 
