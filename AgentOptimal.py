@@ -9,41 +9,31 @@ from TrajectoryPlanner import MinCurvatureTrajectory, generate_velocities
 
 
 class OptimalAgent:
-    def __init__(self, env_map):
-        self.env_map = env_map
+    def __init__(self):
+        self.env_map = None
         self.wpts = None
-        self.vpts = None
 
-        self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
+        self.path_name = None
         self.pind = 1
         self.target = None
 
-    def init_agent(self):
-        track = self.env_map.track
-        n_set = MinCurvatureTrajectory(track, self.env_map.obs_map)
+    def init_agent(self, env_map):
+        self.env_map = env_map
+        self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
+ 
+        self.wpts = self.env_map.get_min_curve_path()
 
-        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
-        r_line = track[:, 0:2] + deviation
-
-        self.wpts = r_line
-
+        r_line = self.wpts
         ths = [lib.get_bearing(r_line[i], r_line[i+1]) for i in range(len(r_line)-1)]
         alphas = [lib.sub_angles_complex(ths[i+1], ths[i]) for i in range(len(ths)-1)]
         lds = [lib.get_distance(r_line[i], r_line[i+1]) for i in range(1, len(r_line)-1)]
 
         self.deltas = np.arctan(2*0.33*np.sin(alphas)/lds)
 
-        # self.vpts = generate_velocities(r_line)
-        # plt.figure(5)
-        # plt.plot(self.vpts)
-        # plt.pause(0.001)
-        # self.wpts = r_line
-
         self.pind = 1
 
         return self.wpts
-        
-    
+         
     def act(self, obs):
         # v_ref, d_ref = self.get_corridor_references(obs)
         v_ref, d_ref = self.get_target_references(obs)
@@ -111,8 +101,7 @@ class OptimalAgent:
             else:
                 self.pind = 0
 
-        
-        # self.target = self.wpts[self.pind]
+    
 
 
 

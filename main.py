@@ -19,10 +19,10 @@ def RunOptimalAgent():
 
     env_map.random_obs()
     env = TrackSim(env_map)
-    agent = OptimalAgent(env_map)
+    agent = OptimalAgent()
 
     done, state, score = False, env.reset(None), 0.0
-    wpts = agent.init_agent()
+    wpts = agent.init_agent(env_map)
     # env.render(True, wpts)
     while not done:
         action = agent.act(state)
@@ -78,7 +78,7 @@ def TrainModVehicle(agent_name, load=True):
     wpts = vehicle.init_plan(env_map)
     for n in range(100000):
         a = vehicle.act(state)
-        s_prime, r, done, _ = env.step(a, 30)
+        s_prime, r, done, _ = env.step(a, 1)
 
         vehicle.add_memory_entry(r, done, s_prime, buffer)
         score += r

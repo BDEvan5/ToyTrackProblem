@@ -4,6 +4,7 @@ import yaml
 import csv
 
 import LibFunctions as lib
+from TrajectoryPlanner import MinCurvatureTrajectory
 
 
 class TrackMap:
@@ -48,6 +49,24 @@ class TrackMap:
         self.end = self.track_pts[-1]
 
         self.random_obs()
+
+    def get_min_curve_path(self):
+        path_name = 'Maps/' + self.name + "_path.npy"
+        try:
+            # raise Exception
+            path = np.load(path_name)
+            print(f"Path loaded from file: min curve")
+        except:
+            track = self.track
+            n_set = MinCurvatureTrajectory(track, self.obs_map)
+            deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+            path = track[:, 0:2] + deviation
+
+            np.save(path_name, path)
+            print(f"Path saved: min curve")
+
+        return path
+
 
     def find_nearest_point(self, x):
         distances = []

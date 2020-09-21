@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from TrajectoryPlanner import MinCurvatureTrajectory
+
 import LibFunctions as lib
 
 #Hyperparameters
@@ -315,12 +315,14 @@ class ModTrainVehicle(ModBaseVehicle):
 
     def init_plan(self, env_map):
         self.env_map = env_map
-        track = self.env_map.track
-        n_set = MinCurvatureTrajectory(track, self.env_map.obs_map)
+        # track = self.env_map.track
+        # n_set = MinCurvatureTrajectory(track, self.env_map.obs_map)
 
-        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
-        r_line = track[:, 0:2] + deviation
-        self.wpts = r_line
+        # deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+        # r_line = track[:, 0:2] + deviation
+        # self.wpts = r_line
+
+        self.wpts = self.env_map.get_min_curve_path()
 
         self.pind = 1
 
