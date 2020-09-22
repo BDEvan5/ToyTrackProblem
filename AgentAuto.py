@@ -351,7 +351,7 @@ class AutoTrainVehicle(AutoAgentBase):
         if reward == -1:
             new_reward = -1
         else:
-            new_reward = 0.1 - abs(action) * 0.05
+            new_reward = 0.1 - abs(action) * 0.2
 
         self.reward_history.append(new_reward)
 

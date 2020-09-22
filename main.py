@@ -284,6 +284,7 @@ def TrainAutoVehicle(agent_name, load):
             env.reset()
             total_rewards.append(score)
             plt.figure(5)
+            plt.clf()
             plt.plot(total_rewards)
             score = 0
             vehicle.reset_lap()
@@ -311,8 +312,8 @@ def RunRepAgent():
 def RunAutoAgent():
     agent_name = "TestingAuto"
 
-    # TrainAutoVehicle(agent_name, False)
-    TrainAutoVehicle(agent_name, True)
+    TrainAutoVehicle(agent_name, False)
+    # TrainAutoVehicle(agent_name, True)
 
 
 if __name__ == "__main__":
