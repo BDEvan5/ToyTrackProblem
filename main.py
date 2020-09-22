@@ -264,6 +264,7 @@ def TrainAutoVehicle(agent_name, load):
     # env_map.reset_map()
     wpts = vehicle.init_agent(env_map)
     done, state, score = False, env.reset(None), 0.0
+    total_rewards = []
     for i in range(100000):
         # action = vehicle.act(state)
         # s_p, r, done, _ = env.step(action, updates=1)
@@ -272,7 +273,7 @@ def TrainAutoVehicle(agent_name, load):
         state = s_p
 
         n_r = vehicle.add_memory_entry(buffer, r, s_p, done)
-        vehicle.agent.train(buffer, 1)
+        vehicle.agent.train(buffer, 2)
         score += n_r
         # env.render(False, wpts)
 
@@ -281,6 +282,9 @@ def TrainAutoVehicle(agent_name, load):
             vehicle.show_history()
             env.render_snapshot(wpts=wpts, wait=False)
             env.reset()
+            total_rewards.append(score)
+            plt.figure(5)
+            plt.plot(total_rewards)
             score = 0
             vehicle.reset_lap()
             vehicle.agent.save()
@@ -307,8 +311,8 @@ def RunRepAgent():
 def RunAutoAgent():
     agent_name = "TestingAuto"
 
-    # TrainAutoVehicle(agent_name, False)
-    TrainAutoVehicle(agent_name, True)
+    TrainAutoVehicle(agent_name, False)
+    # TrainAutoVehicle(agent_name, True)
 
 
 if __name__ == "__main__":

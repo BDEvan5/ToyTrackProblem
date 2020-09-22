@@ -180,7 +180,7 @@ class AutoAgentBase:
         self.current_v_ref = None
         self.current_d_ref = None
 
-        self.agent = TD3(21, 1, 0.4, name)
+        self.agent = TD3(11, 1, 0.4, name)
         self.agent.try_load(load)
 
     def init_agent(self, env_map):
@@ -214,7 +214,7 @@ class AutoAgentBase:
         ds = self.deltas[min(self.pind, len(self.deltas)-1)]
         max_d = abs(ds)
 
-        max_friction_force = 3.74 * 9.81 * 0.523 *0.7
+        max_friction_force = 3.74 * 9.81 * 0.523 *0.6
         d_plan = max(abs(delta_ref), abs(obs[4]), max_d)
         theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
         v_ref = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
@@ -248,7 +248,7 @@ class AutoAgentBase:
     def transform_obs(self, obs):
         _, d_ref = self.get_target_references(obs)
         new_obs = np.append(obs[5:], d_ref)
-        new_obs = np.concatenate([new_obs, self.mem_window])
+        # new_obs = np.concatenate([new_obs, self.mem_window])
 
         return new_obs
 
@@ -294,11 +294,11 @@ class AutoTrainVehicle(AutoAgentBase):
         v_ref, d_ref = self.get_target_references(obs)
         self.current_v_ref = v_ref
         self.d_ref_hisotry.append(d_ref)
-        self.last_obs = nn_obs
+        self.last_obs = obs
 
         d_ref_nn = self.agent.select_action(nn_obs)[0]
-        self.mem_window.pop(0)
-        self.mem_window.append(d_ref_nn)
+        # self.mem_window.pop(0)
+        # self.mem_window.append(d_ref_nn)
         self.nn_history.append(d_ref_nn)
         self.last_action = d_ref_nn
 
@@ -307,11 +307,13 @@ class AutoTrainVehicle(AutoAgentBase):
         return [v_ref, d_ref_nn]
 
     def add_memory_entry(self, buffer, reward, s_prime, done):
-        new_reward = self.update_reward(reward, self.last_action)
+        # new_reward = self.update_reward(reward, self.last_action)
+        new_reward = self.update_reward_dev(reward, self.last_action, self.last_obs)
 
-        s_p = self.transform_obs(s_prime)
+        s_p_nn = self.transform_obs(s_prime)
+        nn_obs = self.transform_obs(self.last_obs)
 
-        mem_entry = (self.last_obs, [self.last_action], s_p, new_reward, done)
+        mem_entry = (nn_obs, [self.last_action], s_p_nn, new_reward, done)
 
         buffer.add(mem_entry)
 
@@ -327,6 +329,18 @@ class AutoTrainVehicle(AutoAgentBase):
 
         return new_reward
 
+    def update_reward_dev(self, reward, action, obs):
+        if reward == -1:
+            new_reward = -1
+        else:
+            v_, d_ref = self.get_target_references(obs)
+            d_dif = abs(d_ref - action)
+            new_reward = - d_dif**2 * 4
+
+        self.reward_history.append(new_reward)
+
+        return new_reward
+
     def show_history(self):
         plt.figure(1)
         plt.clf()
@@ -337,11 +351,11 @@ class AutoTrainVehicle(AutoAgentBase):
         plt.ylim([-0.5, 0.5])
         plt.pause(0.001)
 
-        # plt.figure(3)
-        # plt.clf()
-        # plt.plot(self.reward_history)
-        # plt.title("Reward history")
-        # plt.pause(0.001)
+        plt.figure(3)
+        plt.clf()
+        plt.plot(self.reward_history)
+        plt.title("Reward history")
+        plt.pause(0.001)
 
     def reset_lap(self):
         self.pind = 1
