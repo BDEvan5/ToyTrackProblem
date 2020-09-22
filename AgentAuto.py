@@ -289,6 +289,23 @@ class AutoTrainVehicle(AutoAgentBase):
 
         return [a, d_dot]
 
+    def act_cs(self, obs):
+        nn_obs = self.transform_obs(obs)
+        v_ref, d_ref = self.get_target_references(obs)
+        self.current_v_ref = v_ref
+        self.d_ref_hisotry.append(d_ref)
+        self.last_obs = nn_obs
+
+        d_ref_nn = self.agent.select_action(nn_obs)[0]
+        self.mem_window.pop(0)
+        self.mem_window.append(d_ref_nn)
+        self.nn_history.append(d_ref_nn)
+        self.last_action = d_ref_nn
+
+        self.steps += 1
+
+        return [v_ref, d_ref_nn]
+
     def add_memory_entry(self, buffer, reward, s_prime, done):
         new_reward = self.update_reward(reward, self.last_action)
 
@@ -298,6 +315,7 @@ class AutoTrainVehicle(AutoAgentBase):
 
         buffer.add(mem_entry)
 
+        return new_reward
 
     def update_reward(self, reward, action):
         if reward == -1:
@@ -316,6 +334,7 @@ class AutoTrainVehicle(AutoAgentBase):
         plt.plot(self.nn_history)
         plt.title("NN and d ref hisotry")
         plt.legend(['D_ref', 'NN'])
+        plt.ylim([-0.5, 0.5])
         plt.pause(0.001)
 
         # plt.figure(3)
