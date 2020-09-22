@@ -143,6 +143,45 @@ class TrackSim:
 
         return obs, reward, done, None
 
+    def step_cs(self, action):
+        self.steps += 1
+
+        v_ref = action[0]
+        d_ref = action[1]
+        self.action = action
+
+        frequency_ratio = 10 # cs updates per planning update
+        self.car.prev_loc = [self.car.x, self.car.y]
+        for i in range(frequency_ratio):
+            acceleration, steer_dot = self.control_system(v_ref, d_ref)
+            self.car.update_kinematic_state(acceleration, steer_dot, self.timestep)
+
+            self.steer_history.append(steer_dot)
+            self.velocity_history.append(self.car.velocity)
+         
+        self.check_done_reward_track_train()
+
+        obs = self.get_state_obs()
+        done = self.done
+        reward = self.reward
+
+        self.action_memory.append([self.car.x, self.car.y])
+
+        return obs, reward, done, None
+
+    def control_system(self, v_ref, d_ref):
+
+        kp_a = 10
+        a = (v_ref - self.car.velocity) * kp_a
+        
+        kp_delta = 40
+        d_dot = (d_ref - self.car.steering) * kp_delta
+
+        a = np.clip(a, -8, 8)
+        d_dot = np.clip(d_dot, -3.2, 3.2)
+
+        return a, d_dot
+
     def reset(self, poses=None, random_start=False):
         self.done = False
         self.action_memory = []
@@ -226,6 +265,9 @@ class TrackSim:
         # plt.imshow(self.env_map.obs_map.T, origin='lower')
         plt.imshow(self.env_map.scan_map.T, origin='lower')
 
+        plt.xlim([0, 100])
+        plt.ylim([0, 100])
+
         plt.plot(self.env_map.start[0]*self.ds, self.env_map.start[1]*self.ds, '*', markersize=12)
 
         plt.plot(self.env_map.end[0]*self.ds, self.env_map.end[1]*self.ds, '*', markersize=12)
@@ -279,8 +321,8 @@ class TrackSim:
     def render_snapshot(self, wait=False, wpts=None):
         # self.race_map = self.env_map.race_course
 
-        car_x = int(self.car.x)
-        car_y = int(self.car.y)
+        car_x = int(self.car.x*self.ds)
+        car_y = int(self.car.y*self.ds)
         fig = plt.figure(4)
         plt.clf()  
         c_line = self.env_map.track_pts
@@ -294,18 +336,21 @@ class TrackSim:
         ret_map = self.env_map.get_show_map()
         plt.imshow(ret_map.T, origin='lower')
 
+        plt.xlim([0, 100])
+        plt.ylim([0, 100])
+
         plt.plot(self.env_map.start[0]*self.ds, self.env_map.start[1]*self.ds, '*', markersize=12)
 
         plt.plot(self.env_map.end[0]*self.ds, self.env_map.end[1]*self.ds, '*', markersize=12)
-        plt.plot(self.car.x*self.ds, self.car.y*self.ds, '+', markersize=16)
+        plt.plot(self.car.x, self.car.y, '+', markersize=16)
 
         for i in range(self.scan_sim.number_of_beams):
             angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
             fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations([self.car.x, self.car.y], dx)
-            x = [car_x*self.ds, range_val[0]*self.ds]
-            y = [car_y*self.ds, range_val[1]*self.ds]
+            x = [car_x, range_val[0]*self.ds]
+            y = [car_y, range_val[1]*self.ds]
             plt.plot(x, y)
 
         for pos in self.action_memory:

@@ -53,6 +53,15 @@ class OptimalAgent:
 
         return [a, d_dot]
 
+    def act_cs(self, obs):
+        v_ref, d_ref = self.get_target_references(obs)
+
+        # possibly clip if needed, but shouldn't change much.
+
+        return [v_ref, d_ref]
+
+
+
     def get_corridor_references(self, obs):
         ranges = obs[5:]
         max_range = np.argmax(ranges)

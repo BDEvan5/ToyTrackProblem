@@ -37,6 +37,30 @@ def RunOptimalAgent():
     env.render_snapshot(wait=True, wpts=wpts)
 
 
+def RunOptimalControlAgent():
+    env_map = TrackMap()
+
+    env = TrackSim(env_map)
+    agent = OptimalAgent()
+
+    done, state, score = False, env.reset(None), 0.0
+    wpts = agent.init_agent(env_map)
+    # env.render(True, wpts)
+    while not done:
+        action = agent.act_cs(state)
+        s_p, r, done, _ = env.step_cs(action)
+        score += r
+        state = s_p
+
+        # env.render(True)
+        env.render(False, wpts)
+
+    print(f"Score: {score}")
+    env.show_history()
+    env.render_snapshot(wait=True, wpts=wpts)
+
+
+
 """Training functions: PURE MOD"""
 def collect_willem_mod_observations(buffer, agent_name, n_itterations=5000):
     env_map = EnvironmentMap('TrainTrackEmpty')
@@ -251,7 +275,8 @@ if __name__ == "__main__":
 
     # RunModAgent()
     # RunRepAgent()
-    RunOptimalAgent()
+    # RunOptimalAgent()
+    RunOptimalControlAgent()
 
 
 
