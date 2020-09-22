@@ -180,7 +180,7 @@ class AutoAgentBase:
         self.current_v_ref = None
         self.current_d_ref = None
 
-        self.agent = TD3(11, 1, 0.4, name)
+        self.agent = TD3(10, 1, 0.4, name)
         self.agent.try_load(load)
 
     def init_agent(self, env_map):
@@ -201,7 +201,8 @@ class AutoAgentBase:
         return self.wpts
          
     def get_target_references(self, obs):
-        self._set_target(obs)
+        # self._set_target(obs)
+        self.find_target(obs)
 
         target = self.wpts[self.pind]
         th_target = lib.get_bearing(obs[0:2], target)
@@ -214,12 +215,15 @@ class AutoAgentBase:
         ds = self.deltas[min(self.pind, len(self.deltas)-1)]
         max_d = abs(ds)
 
-        max_friction_force = 3.74 * 9.81 * 0.523 *0.6
+        max_friction_force = 3.74 * 9.81 * 0.523 *0.5
         d_plan = max(abs(delta_ref), abs(obs[4]), max_d)
         theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
         v_ref = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
         v_ref = min(v_ref, 8.5)
-        # v_ref = 3
+        v_ref = 2
+
+        v_ref = np.clip(v_ref, -8, 8)
+        delta_ref = np.clip(delta_ref, -0.4, 0.4)
 
         return v_ref, delta_ref
 
@@ -245,11 +249,29 @@ class AutoAgentBase:
             else:
                 self.pind = 0
 
+    def find_target(self, obs):
+        distances = [lib.get_distance(obs[0:2], self.wpts[i]) for i in range(len(self.wpts))]
+        ind = np.argmin(distances)
+        N = len(self.wpts)
+        if ind == N:
+            ind = 1
+
+        front_dis = lib.get_distance(self.wpts[ind], self.wpts[ind+1])
+        back_dis = lib.get_distance(self.wpts[ind], self.wpts[ind-1])
+
+        if front_dis < back_dis * 0.5:
+            self.pind = ind + 1
+        else:
+            self.pind = ind
+        # self.pind = ind + 1
+
+
     def transform_obs(self, obs):
-        _, d_ref = self.get_target_references(obs)
-        new_obs = np.append(obs[5:], d_ref)
+        # _, d_ref = self.get_target_references(obs)
+        # new_obs = np.append(obs[5:], d_ref)
         # new_obs = np.concatenate([new_obs, self.mem_window])
 
+        new_obs = obs[5:]
         return new_obs
 
 
@@ -335,7 +357,7 @@ class AutoTrainVehicle(AutoAgentBase):
         else:
             v_, d_ref = self.get_target_references(obs)
             d_dif = abs(d_ref - action)
-            new_reward = - d_dif**2 * 4
+            new_reward = 0.5 - d_dif *2 
 
         self.reward_history.append(new_reward)
 

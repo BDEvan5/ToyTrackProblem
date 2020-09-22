@@ -125,6 +125,9 @@ class TrackMap:
         return ret_map
 
     def check_scan_location(self, x_in):
+        if x_in[0] < 0 or x_in[1] < 0:
+            return True
+
         y = int(max(min(x_in[1] / self.obs_res, 99), 0))
         x = int(max(min(x_in[0] / self.obs_res, 99), 0))
         if self.scan_map[x, y]:

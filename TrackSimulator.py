@@ -2,6 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import LibFunctions as lib
+from RaceTrackMap import TrackMap
 
 
 class CarModel:
@@ -68,7 +69,7 @@ class ScanSimulator:
         self.dth = self.fov / (self.number_of_beams -1)
         self.scan_output = np.zeros(number_of_beams)
 
-        self.step_size = 1
+        self.step_size = 0.1
         self.n_searches = 50
 
         self.race_map = None
@@ -83,14 +84,15 @@ class ScanSimulator:
         return self.scan_output
 
     def trace_ray(self, x, y, theta, noise=True):
+        # obs_res = 10
         for j in range(self.n_searches): # number of search points
-            fs = self.step_size * j
+            fs = self.step_size * (j + 1)  # search from 1 step away from the point
             dx =  [np.sin(theta) * fs, np.cos(theta) * fs]
             search_val = lib.add_locations([x, y], dx)
             if self._check_location(search_val):
                 break       
 
-        ray = j / self.n_searches * (1 + np.random.normal(0, self.std_noise))
+        ray = (j) / self.n_searches #* (1 + np.random.normal(0, self.std_noise))
         return ray
 
     def set_map(self, check_fcn):
@@ -232,7 +234,7 @@ class TrackSim:
         if self.env_map.check_scan_location([self.car.x, self.car.y]):
             self.done = True
             self.reward = -1
-            self.done_reason = f"Crash obstacle: [{self.car.x}, {self.car.y}]"
+            self.done_reason = f"Crash obstacle: [{self.car.x:.2f}, {self.car.y:.2f}]"
         horizontal_force = self.car.mass * self.car.th_dot * self.car.velocity
         self.y_forces.append(horizontal_force)
         if horizontal_force > self.car.max_friction_force:
@@ -249,8 +251,6 @@ class TrackSim:
                 self.done_reason = f"Lap complete"
 
     def render(self, wait=False, wpts=None):
-        car_x = int(self.car.x)
-        car_y = int(self.car.y)
         fig = plt.figure(4)
         plt.clf()  
 
@@ -320,10 +320,6 @@ class TrackSim:
             plt.show()
             
     def render_snapshot(self, wait=False, wpts=None):
-        # self.race_map = self.env_map.race_course
-
-        car_x = int(self.car.x*self.ds)
-        car_y = int(self.car.y*self.ds)
         fig = plt.figure(4)
         plt.clf()  
         c_line = self.env_map.track_pts
@@ -343,15 +339,15 @@ class TrackSim:
         plt.plot(self.env_map.start[0]*self.ds, self.env_map.start[1]*self.ds, '*', markersize=12)
 
         plt.plot(self.env_map.end[0]*self.ds, self.env_map.end[1]*self.ds, '*', markersize=12)
-        plt.plot(self.car.x, self.car.y, '+', markersize=16)
+        plt.plot(self.car.x*self.ds, self.car.y*self.ds, '+', markersize=16)
 
         for i in range(self.scan_sim.number_of_beams):
             angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
             fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations([self.car.x, self.car.y], dx)
-            x = [car_x, range_val[0]*self.ds]
-            y = [car_y, range_val[1]*self.ds]
+            x = [self.car.x*self.ds, range_val[0]*self.ds]
+            y = [self.car.y*self.ds, range_val[1]*self.ds]
             plt.plot(x, y)
 
         for pos in self.action_memory:
@@ -411,17 +407,29 @@ def CorridorAction(obs):
 
     return [a, d_dot]
 
+def CorridorCS(obs):
+    ranges = obs[5:]
+    max_range = np.argmax(ranges)
+    dth = (np.pi * 2/ 3) / 9
+    theta_dot = dth * max_range - np.pi/3
+
+    ld = 0.3 # lookahead distance
+    delta_ref = np.arctan(2*0.33*np.sin(theta_dot)/ld)
+
+    v_ref = 2
+
+    return [v_ref, delta_ref]
+
 
 
 def sim_driver():
-    race_map = TestMap()
-    race_map.map_1000(True)
-    env = F110Env(race_map)
+    race_map = TrackMap()
+    env = TrackSim(race_map)
 
     done, state, score = False, env.reset(None), 0.0
     while not done:
-        action = CorridorAction(state)
-        s_p, r, done, _ = env.step(action, updates=20)
+        action = CorridorCS(state)
+        s_p, r, done, _ = env.step_cs(action)
         score += r
         state = s_p
 
@@ -429,6 +437,11 @@ def sim_driver():
         env.render(False)
 
     print(f"Score: {score}")
+    env.show_history()
+    env.render_snapshot(True)
+
+
+
 
 if __name__ == "__main__":
     sim_driver()
