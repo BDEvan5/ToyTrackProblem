@@ -253,7 +253,7 @@ class AutoAgentBase:
         distances = [lib.get_distance(obs[0:2], self.wpts[i]) for i in range(len(self.wpts))]
         ind = np.argmin(distances)
         N = len(self.wpts)
-        if ind == N:
+        if ind == N-1:
             ind = 1
 
         front_dis = lib.get_distance(self.wpts[ind], self.wpts[ind+1])
@@ -357,7 +357,7 @@ class AutoTrainVehicle(AutoAgentBase):
         else:
             v_, d_ref = self.get_target_references(obs)
             d_dif = abs(d_ref - action)
-            new_reward = 0.5 - d_dif *2 
+            new_reward = 0.5 - d_dif 
 
         self.reward_history.append(new_reward)
 
@@ -375,7 +375,7 @@ class AutoTrainVehicle(AutoAgentBase):
 
         plt.figure(3)
         plt.clf()
-        plt.plot(self.reward_history)
+        plt.plot(self.reward_history, 'x', markersize=15)
         plt.title("Reward history")
         plt.pause(0.001)
 

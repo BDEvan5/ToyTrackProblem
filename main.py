@@ -275,7 +275,7 @@ def TrainAutoVehicle(agent_name, load):
         n_r = vehicle.add_memory_entry(buffer, r, s_p, done)
         vehicle.agent.train(buffer, 2)
         score += n_r
-        env.render(False, wpts)
+        # env.render(False, wpts)
 
         if done:
             print(f"#{i}: Ep done in {env.steps} steps --> NewReward: {score} ")
@@ -311,8 +311,8 @@ def RunRepAgent():
 def RunAutoAgent():
     agent_name = "TestingAuto"
 
-    TrainAutoVehicle(agent_name, False)
-    # TrainAutoVehicle(agent_name, True)
+    # TrainAutoVehicle(agent_name, False)
+    TrainAutoVehicle(agent_name, True)
 
 
 if __name__ == "__main__":
