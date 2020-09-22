@@ -148,11 +148,17 @@ class TD3(object):
         filename = self.name
         torch.save(self.actor.state_dict(), '%s/%s_actor.pth' % (directory, filename))
         torch.save(self.critic.state_dict(), '%s/%s_critic.pth' % (directory, filename))
+        torch.save(self.actor_target.state_dict(), '%s/%s_actor_target.pth' % (directory, filename))
+        torch.save(self.critic_target.state_dict(), '%s/%s_critic_target.pth' % (directory, filename))
 
     def load(self, directory="./saves"):
         filename = self.name
         self.actor.load_state_dict(torch.load('%s/%s_actor.pth' % (directory, filename)))
         self.critic.load_state_dict(torch.load('%s/%s_critic.pth' % (directory, filename)))
+        self.actor_target.load_state_dict(torch.load('%s/%s_actor_target.pth' % (directory, filename)))
+        self.critic_target.load_state_dict(torch.load('%s/%s_critic_target.pth' % (directory, filename)))
+
+        print("Agent Loaded")
 
     def try_load(self, load=True):
         if load:
@@ -329,8 +335,8 @@ class AutoTrainVehicle(AutoAgentBase):
         return [v_ref, d_ref_nn]
 
     def add_memory_entry(self, buffer, reward, s_prime, done):
-        # new_reward = self.update_reward(reward, self.last_action)
-        new_reward = self.update_reward_dev(reward, self.last_action, self.last_obs)
+        new_reward = self.update_reward(reward, self.last_action)
+        # new_reward = self.update_reward_dev(reward, self.last_action, self.last_obs)
 
         s_p_nn = self.transform_obs(s_prime)
         nn_obs = self.transform_obs(self.last_obs)
@@ -345,7 +351,7 @@ class AutoTrainVehicle(AutoAgentBase):
         if reward == -1:
             new_reward = -1
         else:
-            new_reward = 0.01 - abs(action) * 0.005
+            new_reward = 0.1 - abs(action) * 0.05
 
         self.reward_history.append(new_reward)
 
