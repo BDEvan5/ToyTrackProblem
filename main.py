@@ -13,6 +13,7 @@ from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
 from AgentRep import RepTrainVehicle, RepRaceVehicle
 from AgentAuto import AutoTrainVehicle
+from AgentFull import FullTrainVehicle
 
 
 def RunOptimalAgent():
@@ -322,6 +323,45 @@ def TrainAutoVehicle(agent_name, load):
             vehicle.agent.save()
 
 
+"""Training for Full agent"""
+def TrainFullVehicle(agent_name, load):
+    print(f"Training Full Vehicle performance")
+    env_map = TrackMap('TrackMap1000')
+    buffer = ReplayBufferAuto()
+
+    env = TrackSim(env_map)
+    vehicle = FullTrainVehicle(agent_name, load)
+
+    # env_map.reset_map()
+    wpts = vehicle.init_agent(env_map)
+    done, state, score = False, env.reset(None), 0.0
+    total_rewards = []
+    for i in range(100000):
+        # action = vehicle.act(state)
+        # s_p, r, done, _ = env.step(action, updates=1)
+        action = vehicle.act_cs(state)
+        s_p, r, done, _ = env.step_cs(action)
+        state = s_p
+
+        n_r = vehicle.add_memory_entry(buffer, r, s_p, done)
+        vehicle.agent.train(buffer, 2)
+        score += n_r
+        # env.render(False, wpts)
+
+        if done:
+            print(f"#{i}: Ep done in {env.steps} steps --> NewReward: {score} ")
+            vehicle.show_history()
+            env.render_snapshot(wpts=wpts, wait=False)
+            env.reset()
+            total_rewards.append(score)
+            plt.figure(5)
+            plt.clf()
+            plt.plot(total_rewards)
+            score = 0
+            vehicle.reset_lap()
+            vehicle.agent.save()
+
+
 
 """Total functions"""
 def RunModAgent():
@@ -346,14 +386,21 @@ def RunAutoAgent():
     TrainAutoVehicle(agent_name, False)
     # TrainAutoVehicle(agent_name, True)
 
+def RunFullAgent():
+    agent_name = "TestingFull"
+
+    TrainFullVehicle(agent_name, False)
+    # TrainFullVehicle(agent_name, True)
+
 
 if __name__ == "__main__":
 
-    RunModAgent()
+    # RunModAgent()
     # RunRepAgent()
     # RunAutoAgent()
     # RunOptimalControlAgent()
     # RunOptimalAgent()
+    RunFullAgent()
 
 
 
