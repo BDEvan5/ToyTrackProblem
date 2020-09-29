@@ -95,9 +95,12 @@ def TrainModVehicle(agent_name, load=True):
     env = TrackSim(env_map)
 
     print_n = 500
-    rewards = []
+    plot_n = 0
+    rewards, reward_crashes, lengths = [], [], []
+    completes, crash_laps = 0, 0
+    complete_his, crash_his = [], []
 
-    done, state, score = False, env.reset(None), 0.0
+    done, state, score, crashes = False, env.reset(None), 0.0, 0.0
     wpts = vehicle.init_agent(env_map)
     for n in range(100000):
         # a = vehicle.act(state)
@@ -105,8 +108,9 @@ def TrainModVehicle(agent_name, load=True):
         a = vehicle.act_cs(state)
         s_prime, r, done, _ = env.step_cs(a)
 
-        vehicle.add_memory_entry(r, done, s_prime, buffer)
-        score += r
+        nr = vehicle.add_memory_entry(r, done, s_prime, buffer)
+        score += nr
+        crashes += r
         state = s_prime
         
         # env.render(False)
@@ -114,22 +118,47 @@ def TrainModVehicle(agent_name, load=True):
 
         if n % print_n == 0 and n > 0:
             rewards.append(score)
+            reward_crashes.append(crashes)
             exp = vehicle.agent.model.exploration_rate
             mean = np.mean(rewards)
             b = buffer.size()
-            print(f"Run: {n} --> Score: {score} --> Mean: {mean} --> exp: {exp} --> Buf: {b}")
+            print(f"Run: {n} --> Score: {score:.2f} --> Mean: {mean:.2f} --> exp: {exp} --> ")
             score = 0
             lib.plot(rewards, figure_n=2)
+            plt.figure(2)
+            plt.plot(reward_crashes)
+            plt.pause(0.0001)
+            crashes = 0
 
             vehicle.agent.save()
         
         if done:
-            vehicle.show_vehicle_history()
-            env.render_snapshot(wpts=wpts, wait=False)
+            lengths.append(env.steps)
+            if plot_n % 10 == 0:
+                vehicle.show_vehicle_history()
+                env.render_snapshot(wpts=wpts, wait=False)
 
+                # 10 ep moving avg of laps
+                plt.figure(5)
+                plt.clf()
+                plt.plot(crash_his)
+                plt.plot(complete_his)
+
+                crash_his.append(crash_laps)
+                complete_his.append(completes)
+                crash_laps = 0
+                completes = 0
+
+            plot_n += 1
             env_map.reset_map()
             vehicle.reset_lap()
             state = env.reset()
+
+            if r == -1:
+                crash_laps += 1
+            else:
+                completes += 1
+
 
     vehicle.agent.save()
 
