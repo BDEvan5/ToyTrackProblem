@@ -296,8 +296,8 @@ def TrainAutoVehicle(agent_name, load):
 def RunModAgent():
     agent_name = "TestingWillem"
     
-    # TrainModVehicle(agent_name, False)
-    TrainModVehicle(agent_name, True)
+    TrainModVehicle(agent_name, False)
+    # TrainModVehicle(agent_name, True)
 
     # RaceModVehicle(agent_name)
 
@@ -318,7 +318,7 @@ def RunAutoAgent():
 
 if __name__ == "__main__":
 
-    # RunModAgent()
+    RunModAgent()
     # RunRepAgent()
     RunAutoAgent()
     # RunOptimalControlAgent()
