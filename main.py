@@ -100,8 +100,10 @@ def TrainModVehicle(agent_name, load=True):
     done, state, score = False, env.reset(None), 0.0
     wpts = vehicle.init_agent(env_map)
     for n in range(100000):
-        a = vehicle.act(state)
-        s_prime, r, done, _ = env.step(a, 1)
+        # a = vehicle.act(state)
+        # s_prime, r, done, _ = env.step(a, 1)
+        a = vehicle.act_cs(state)
+        s_prime, r, done, _ = env.step_cs(a)
 
         vehicle.add_memory_entry(r, done, s_prime, buffer)
         score += r
@@ -320,7 +322,7 @@ if __name__ == "__main__":
 
     RunModAgent()
     # RunRepAgent()
-    RunAutoAgent()
+    # RunAutoAgent()
     # RunOptimalControlAgent()
     # RunOptimalAgent()
 
