@@ -167,14 +167,14 @@ class BaseModAgent:
         self.steps = 0
 
         # agent stuff 
-        self.action_space = 3
+        self.action_space = 5
         self.center_act = int((self.action_space - 1) / 2)
         self.state_action = None
         self.cur_nn_act = None
         self.prev_nn_act = self.center_act
         self.mem_window = [0, 0, 0, 0, 0]
 
-        self.agent = TrainWillemModDQN(16, self.action_space, name)
+        self.agent = TrainWillemModDQN(11, self.action_space, name)
         self.agent.try_load(load)
 
     def init_agent(self, env_map):
@@ -219,7 +219,7 @@ class BaseModAgent:
         max_d = abs(ds)
         # max_d = max(abs(ds))
 
-        max_friction_force = 3.74 * 9.81 * 0.523 *0.9
+        max_friction_force = 3.74 * 9.81 * 0.523 *0.5
         d_plan = max(abs(delta_ref), abs(obs[4]), max_d)
         theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
         v_ref = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
@@ -265,17 +265,26 @@ class BaseModAgent:
         scaled_target_phi = phi_ref / max_angle
         nn_obs = [scaled_target_phi]
 
-        nn_obs = np.concatenate([nn_obs, obs[5:], self.mem_window])
+        # nn_obs = np.concatenate([nn_obs, obs[5:], self.mem_window])
+        nn_obs = np.concatenate([nn_obs, obs[5:]])
 
         return nn_obs
 
-    def modify_references(self, nn_action, v_ref, phi_ref):
-        d_phi = 0.5 # rad
-        phi_new = phi_ref + (nn_action[0] - self.center_act) * d_phi
+    def modify_references(self, nn_action, v_ref, d_ref, obs):
+        d_phi = 0.5 / self.center_act# rad
+        d_new = d_ref + (nn_action[0] - self.center_act) * d_phi
 
-        v_ref_mod = v_ref
+        if abs(d_new) > abs(d_ref):
+            max_friction_force = 3.74 * 9.81 * 0.523 *0.5
+            d_plan = max(abs(d_ref), abs(obs[4]), abs(d_new))
+            theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
+            v_ref = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
+            v_ref_mod = min(v_ref, 8.5)
+        else:
+            v_ref_mod = v_ref
 
-        return v_ref_mod, phi_new
+
+        return v_ref_mod, d_new
 
     def reset_lap(self):
         self.mod_history.clear()
@@ -331,25 +340,45 @@ class ModVehicleTrain(BaseModAgent):
 
         return [a, d_dot]
 
+    def act_cs(self, obs):
+        v_ref, d_ref = self.get_target_references(obs)
+
+        nn_obs = self.transform_obs(obs, v_ref, d_ref)
+        nn_action = self.agent.act(nn_obs)
+        self.cur_nn_act = nn_action
+
+        self.out_his.append(self.agent.get_out(nn_obs))
+        self.mod_history.append(self.cur_nn_act)
+        self.state_action = [nn_obs, self.cur_nn_act]
+
+        # self.mem_window.pop(0)
+        # self.mem_window.append(float(self.cur_nn_act[0]/self.action_space)) # normalises it.
+
+        v_ref, d_ref = self.modify_references(self.cur_nn_act, v_ref, d_ref, obs)
+
+        self.steps += 1
+
+        return [v_ref, d_ref]
+
+
+
     def update_reward(self, reward, action):
-        beta = 0.1
+        beta = 0.1 / self.center_act
         d_action = abs(action[0] - self.center_act)
         if reward == -1:
             new_reward = -1
-        # elif reward == 1:
-        #     new_reward = 1
-        elif d_action == 0:
-            new_reward = 0
         else:
             dd_action = abs(action[0] - self.prev_nn_act)
-            new_reward = 0 - d_action * beta - dd_action *beta
+            new_reward = 0.05 - d_action * beta - dd_action *beta/2
+            # new_reward = 0.01
 
         self.reward_history.append(new_reward)
 
         return new_reward
 
     def add_memory_entry(self, reward, done, s_prime, buffer):
-        if self.mem_save:
+        # if self.mem_save:
+        if True:
             new_reward = self.update_reward(reward, self.state_action[1])
             self.prev_nn_act = self.state_action[1][0]
 
@@ -362,8 +391,8 @@ class ModVehicleTrain(BaseModAgent):
             # if new_reward != 0 or np.random.random() < 0.2: 
             buffer.put(mem_entry)
 
-            self.mem_save = False
-
+            # self.mem_save = False
+        return new_reward
 
 class ModVehicleTest(BaseModAgent):
     def __init__(self):
