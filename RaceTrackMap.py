@@ -45,7 +45,7 @@ class TrackMap:
         self.nvecs = track[:, 2: 4]
         self.ws = track[:, 4:6]
 
-        self.start = self.track_pts[0]
+        self.start = self.track_pts[0] - 0.1
         self.end = self.track_pts[-1]
 
         self.random_obs(0)
@@ -66,7 +66,6 @@ class TrackMap:
             print(f"Path saved: min curve")
 
         return path
-
 
     def find_nearest_point(self, x):
         distances = []
@@ -126,8 +125,11 @@ class TrackMap:
         return ret_map
 
     def check_scan_location(self, x_in):
-        y = int(min(x_in[1] / self.obs_res, 99))
-        x = int(min(x_in[0] / self.obs_res, 99))
+        if x_in[0] < 0 or x_in[1] < 0:
+            return True
+
+        y = int(max(min(x_in[1] / self.obs_res, 99), 0))
+        x = int(max(min(x_in[0] / self.obs_res, 99), 0))
         if self.scan_map[x, y]:
             return True
         if self.obs_map[x, y]:
