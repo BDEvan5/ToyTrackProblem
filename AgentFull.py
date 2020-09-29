@@ -179,105 +179,20 @@ class FullAgentBase:
         self.path_name = None
         self.wpts = None
 
-        self.pind = 1
-        self.target = None
         self.steps = 0
 
-        self.current_v_ref = None
-        self.current_d_ref = None
-
-        self.agent = TD3(10, 1, 0.4, name)
+        self.agent = TD3(12, 2, 1, name)
         self.agent.try_load(load)
 
-    def init_agent(self, env_map):
-        self.env_map = env_map
-        self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
- 
-        self.wpts = self.env_map.get_min_curve_path()
-
-        r_line = self.wpts
-        ths = [lib.get_bearing(r_line[i], r_line[i+1]) for i in range(len(r_line)-1)]
-        alphas = [lib.sub_angles_complex(ths[i+1], ths[i]) for i in range(len(ths)-1)]
-        lds = [lib.get_distance(r_line[i], r_line[i+1]) for i in range(1, len(r_line)-1)]
-
-        self.deltas = np.arctan(2*0.33*np.sin(alphas)/lds)
-
-        self.pind = 1
-
-        return self.wpts
          
-    def get_target_references(self, obs):
-        # self._set_target(obs)
-        self.find_target(obs)
-
-        target = self.wpts[self.pind]
-        th_target = lib.get_bearing(obs[0:2], target)
-        alpha = lib.sub_angles_complex(th_target, obs[2])
-
-        # pure pursuit
-        ld = lib.get_distance(obs[0:2], target)
-        delta_ref = np.arctan(2*0.33*np.sin(alpha)/ld)
-
-        ds = self.deltas[min(self.pind, len(self.deltas)-1)]
-        max_d = abs(ds)
-
-        max_friction_force = 3.74 * 9.81 * 0.523 *0.5
-        d_plan = max(abs(delta_ref), abs(obs[4]), max_d)
-        theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
-        v_ref = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
-        v_ref = min(v_ref, 8.5)
-        v_ref = 2
-
-        v_ref = np.clip(v_ref, -8, 8)
-        delta_ref = np.clip(delta_ref, -0.4, 0.4)
-
-        return v_ref, delta_ref
-
-    def control_system(self, obs):
-        v_ref = self.current_v_ref
-        d_ref = self.current_d_ref
-
-        kp_a = 10
-        a = (v_ref - obs[3]) * kp_a
-        
-        kp_delta = 40
-        d_dot = (d_ref - obs[4]) * kp_delta
-
-        return a, d_dot
-
-    def _set_target(self, obs):
-        dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-        shift_distance = 1
-        while dis_cur_target < shift_distance: # how close to say you were there
-            if self.pind < len(self.wpts)-2:
-                self.pind += 1
-                dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-            else:
-                self.pind = 0
-
-    def find_target(self, obs):
-        distances = [lib.get_distance(obs[0:2], self.wpts[i]) for i in range(len(self.wpts))]
-        ind = np.argmin(distances)
-        N = len(self.wpts)
-        if ind == N-1:
-            ind = 1
-
-        front_dis = lib.get_distance(self.wpts[ind], self.wpts[ind+1])
-        back_dis = lib.get_distance(self.wpts[ind], self.wpts[ind-1])
-
-        if front_dis < back_dis * 0.5:
-            self.pind = ind + 1
-        else:
-            self.pind = ind
-        # self.pind = ind + 1
-
-
     def transform_obs(self, obs):
         # _, d_ref = self.get_target_references(obs)
         # new_obs = np.append(obs[5:], d_ref)
         # new_obs = np.concatenate([new_obs, self.mem_window])
 
-        new_obs = obs[5:]
+        # new_obs = obs[5:]
+
+        new_obs = np.concatenate([[obs[3]/7.5], [obs[4]/0.4], obs[5:]])
         return new_obs
 
 
@@ -288,95 +203,81 @@ class FullTrainVehicle(FullAgentBase):
         self.last_action = None
         self.last_obs = None
         self.max_act_scale = 0.4
+        self.prev_s = 0
 
         self.reward_history = []
-        self.nn_history = []
-        self.d_ref_hisotry = []
+        self.v_history = []
+        self.d_history = []
 
         self.mem_window = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        
 
-    def act(self, obs):
-        nn_obs = self.transform_obs(obs)
-        v_ref, d_ref = self.get_target_references(obs)
-        self.current_v_ref = v_ref
-        self.d_ref_hisotry.append(d_ref)
-        self.last_obs = nn_obs
+    def init_agent(self, env_map):
+        self.env_map = env_map
 
-        self.current_d_ref = self.agent.select_action(nn_obs)[0]
-        self.mem_window.pop(0)
-        self.mem_window.append(self.current_d_ref)
-        self.nn_history.append(self.current_d_ref)
-        self.last_action = self.current_d_ref
-
-        a, d_dot = self.control_system(obs)
-
-        self.steps += 1
-
-        a = np.clip(a, -8.5, 8.5)
-        d_dot = np.clip(d_dot, -3.2, 3.2)
-
-        return [a, d_dot]
 
     def act_cs(self, obs):
         nn_obs = self.transform_obs(obs)
-        v_ref, d_ref = self.get_target_references(obs)
-        self.current_v_ref = v_ref
-        self.d_ref_hisotry.append(d_ref)
+
         self.last_obs = obs
 
-        d_ref_nn = self.agent.select_action(nn_obs)[0]
+        action = self.agent.select_action(nn_obs)
         # self.mem_window.pop(0)
         # self.mem_window.append(d_ref_nn)
-        self.nn_history.append(d_ref_nn)
-        self.last_action = d_ref_nn
+        self.v_history.append(action[0])
+        self.d_history.append(action[1])
+        self.last_action = action
+
+        max_v = 6.5
+        max_d = 0.4
+        ret_action = [(action[0] +1)*max_v/2+1, action[1]* max_d]
 
         self.steps += 1
 
-        return [v_ref, d_ref_nn]
+        return ret_action
 
     def add_memory_entry(self, buffer, reward, s_prime, done):
-        new_reward = self.update_reward(reward, self.last_action)
-        # new_reward = self.update_reward_dev(reward, self.last_action, self.last_obs)
+        new_reward = self.update_reward(reward, self.last_action, s_prime)
 
         s_p_nn = self.transform_obs(s_prime)
         nn_obs = self.transform_obs(self.last_obs)
 
-        mem_entry = (nn_obs, [self.last_action], s_p_nn, new_reward, done)
+        mem_entry = (nn_obs, self.last_action, s_p_nn, new_reward, done)
 
         buffer.add(mem_entry)
 
         return new_reward
 
-    def update_reward(self, reward, action):
+    def update_reward(self, reward, action, obs):
         if reward == -1:
             new_reward = -1
         else:
-            new_reward = 0.1 - abs(action) * 0.2
+            # v_beta = 0.02
+            # d_beta = 0.1
+            
+            # new_reward = 0.05 - abs(action[1]) * d_beta  + v_beta * (action[0] + 1)/2 
+            s_beta = 0.8
+            s = self.env_map.get_s_progress(obs[0:2])
+            ds = s - self.prev_s
+            ds = np.clip(ds, -0.5, 0.5)
+            new_reward = ds * s_beta
+            self.prev_s = s
+
 
         self.reward_history.append(new_reward)
 
         return new_reward
 
-    def update_reward_dev(self, reward, action, obs):
-        if reward == -1:
-            new_reward = -1
-        else:
-            v_, d_ref = self.get_target_references(obs)
-            d_dif = abs(d_ref - action)
-            new_reward = 0.5 - d_dif 
 
-        self.reward_history.append(new_reward)
-
-        return new_reward
 
     def show_history(self):
         plt.figure(1)
         plt.clf()
-        plt.plot(self.d_ref_hisotry)
-        plt.plot(self.nn_history)
-        plt.title("NN and d ref hisotry")
-        plt.legend(['D_ref', 'NN'])
-        plt.ylim([-0.5, 0.5])
+        plt.plot(self.d_history)
+        plt.plot(self.v_history)
+        plt.title("NN v & d hisotry")
+        plt.legend(['d his', 'v_his'])
+        plt.ylim([-1.1, 1.1])
         plt.pause(0.001)
 
         plt.figure(3)
@@ -386,8 +287,8 @@ class FullTrainVehicle(FullAgentBase):
         plt.pause(0.001)
 
     def reset_lap(self):
-        self.pind = 1
         self.reward_history.clear()
-        self.nn_history.clear()
-        self.d_ref_hisotry.clear()
+        self.d_history.clear()
+        self.v_history.clear()
+        self.prev_s = 0
 

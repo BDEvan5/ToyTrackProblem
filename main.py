@@ -333,7 +333,7 @@ def TrainFullVehicle(agent_name, load):
     vehicle = FullTrainVehicle(agent_name, load)
 
     # env_map.reset_map()
-    wpts = vehicle.init_agent(env_map)
+    vehicle.init_agent(env_map)
     done, state, score = False, env.reset(None), 0.0
     total_rewards = []
     for i in range(100000):
@@ -351,7 +351,7 @@ def TrainFullVehicle(agent_name, load):
         if done:
             print(f"#{i}: Ep done in {env.steps} steps --> NewReward: {score} ")
             vehicle.show_history()
-            env.render_snapshot(wpts=wpts, wait=False)
+            env.render_snapshot(wait=False)
             env.reset()
             total_rewards.append(score)
             plt.figure(5)
@@ -360,6 +360,7 @@ def TrainFullVehicle(agent_name, load):
             score = 0
             vehicle.reset_lap()
             vehicle.agent.save()
+
 
 
 
@@ -389,8 +390,8 @@ def RunAutoAgent():
 def RunFullAgent():
     agent_name = "TestingFull"
 
-    TrainFullVehicle(agent_name, False)
-    # TrainFullVehicle(agent_name, True)
+    # TrainFullVehicle(agent_name, False)
+    TrainFullVehicle(agent_name, True)
 
 
 if __name__ == "__main__":

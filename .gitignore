@@ -3,36 +3,13 @@ __pycache__/
 
 *.pyc
 
-RunFiles/AgentLogger.log
 
-RunFiles/
-
-SimulationTests/
-
-myToyProblemEnv2/lib/python3.7/site-packages/wrapt/
-
-myToyProblemEnv2/
-
-Agent_AV_SimTests/ModelWeights/
 
 *.log
 
-Agent_A2C_SimTests/AgentTests/
 
-Agent_A2C_SimTests/ModelWeights/
-
-Agent_A2C_SimTests/Plots/
-
-Agent_AV_SimTests/TrainingImages/
-
-Agent_AV_SimTests/Plots/
 
 .vscode/launch.json
 
 
 
-SimpleCreations/Renders/
-
-PNGs/
-
-*.pth
