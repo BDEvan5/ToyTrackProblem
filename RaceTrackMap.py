@@ -26,6 +26,9 @@ class TrackMap:
 
         self.load_map()
         self.set_up_scan_map()
+        lengths = [lib.get_distance(self.track_pts[i], self.track_pts[i+1]) for i in range(self.N-1)]
+        lengths.insert(0, 0)
+        self.cum_lengs = np.cumsum(lengths)
 
     def load_map(self):
         track = []
@@ -68,10 +71,8 @@ class TrackMap:
         return path
 
     def find_nearest_point(self, x):
-        distances = []
-        for i in range(self.N):
-            d = lib.get_distance(self.track_pts[i], x)
-            distances.append(d)
+        distances = [lib.get_distance(x, self.track_pts[i]) for i in range(self.N)]
+
         nearest_idx = np.argmin(np.array(distances))
 
         return nearest_idx
@@ -138,3 +139,24 @@ class TrackMap:
 
     def reset_map(self):
         self.random_obs(10)
+
+    def get_s_progress(self, x):
+        idx = self.find_nearest_point(x)
+
+        if idx == 0:
+            return lib.get_distance(x, self.track_pts[0])
+
+        if idx == self.N-1:
+            s = self.cum_lengs[-2] + lib.get_distance(x, self.track_pts[-2])
+            return s
+
+        p_d = lib.get_distance(x, self.track_pts[idx-1])
+        n_d = lib.get_distance(x, self.track_pts[idx+1])
+
+        if p_d < n_d:
+            s = self.cum_lengs[idx-1] + p_d
+        else:
+            s = self.cum_lengs[idx] + lib.get_distance(self.track_pts[idx], x)
+
+
+        return s
