@@ -175,21 +175,20 @@ def TrainModVehicle(agent_name, load=True):
     return rewards
 
 def RaceModVehicle(agent_name):
-    env_map = RaceMap('RaceTrack1000')
-    # env_map = RaceMap('RaceTrack1020')
-    vehicle = ModRaceVehicle(agent_name, 11, 3, True)
-    env = F110Env(env_map)
+    env_map = TrackMap('TrackMap1000')
+    vehicle = ModVehicleTrain(agent_name, load)
 
-    wpts = vehicle.init_plan(env_map)
+    env = TrackSim(env_map)
+
+    wpts = vehicle.init_agent(env_map)
     done, state, score = False, env.reset(None), 0.0
     for i in range(10): # 10 laps
         print(f"Running lap: {i}")
         env_map.reset_map()
         # env.render(False, wpts)
         while not done:
-            action = vehicle.act(state, True)
-            s_p, r, done, _ = env.step(action, updates=20, race=True)
-
+            a = vehicle.act_cs(state)
+            s_prime, r, done, _ = env.step_cs(a)
             state = s_p
             # env.render(False, wpts)
         # env.render(False, wpts)
@@ -199,7 +198,6 @@ def RaceModVehicle(agent_name):
 
         if r == -1:
             state = env.reset(None)
-            done = False
         
         env.reset_lap()
         vehicle.reset_lap()
@@ -396,12 +394,12 @@ def RunFullAgent():
 
 if __name__ == "__main__":
 
-    # RunModAgent()
+    RunModAgent()
     # RunRepAgent()
     # RunAutoAgent()
     # RunOptimalControlAgent()
     # RunOptimalAgent()
-    RunFullAgent()
+    # RunFullAgent()
 
 
 
