@@ -176,34 +176,44 @@ def TrainModVehicle(agent_name, load=True):
 
 def RaceModVehicle(agent_name):
     env_map = TrackMap('TrackMap1000')
-    vehicle = ModVehicleTrain(agent_name, load)
+    vehicle = ModVehicleTrain(agent_name, True)
 
     env = TrackSim(env_map)
 
+    crashes = 0
+    completes = 0
+    lap_times = []
+
     wpts = vehicle.init_agent(env_map)
     done, state, score = False, env.reset(None), 0.0
-    for i in range(10): # 10 laps
+    for i in range(100): # 10 laps
         print(f"Running lap: {i}")
         env_map.reset_map()
         # env.render(False, wpts)
         while not done:
             a = vehicle.act_cs(state)
-            s_prime, r, done, _ = env.step_cs(a)
+            s_p, r, done, _ = env.step_cs(a)
             state = s_p
             # env.render(False, wpts)
         # env.render(False, wpts)
         print(f"Lap time updates: {env.steps}")
-        vehicle.show_vehicle_history()
-        env.render_snapshot(wpts=wpts, wait=False)
+        # vehicle.show_vehicle_history()
+        # env.render_snapshot(wpts=wpts, wait=False)
 
         if r == -1:
             state = env.reset(None)
+            crashes += 1
+        else:
+            completes += 1
+            lap_times.append(env.steps)
         
         env.reset_lap()
         vehicle.reset_lap()
         done = False
 
- 
+    print(f"Crashes: {crashes}")
+    print(f"Completes: {completes} --> {completes / (completes + crashes) * 100} %")
+    print(f"Lap times: {lap_times} --> Avg: {np.mean(lap_times)}")
 
 
 """Training functions: PURE REP"""
@@ -366,10 +376,10 @@ def TrainFullVehicle(agent_name, load):
 def RunModAgent():
     agent_name = "TestingWillem"
     
-    TrainModVehicle(agent_name, False)
+    # TrainModVehicle(agent_name, False)
     # TrainModVehicle(agent_name, True)
 
-    # RaceModVehicle(agent_name)
+    RaceModVehicle(agent_name)
 
 def RunRepAgent():
     agent_name = "TestingRep"
