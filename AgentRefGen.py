@@ -54,7 +54,7 @@ class FullAgentBase:
         plt.plot(self.v_ref_history)
         plt.title("V history comparison")
         plt.legend(['NN', 'Ref'])
-        plt.ylim([-10, 10])
+        plt.ylim([0, 10])
         plt.pause(0.001)
 
         plt.figure(3)
@@ -209,7 +209,7 @@ class RefGenVehicleTrain(FullAgentBase):
             v_dif = abs(v_ref - action[0])
             d_dif = abs(d_ref - action[1])
 
-            new_reward = 0.4 - d_dif - v_dif * 0.1
+            new_reward = 0.4 - d_dif*0.5 #- v_dif * 0.02
 
         self.reward_history.append(new_reward)
 
@@ -277,3 +277,5 @@ class RefGenVehicleTest(FullAgentBase):
         self.steps += 1
 
         return ret_action
+
+

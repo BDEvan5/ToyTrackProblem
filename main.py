@@ -349,8 +349,9 @@ def TrainRefGenVehicle(agent_name, load):
         state = s_p
 
         n_r = vehicle.add_memory_entry(buffer, r, s_p, done)
-        vehicle.agent.train(buffer, 2)
-        score += n_r
+        l = vehicle.agent.train(buffer, 2)
+        # score += n_r
+        score += l
         # env.render(False, wpts)
 
         if done:

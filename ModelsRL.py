@@ -143,6 +143,10 @@ class TD3(object):
                 for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
                     target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
+        total_loss = actor_loss + critic_loss
+        
+        return total_loss
+
     def save(self, directory="./saves"):
         filename = self.name
         torch.save(self.actor.state_dict(), '%s/%s_actor.pth' % (directory, filename))
