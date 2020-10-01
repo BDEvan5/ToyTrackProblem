@@ -12,10 +12,8 @@ import LibFunctions as lib
 from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
 from AgentRep import RepTrainVehicle, RepRaceVehicle
-from AgentAuto import AutoTrainVehicle
-from AgentFull import FullTrainVehicle
 
-
+"""Testing via optimal agent -- to be deprecated"""
 def RunOptimalAgent():
     env_map = TrackMap()
 
@@ -38,28 +36,63 @@ def RunOptimalAgent():
     env.show_history()
     env.render_snapshot(wait=True, wpts=wpts)
 
-
-def RunOptimalControlAgent():
-    env_map = TrackMap()
-
-    env = TrackSim(env_map)
-    agent = OptimalAgent()
-
+"""General run agent function"""
+def RunVehicleLap(vehicle, env, show=False):
+    vehicle.reset_lap()
+    wpts = vehicle.init_agent(env.env_map)
     done, state, score = False, env.reset(None), 0.0
-    wpts = agent.init_agent(env_map)
-    # env.render(True, wpts)
     while not done:
-        action = agent.act_cs(state)
-        s_p, r, done, _ = env.step_cs(action)
-        score += r
+        a = vehicle.act(state)
+        s_p, r, done, _ = env.step(a)
         state = s_p
+        # env.render(False, wpts)
 
-        # env.render(True)
-        env.render(False, wpts)
+    print(f"Lap time for({vehicle.name}): {env.steps}")
+    if show:
+        # vehicle.show_vehicle_history()
+        # env.render_snapshot(wpts=wpts, wait=False)
+        env.render_snapshot(wpts=wpts, wait=True)
 
-    print(f"Score: {score}")
-    env.show_history()
-    env.render_snapshot(wait=True, wpts=wpts)
+    return r, env.steps
+
+
+def test_vehicles(vehicle_list, laps=100):
+    N = len(vehicle_list)
+
+    env = env_map = TrackMap('TrackMap1000')
+    env = TrackSim(env_map)
+
+    completes = np.zeros((N))
+    crashes = np.zeros((N))
+    lap_times = np.zeros((laps, N))
+    endings = np.zeros((laps, N)) #store env reward
+
+    for i in range(laps):
+        env_map.reset_map()
+        for j in range(N):
+            vehicle = vehicle_list[j]
+
+            # r, steps = RunVehicleLap(vehicle, env, False)
+            r, steps = RunVehicleLap(vehicle, env, True)
+            endings[i, j] = r
+            lap_times[i, j] = steps
+            if r == -1:
+                crashes[j] += 1
+            else:
+                completes[j] += 1
+
+    print(f"\nTesting Complete ")
+    print(f"-----------------------------------------------------")
+    print(f"-----------------------------------------------------")
+    for i in range(N):
+        print(f"Vehicle: {vehicle_list[i].name}")
+        print(f"Crashes: {crashes[i]} --> Completes {completes[i]}")
+        percent = (completes[i] / (completes[i] + crashes[i]) * 100)
+        print(f"% Finished = {percent:.2f}")
+        print(f"Avg lap times: {np.mean(lap_times[i])}")
+        print(f"-----------------------------------------------------")
+
+            
 
 
 
@@ -104,10 +137,8 @@ def TrainModVehicle(agent_name, load=True):
     done, state, score, crashes = False, env.reset(None), 0.0, 0.0
     wpts = vehicle.init_agent(env_map)
     for n in range(100000):
-        # a = vehicle.act(state)
-        # s_prime, r, done, _ = env.step(a, 1)
-        a = vehicle.act_cs(state)
-        s_prime, r, done, _ = env.step_cs(a)
+        a = vehicle.act(state)
+        s_prime, r, done, _ = env.step(a)
 
         nr = vehicle.add_memory_entry(r, done, s_prime, buffer)
         score += nr
@@ -291,84 +322,6 @@ def TrainRepTrack(agent_name, load=False):
             RaceRepVehicle(agent_name)
 
 
-"""Training for AUTO agent"""
-def TrainAutoVehicle(agent_name, load):
-    print(f"Training Auto Vehicle performance")
-    env_map = TrackMap('TrackMap1000')
-    buffer = ReplayBufferAuto()
-
-    env = TrackSim(env_map)
-    vehicle = AutoTrainVehicle(agent_name, load)
-
-    # env_map.reset_map()
-    wpts = vehicle.init_agent(env_map)
-    done, state, score = False, env.reset(None), 0.0
-    total_rewards = []
-    for i in range(100000):
-        # action = vehicle.act(state)
-        # s_p, r, done, _ = env.step(action, updates=1)
-        action = vehicle.act_cs(state)
-        s_p, r, done, _ = env.step_cs(action)
-        state = s_p
-
-        n_r = vehicle.add_memory_entry(buffer, r, s_p, done)
-        vehicle.agent.train(buffer, 2)
-        score += n_r
-        # env.render(False, wpts)
-
-        if done:
-            print(f"#{i}: Ep done in {env.steps} steps --> NewReward: {score} ")
-            vehicle.show_history()
-            env.render_snapshot(wpts=wpts, wait=False)
-            env.reset()
-            total_rewards.append(score)
-            plt.figure(5)
-            plt.clf()
-            plt.plot(total_rewards)
-            score = 0
-            vehicle.reset_lap()
-            vehicle.agent.save()
-
-
-"""Training for Full agent"""
-def TrainFullVehicle(agent_name, load):
-    print(f"Training Full Vehicle performance")
-    env_map = TrackMap('TrackMap1000')
-    buffer = ReplayBufferAuto()
-
-    env = TrackSim(env_map)
-    vehicle = FullTrainVehicle(agent_name, load)
-
-    # env_map.reset_map()
-    vehicle.init_agent(env_map)
-    done, state, score = False, env.reset(None), 0.0
-    total_rewards = []
-    for i in range(100000):
-        # action = vehicle.act(state)
-        # s_p, r, done, _ = env.step(action, updates=1)
-        action = vehicle.act_cs(state)
-        s_p, r, done, _ = env.step_cs(action)
-        state = s_p
-
-        n_r = vehicle.add_memory_entry(buffer, r, s_p, done)
-        vehicle.agent.train(buffer, 2)
-        score += n_r
-        # env.render(False, wpts)
-
-        if done:
-            print(f"#{i}: Ep done in {env.steps} steps --> NewReward: {score} ")
-            vehicle.show_history()
-            env.render_snapshot(wait=False)
-            env.reset()
-            total_rewards.append(score)
-            plt.figure(5)
-            plt.clf()
-            plt.plot(total_rewards)
-            score = 0
-            vehicle.reset_lap()
-            vehicle.agent.save()
-
-
 
 
 """Total functions"""
@@ -400,14 +353,39 @@ def RunFullAgent():
     # TrainFullVehicle(agent_name, False)
     TrainFullVehicle(agent_name, True)
 
+def main_train():
+    mod_name = "ModICRA"
+    gen_name = "GenICRA"
+
+    train_mod(mod_name)
+    train_gen(gen_name)
+
+
+def main_test():
+    mod_name = "ModICRA"
+    gen_name = "GenICRA"
+
+    vehicle_list = []
+    
+    mod_vehicle = ModVehicleTest(mod_name, True)
+    vehicle_list.append(mod_vehicle)
+
+    opt_vehicle = OptimalAgent()
+    vehicle_list.append(opt_vehicle)
+
+    # gen_vehicle = RepRaceVehicle(gen_name)
+    # vehicle_list.append(gen_vehicle)
+
+    test_vehicles(vehicle_list, 2)
+
 
 if __name__ == "__main__":
 
-    RunModAgent()
+    # RunModAgent()
     # RunRepAgent()
     # RunAutoAgent()
     # RunOptimalControlAgent()
     # RunOptimalAgent()
     # RunFullAgent()
 
-
+    main_test()

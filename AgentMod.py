@@ -153,6 +153,7 @@ class TrainWillemModDQN:
 
 class BaseModAgent:
     def __init__(self, name, load):
+        self.name = name
         self.env_map = None
         self.wpts = None
 
@@ -194,15 +195,6 @@ class BaseModAgent:
 
         return self.wpts
          
-    def act(self, obs):
-        v_ref, d_ref = self.get_target_references(obs)
-        a, d_dot = self.control_system(obs, v_ref, d_ref)
-
-        a = np.clip(a, -8, 8)
-        d_dot = np.clip(d_dot, -3.2, 3.2)
-
-        return [a, d_dot]
-
     def get_target_references(self, obs):
         self._set_target(obs)
 
@@ -303,44 +295,7 @@ class ModVehicleTrain(BaseModAgent):
 
         self.mem_save = True
 
-    def act(self, obs, greedy=False):
-        if self.steps % 10 == 0:
-            v_ref, phi_ref = self.get_target_references(obs)
-
-            nn_obs = self.transform_obs(obs, v_ref, phi_ref)
-            """This is where the agent can be removed if needed"""
-            agent_on = True
-            if agent_on:
-                if not greedy:
-                    nn_action = self.agent.act(nn_obs)
-                else:
-                    nn_action = self.agent.greedy_action(nn_obs)
-                self.cur_nn_act = nn_action
-            else:
-                self.cur_nn_act = [self.center_act]
-
-            # add to the histories
-            self.out_his.append(self.agent.get_out(nn_obs))
-            self.mod_history.append(self.cur_nn_act)
-            self.state_action = [nn_obs, self.cur_nn_act]
-
-            self.mem_window.pop(0)
-            self.mem_window.append(float(self.cur_nn_act[0]/self.action_space)) # normalises it.
-
-            v_ref, phi_ref = self.modify_references(self.cur_nn_act, v_ref, phi_ref)
-
-            self.current_v_ref = v_ref
-            self.current_phi_ref = phi_ref
-
-            self.mem_save = True
-
-        self.steps += 1
-
-        a, d_dot = self.control_system(obs)
-
-        return [a, d_dot]
-
-    def act_cs(self, obs):
+    def act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)
 
         nn_obs = self.transform_obs(obs, v_ref, d_ref)
@@ -392,35 +347,32 @@ class ModVehicleTrain(BaseModAgent):
             # self.mem_save = False
         return new_reward
 
+
 class ModVehicleTest(BaseModAgent):
-    def __init__(self):
-        BaseModAgent.__init__(self)
-        
-    def act(self, obs, greedy=False):
-        v_ref, phi_ref = self.get_target_references(obs)
+    def __init__(self, name, load):
+        BaseModAgent.__init__(self, name, load)
 
-        nn_obs = self.transform_obs(obs, v_ref, phi_ref)
-        """This is where the agent can be removed if needed"""
-        agent_on = True
-        if agent_on:
-            self.cur_nn_act = self.agent.greedy_action(nn_obs)
-        else:
-            self.cur_nn_act = [self.center_act]
+        self.current_v_ref = None
+        self.current_phi_ref = None
 
-        # add to the histories
+        self.mem_save = True
+
+    def act(self, obs):
+        v_ref, d_ref = self.get_target_references(obs)
+
+        nn_obs = self.transform_obs(obs, v_ref, d_ref)
+        nn_action = self.agent.greedy_action(nn_obs)
+        self.cur_nn_act = nn_action
+
         self.out_his.append(self.agent.get_out(nn_obs))
         self.mod_history.append(self.cur_nn_act)
         self.state_action = [nn_obs, self.cur_nn_act]
 
-        self.mem_window.pop(0)
-        self.mem_window.append(float(self.cur_nn_act[0]/self.action_space)) # normalises it.
+        # self.mem_window.pop(0)
+        # self.mem_window.append(float(self.cur_nn_act[0]/self.action_space)) # normalises it.
 
-        v_ref, phi_ref = self.modify_references(self.cur_nn_act, v_ref, phi_ref)
+        v_ref, d_ref = self.modify_references(self.cur_nn_act, v_ref, d_ref, obs)
 
         self.steps += 1
 
-        a, d_dot = self.control_system(obs, v_ref, phi_ref)
-
-        return [a, d_dot]
-
-
+        return [v_ref, d_ref]
