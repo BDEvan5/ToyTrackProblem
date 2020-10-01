@@ -39,7 +39,7 @@ class Qnet(nn.Module):
         return x
       
 
-class TrainWillemModDQN:
+class DQN:
     def __init__(self, obs_space, action_space, name):
         self.action_space = action_space
         self.obs_space = obs_space
@@ -150,7 +150,6 @@ class TrainWillemModDQN:
         print(f"Created new model")
 
 
-
 class BaseModAgent:
     def __init__(self, name, load):
         self.name = name
@@ -175,7 +174,7 @@ class BaseModAgent:
         self.prev_nn_act = self.center_act
         self.mem_window = [0, 0, 0, 0, 0]
 
-        self.agent = TrainWillemModDQN(11, self.action_space, name)
+        self.agent = DQN(11, self.action_space, name)
         self.agent.try_load(load)
 
     def init_agent(self, env_map):
@@ -219,18 +218,6 @@ class BaseModAgent:
         # v_ref = 3
 
         return v_ref, delta_ref
-
-    def control_system(self, obs):
-        v_ref = self.current_v_ref
-        d_ref = self.current_phi_ref
-
-        kp_a = 10
-        a = (v_ref - obs[3]) * kp_a
-        
-        kp_delta = 40
-        d_dot = (d_ref - obs[4]) * kp_delta
-
-        return a, d_dot
 
     def _set_target(self, obs):
         dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
