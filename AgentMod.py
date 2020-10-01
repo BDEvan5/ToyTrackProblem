@@ -360,8 +360,6 @@ class ModVehicleTrain(BaseModAgent):
 
         return [v_ref, d_ref]
 
-
-
     def update_reward(self, reward, action):
         beta = 0.1 / self.center_act
         d_action = abs(action[0] - self.center_act)
