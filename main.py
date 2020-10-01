@@ -403,8 +403,8 @@ def RunFullAgent():
 
 if __name__ == "__main__":
 
-    RunModAgent()
-    # RunRepAgent()
+    # RunModAgent()
+    RunRepAgent()
     # RunAutoAgent()
     # RunOptimalControlAgent()
     # RunOptimalAgent()

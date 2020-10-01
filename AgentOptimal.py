@@ -10,6 +10,7 @@ from TrajectoryPlanner import MinCurvatureTrajectory, generate_velocities
 
 class OptimalAgent:
     def __init__(self):
+        self.name = "Optimal Agent: Following target references"
         self.env_map = None
         self.path_name = None
         self.wpts = None
@@ -37,30 +38,13 @@ class OptimalAgent:
         self.pind = 1
 
         return self.wpts
-         
+
     def act(self, obs):
-        if self.steps %10 == 0:
-            # v_ref, d_ref = self.get_corridor_references(obs)
-            v_ref, d_ref = self.get_target_references(obs)
-            self.current_v_ref = v_ref
-            self.current_phi_ref = d_ref
-
-        a, d_dot = self.control_system(obs)
-        self.steps += 1
-
-        a = np.clip(a, -8, 8)
-        d_dot = np.clip(d_dot, -3.2, 3.2)
-
-        return [a, d_dot]
-
-    def act_cs(self, obs):
         v_ref, d_ref = self.get_target_references(obs)
 
         # possibly clip if needed, but shouldn't change much.
 
         return [v_ref, d_ref]
-
-
 
     def get_corridor_references(self, obs):
         ranges = obs[5:]
@@ -122,7 +106,9 @@ class OptimalAgent:
             else:
                 self.pind = 0
 
-    
+    def reset_lap(self):
+        # for testing
+        pass    
 
 
 
