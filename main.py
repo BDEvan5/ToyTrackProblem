@@ -186,10 +186,9 @@ def RaceModVehicle(agent_name):
 
     wpts = vehicle.init_agent(env_map)
     done, state, score = False, env.reset(None), 0.0
-    for i in range(100): # 10 laps
+    for i in range(10): # 10 laps
         print(f"Running lap: {i}")
         env_map.reset_map()
-        # env.render(False, wpts)
         while not done:
             a = vehicle.act_cs(state)
             s_p, r, done, _ = env.step_cs(a)
@@ -198,7 +197,7 @@ def RaceModVehicle(agent_name):
         # env.render(False, wpts)
         print(f"Lap time updates: {env.steps}")
         # vehicle.show_vehicle_history()
-        # env.render_snapshot(wpts=wpts, wait=False)
+        env.render_snapshot(wpts=wpts, wait=False)
 
         if r == -1:
             state = env.reset(None)
@@ -212,7 +211,7 @@ def RaceModVehicle(agent_name):
         done = False
 
     print(f"Crashes: {crashes}")
-    print(f"Completes: {completes} --> {completes / (completes + crashes) * 100} %")
+    print(f"Completes: {completes} --> {(completes / (completes + crashes) * 100):.2f} %")
     print(f"Lap times: {lap_times} --> Avg: {np.mean(lap_times)}")
 
 
