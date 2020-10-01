@@ -340,7 +340,7 @@ def TrainRefGenVehicle(agent_name, load):
     vehicle = RefGenVehicleTrain(agent_name, load)
 
     # env_map.reset_map()
-    vehicle.init_agent(env_map)
+    wpts = vehicle.init_agent(env_map)
     done, state, score = False, env.reset(None), 0.0
     total_rewards = []
     for i in range(100000):
@@ -359,13 +359,53 @@ def TrainRefGenVehicle(agent_name, load):
             env.render_snapshot(wait=False)
             env.reset()
             total_rewards.append(score)
+
             plt.figure(5)
             plt.clf()
+            plt.title('Total rewards')
             plt.plot(total_rewards)
             score = 0
             vehicle.reset_lap()
             vehicle.agent.save()
 
+"""General test function"""
+def testVehicle(vehicle, show=False):
+    env_map = TrackMap('TrackMap1000')
+    env = TrackSim(env_map)
+
+    crashes = 0
+    completes = 0
+    lap_times = []
+
+    wpts = vehicle.init_agent(env_map)
+    done, state, score = False, env.reset(None), 0.0
+    for i in range(10): # 10 laps
+        print(f"Running lap: {i}")
+        env_map.reset_map()
+        while not done:
+            a = vehicle.act(state)
+            s_p, r, done, _ = env.step(a)
+            state = s_p
+            # env.render(False, wpts)
+        print(f"Lap time updates: {env.steps}")
+        if show:
+            # vehicle.show_vehicle_history()
+            env.render_snapshot(wpts=wpts, wait=False)
+
+        if r == -1:
+            state = env.reset(None)
+            crashes += 1
+        else:
+            completes += 1
+            lap_times.append(env.steps)
+        
+        env.reset_lap()
+        vehicle.reset_lap()
+        done = False
+
+    print(f"Crashes: {crashes}")
+    print(f"Completes: {completes} --> {(completes / (completes + crashes) * 100):.2f} %")
+    print(f"Lap times: {lap_times} --> Avg: {np.mean(lap_times)}")
 
 
 
@@ -395,8 +435,11 @@ def RunAutoAgent():
 def RunRefGenAgent():
     agent_name = "TestingFull"
 
-    # TrainRefGenVehicle(agent_name, False)
-    TrainRefGenVehicle(agent_name, True)
+    TrainRefGenVehicle(agent_name, False)
+    # TrainRefGenVehicle(agent_name, True)
+
+    # vehicle = RefGenVehicleTest(agent_name, True)
+    # testVehicle(vehicle, False)
 
 
 if __name__ == "__main__":

@@ -11,6 +11,8 @@ class FullAgentBase:
         self.env_map = None
         self.path_name = None
         self.wpts = None
+        self.deltas = None
+        self.pind = None
 
         self.steps = 0
 
@@ -20,29 +22,39 @@ class FullAgentBase:
         self.max_v = 7.5
         self.max_d = 0.4
 
-        self.env_map = None
-        self.path_name = None 
-        self.wpts = None
-        self.deltas = None
-        self.pind = None
-       
+        self.v_history = []
+        self.d_history = []
+        self.v_ref_history = []
+        self.d_ref_history = []
+
     def transform_obs(self, obs):
         v_ref, d_ref = self.get_target_references(obs)
 
-        v = self.max_v
-        d = self.max_d
+        cur_v = [obs[3]/self.max_v]
+        cur_d = [obs[4]/self.max_d]
+        vr_scale = [(v_ref-1)/self.max_v * 2 -1]
+        dr_scale = [d_ref/self.max_d]
 
-        new_obs = np.concatenate([[obs[3]/v], [obs[4]/d], [v_ref/v], [d_ref/d], obs[5:]])
+        new_obs = np.concatenate([cur_v, cur_d, vr_scale, dr_scale, obs[5:]])
         return new_obs
 
     def show_history(self):
         plt.figure(1)
         plt.clf()
         plt.plot(self.d_history)
+        plt.plot(self.d_ref_history)
+        plt.title("D history comparison")
+        plt.legend(['NN', 'Ref'])
+        plt.ylim([-0.5, 0.5])
+        plt.pause(0.001)
+
+        plt.figure(6)
+        plt.clf()
         plt.plot(self.v_history)
-        plt.title("NN v & d hisotry")
-        plt.legend(['d his', 'v_his'])
-        plt.ylim([-1.1, 1.1])
+        plt.plot(self.v_ref_history)
+        plt.title("V history comparison")
+        plt.legend(['NN', 'Ref'])
+        plt.ylim([-10, 10])
         plt.pause(0.001)
 
         plt.figure(3)
@@ -55,6 +67,8 @@ class FullAgentBase:
         self.reward_history.clear()
         self.d_history.clear()
         self.v_history.clear()
+        self.d_ref_history.clear()
+        self.v_ref_history.clear()
         self.prev_s = 0
           
     def get_target_references(self, obs):
@@ -68,30 +82,45 @@ class FullAgentBase:
         ld = lib.get_distance(obs[0:2], target)
         delta_ref = np.arctan(2*0.33*np.sin(alpha)/ld)
 
-        # ds = self.deltas[self.pind:self.pind+1]
         ds = self.deltas[min(self.pind, len(self.deltas)-1)]
         max_d = abs(ds)
-        # max_d = max(abs(ds))
 
         max_friction_force = 3.74 * 9.81 * 0.523 *0.5
         d_plan = max(abs(delta_ref), abs(obs[4]), max_d)
         theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
         v_ref = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
-        v_ref = min(v_ref, 8.5)
-        # v_ref = 3
+        v_ref = min(v_ref, self.max_v)
+
+        v_ref = np.clip(v_ref, -8, 8)
+        delta_ref = np.clip(delta_ref, -0.4, 0.4)
 
         return v_ref, delta_ref
 
     def _set_target(self, obs):
-        dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-        shift_distance = 1
-        while dis_cur_target < shift_distance: # how close to say you were there
-            if self.pind < len(self.wpts)-2:
-                self.pind += 1
-                dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-            else:
-                self.pind = 0
+    #     dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
+    #     shift_distance = 1
+    #     while dis_cur_target < shift_distance: # how close to say you were there
+    #         if self.pind < len(self.wpts)-2:
+    #             self.pind += 1
+    #             dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
+    #         else:
+    #             self.pind = 0
           
+    # def find_target(self, obs):
+        distances = [lib.get_distance(obs[0:2], self.wpts[i]) for i in range(len(self.wpts))]
+        ind = np.argmin(distances)
+        N = len(self.wpts)
+        if ind == N-1:
+            ind = 1
+
+        front_dis = lib.get_distance(self.wpts[ind], self.wpts[ind+1])
+        back_dis = lib.get_distance(self.wpts[ind], self.wpts[ind-1])
+
+        if front_dis < back_dis * 0.5:
+            self.pind = ind + 1
+        else:
+            self.pind = ind
+
     def init_agent(self, env_map):
         self.env_map = env_map
 
@@ -110,6 +139,13 @@ class FullAgentBase:
 
         return self.wpts
 
+    def trasform_action(self, nn_action):
+        v_ret = (nn_action[0] +1)*self.max_v/2+1
+        d_ret = nn_action[1]* self.max_d
+        ret_action = [v_ret, d_ret]
+
+        return ret_action
+
 
 class RefGenVehicleTrain(FullAgentBase):
     def __init__(self, name, load):
@@ -121,36 +157,32 @@ class RefGenVehicleTrain(FullAgentBase):
         self.prev_s = 0
 
         self.reward_history = []
-        self.v_history = []
-        self.d_history = []
-
-        self.mem_window = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         
     def act(self, obs):
         nn_obs = self.transform_obs(obs)
+        v_ref, d_ref = self.get_target_references(obs)
+        self.v_ref_history.append(v_ref)
+        self.d_ref_history.append(d_ref)
 
         self.last_obs = obs
 
-        action = self.agent.select_action(nn_obs)
-        # self.mem_window.pop(0)
-        # self.mem_window.append(d_ref_nn)
-        self.v_history.append(action[0])
-        self.d_history.append(action[1])
-        self.last_action = action
+        nn_action = self.agent.select_action(nn_obs)
+        self.last_action = nn_action
 
-        max_v = 6.5
-        max_d = 0.4
-        ret_action = [(action[0] +1)*max_v/2+1, action[1]* max_d]
+        ret_action = self.trasform_action(nn_action)
+        self.v_history.append(ret_action[0])
+        self.d_history.append(ret_action[1])
 
         self.steps += 1
 
         return ret_action
 
     def add_memory_entry(self, buffer, reward, s_prime, done):
-        new_reward = self.update_reward_curvature(reward, self.last_action, s_prime)
+        # new_reward = self.update_reward_curvature(reward, self.last_action, s_prime)
+        new_reward = self.update_reward_deviation(reward, self.last_action, s_prime)
 
-        s_p_nn = self.transform_obs(s_prime)
         nn_obs = self.transform_obs(self.last_obs)
+        s_p_nn = self.transform_obs(s_prime)
 
         mem_entry = (nn_obs, self.last_action, s_p_nn, new_reward, done)
 
@@ -172,9 +204,12 @@ class RefGenVehicleTrain(FullAgentBase):
         if reward == -1:
             new_reward = -1
         else:
-            v_, d_ref = self.get_target_references(obs)
-            d_dif = abs(d_ref - action)
-            new_reward = 0.5 - d_dif 
+            v_ref, d_ref = self.get_target_references(obs)
+            action = self.trasform_action(action)
+            v_dif = abs(v_ref - action[0])
+            d_dif = abs(d_ref - action[1])
+
+            new_reward = 0.4 - d_dif - v_dif * 0.1
 
         self.reward_history.append(new_reward)
 
@@ -190,7 +225,6 @@ class RefGenVehicleTrain(FullAgentBase):
             ds = np.clip(ds, -0.5, 0.5)
             new_reward = ds * s_beta
             self.prev_s = s
-
 
         self.reward_history.append(new_reward)
 
