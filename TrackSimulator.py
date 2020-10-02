@@ -123,29 +123,7 @@ class TrackSim:
         self.done_reason = ""
         self.y_forces = []
 
-    def step(self, action, updates=10):
-        self.steps += 1
-        self.action = action
-        acceleration = action[0]
-        steer_dot = action[1]
-
-        self.car.prev_loc = [self.car.x, self.car.y]
-        for _ in range(updates):
-            self.car.update_kinematic_state(acceleration, steer_dot, self.timestep)
-         
-        self.check_done_reward_track_train()
-        self.steer_history.append(steer_dot)
-        self.velocity_history.append(self.car.velocity)
-
-        obs = self.get_state_obs()
-        done = self.done
-        reward = self.reward
-
-        self.action_memory.append([self.car.x, self.car.y])
-
-        return obs, reward, done, None
-
-    def step_cs(self, action):
+    def step(self, action):
         self.steps += 1
 
         v_ref = action[0]
@@ -246,7 +224,7 @@ class TrackSim:
             self.done_reason = f"Max steps"
         start_y = self.env_map.start[1]
         if self.car.prev_loc[1] < start_y - 0.5 and self.car.y > start_y - 0.5:
-            if abs(self.car.x - self.env_map.start[0]) < 10:
+            if abs(self.car.x - self.env_map.start[0]) < 1:
                 self.done = True
                 self.done_reason = f"Lap complete"
 
