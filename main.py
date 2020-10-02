@@ -6,7 +6,7 @@ import torch
 
 from TrackSimulator import TrackSim
 from RaceTrackMap import TrackMap
-from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper, ReplayBufferAuto
+from ModelsRL import ReplayBufferDQN, ReplayBufferTD3
 import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
@@ -39,7 +39,8 @@ def RunOptimalAgent():
 
 """Training functions: PURE MOD"""
 def TrainModVehicle(agent_name, load=True):
-    buffer = ReplayBufferDQN()
+    # buffer = ReplayBufferDQN()
+    buffer = ReplayBufferTD3()
 
     env_map = TrackMap('TrackMap1000')
     vehicle = ModVehicleTrain(agent_name, load)
@@ -64,21 +65,16 @@ def TrainModVehicle(agent_name, load=True):
         state = s_prime
         
         # env.render(False)
-        vehicle.agent.train_episodes(buffer)
+        vehicle.agent.train(buffer, 2)
 
         if n % print_n == 0 and n > 0:
             rewards.append(score)
             reward_crashes.append(crashes)
-            exp = vehicle.agent.model.exploration_rate
             mean = np.mean(rewards)
             b = buffer.size()
-            print(f"Run: {n} --> Score: {score:.2f} --> Mean: {mean:.2f} --> exp: {exp} --> ")
+            print(f"Run: {n} --> Score: {score:.2f} --> Mean: {mean:.2f} --> ")
             score = 0
             lib.plot(rewards, figure_n=2)
-            plt.figure(2)
-            plt.plot(reward_crashes)
-            plt.pause(0.0001)
-            crashes = 0
 
             vehicle.agent.save()
         
@@ -88,19 +84,13 @@ def TrainModVehicle(agent_name, load=True):
                 vehicle.show_vehicle_history()
                 env.render_snapshot(wpts=wpts, wait=False)
 
-                # 10 ep moving avg of laps
-                plt.figure(5)
-                plt.clf()
-                plt.plot(crash_his)
-                plt.plot(complete_his)
-
                 crash_his.append(crash_laps)
                 complete_his.append(completes)
                 crash_laps = 0
                 completes = 0
 
             plot_n += 1
-            env_map.reset_map()
+            # env_map.reset_map()
             vehicle.reset_lap()
             state = env.reset()
 
@@ -200,11 +190,11 @@ def testVehicle(vehicle, show=False):
 def RunModAgent():
     agent_name = "TestingWillem"
     
-    # TrainModVehicle(agent_name, False)
+    TrainModVehicle(agent_name, False)
     # TrainModVehicle(agent_name, True)
 
-    vehicle = ModVehicleTrain(agent_name, True)
-    testVehicle(vehicle)
+    # vehicle = ModVehicleTrain(agent_name, True)
+    # testVehicle(vehicle)
 
 def RunRefGenAgent():
     agent_name = "TestingFull"
