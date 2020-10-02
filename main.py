@@ -37,31 +37,7 @@ def RunOptimalAgent():
     env.render_snapshot(wait=True, wpts=wpts)
 
 
-
 """Training functions: PURE MOD"""
-def collect_willem_mod_observations(buffer, agent_name, n_itterations=5000):
-    env_map = EnvironmentMap('TrainTrackEmpty')
-    env = F110Env(env_map)
-    vehicle = ModTrainVehicle(agent_name, env.obs_space, 3, False)
-
-    env_map.reset_map()
-    done, state, score = False, env.reset(None), 0.0
-    wpts = vehicle.init_plan(env_map)
-    for n in range(n_itterations):
-        a = vehicle.random_act(state)
-        s_prime, r, done, _ = env.step(a, 20)
-        vehicle.add_memory_entry(r, done, s_prime, buffer)
-        state = s_prime
-        
-        if done:
-            env_map.reset_map()
-            state = env.reset()
-            wpts = vehicle.init_plan()
-
-        print("\rPopulating Buffer {}/{}.".format(n, n_itterations), end="")
-        sys.stdout.flush()
-    print(" ")
-
 def TrainModVehicle(agent_name, load=True):
     buffer = ReplayBufferDQN()
 
@@ -138,47 +114,6 @@ def TrainModVehicle(agent_name, load=True):
 
     return rewards
 
-def RaceModVehicle(agent_name):
-    env_map = TrackMap('TrackMap1000')
-    vehicle = ModVehicleTrain(agent_name, True)
-
-    env = TrackSim(env_map)
-
-    crashes = 0
-    completes = 0
-    lap_times = []
-
-    wpts = vehicle.init_agent(env_map)
-    done, state, score = False, env.reset(None), 0.0
-    for i in range(10): # 10 laps
-        print(f"Running lap: {i}")
-        env_map.reset_map()
-        while not done:
-            a = vehicle.act_cs(state)
-            s_p, r, done, _ = env.step_cs(a)
-            state = s_p
-            # env.render(False, wpts)
-        # env.render(False, wpts)
-        print(f"Lap time updates: {env.steps}")
-        # vehicle.show_vehicle_history()
-        env.render_snapshot(wpts=wpts, wait=False)
-
-        if r == -1:
-            state = env.reset(None)
-            crashes += 1
-        else:
-            completes += 1
-            lap_times.append(env.steps)
-        
-        env.reset_lap()
-        vehicle.reset_lap()
-        done = False
-
-    print(f"Crashes: {crashes}")
-    print(f"Completes: {completes} --> {(completes / (completes + crashes) * 100):.2f} %")
-    print(f"Lap times: {lap_times} --> Avg: {np.mean(lap_times)}")
-
-
 
 """Training for Ref Gen agent"""
 def TrainRefGenVehicle(agent_name, load):
@@ -218,6 +153,7 @@ def TrainRefGenVehicle(agent_name, load):
             score = 0
             vehicle.reset_lap()
             vehicle.agent.save()
+
 
 """General test function"""
 def testVehicle(vehicle, show=False):
@@ -264,10 +200,11 @@ def testVehicle(vehicle, show=False):
 def RunModAgent():
     agent_name = "TestingWillem"
     
-    TrainModVehicle(agent_name, False)
+    # TrainModVehicle(agent_name, False)
     # TrainModVehicle(agent_name, True)
 
-    # RaceModVehicle(agent_name)
+    vehicle = ModVehicleTrain(agent_name, True)
+    testVehicle(vehicle)
 
 def RunRefGenAgent():
     agent_name = "TestingFull"
