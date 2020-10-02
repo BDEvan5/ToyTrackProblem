@@ -382,12 +382,12 @@ def testVehicle(vehicle, show=False):
     done, state, score = False, env.reset(None), 0.0
     for i in range(10): # 10 laps
         print(f"Running lap: {i}")
-        env_map.reset_map()
+        # env_map.reset_map()
         while not done:
             a = vehicle.act(state)
             s_p, r, done, _ = env.step(a)
             state = s_p
-            # env.render(False, wpts)
+            env.render(False, wpts)
         print(f"Lap time updates: {env.steps}")
         if show:
             # vehicle.show_vehicle_history()
@@ -440,7 +440,7 @@ def RunRefGenAgent():
     # TrainRefGenVehicle(agent_name, True)
 
     # vehicle = RefGenVehicleTest(agent_name, True)
-    # testVehicle(vehicle, False)
+    # testVehicle(vehicle, True)
 
 
 if __name__ == "__main__":

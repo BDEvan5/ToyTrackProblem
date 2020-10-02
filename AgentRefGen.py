@@ -179,7 +179,8 @@ class RefGenVehicleTrain(FullAgentBase):
 
     def add_memory_entry(self, buffer, reward, s_prime, done):
         # new_reward = self.update_reward_curvature(reward, self.last_action, s_prime)
-        new_reward = self.update_reward_deviation(reward, self.last_action, s_prime)
+        # new_reward = self.update_reward_deviation(reward, self.last_action, s_prime)
+        new_reward = self.update_reward_progress(reward, self.last_action, s_prime)
 
         nn_obs = self.transform_obs(self.last_obs)
         s_p_nn = self.transform_obs(s_prime)
@@ -278,4 +279,12 @@ class RefGenVehicleTest(FullAgentBase):
 
         return ret_action
 
+    # def act(self, obs):
+    #     v_ref, d_ref = self.get_target_references(obs)
+
+    #     ret_action = [v_ref, d_ref]
+    #     self.v_history.append(ret_action[0])
+    #     self.d_history.append(ret_action[1])
+
+    #     return ret_action
 
