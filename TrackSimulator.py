@@ -224,7 +224,7 @@ class TrackSim:
             self.done_reason = f"Max steps"
         start_y = self.env_map.start[1]
         if self.car.prev_loc[1] < start_y - 0.5 and self.car.y > start_y - 0.5:
-            if abs(self.car.x - self.env_map.start[0]) < 10:
+            if abs(self.car.x - self.env_map.start[0]) < 1:
                 self.done = True
                 self.done_reason = f"Lap complete"
 
