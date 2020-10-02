@@ -57,7 +57,7 @@ def TrainModVehicle(agent_name, load=True):
     env_map.reset_map()
 
     wpts = vehicle.init_agent(env_map)
-    for n in range(100000):
+    for n in range(200000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
