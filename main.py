@@ -136,15 +136,6 @@ def TrainModVehicle(agent_name, load=True):
 
     vehicle.agent.save()
 
-    plt.figure(1)
-    plt.savefig('Figure 1')
-    plt.figure(2)
-    plt.savefig('Figure 2')
-    plt.figure(3)
-    plt.savefig('Figure 3')
-    plt.figure(4)
-    plt.savefig('Figure 4')
-
     return rewards
 
 def RaceModVehicle(agent_name):
@@ -293,6 +284,7 @@ if __name__ == "__main__":
     RunModAgent()
     # RunOptimalAgent()
     # RunRefGenAgent()
+
 
 
 
