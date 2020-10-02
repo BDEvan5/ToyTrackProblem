@@ -23,6 +23,7 @@ class BaseModAgent:
         self.mod_history = []
         self.d_ref_history = []
         self.reward_history = []
+        self.critic_history = []
         self.steps = 0
 
         self.max_v = 7.5
@@ -36,7 +37,7 @@ class BaseModAgent:
         self.prev_nn_act = self.center_act
 
         # self.agent = DQN(11, self.action_space, name)
-        self.agent = TD3(11, 1, 1, name)
+        self.agent = TD3(14, 1, 1, name)
         self.agent.try_load(load)
 
     def init_agent(self, env_map):
@@ -102,23 +103,22 @@ class BaseModAgent:
 
         plt.pause(0.001)
 
-        # lib.plot_no_avg(self.reward_history, figure_n=2, title="Reward history")
-        # lib.plot_multi(self.out_his, "Outputs", figure_n=3)
-
         plt.figure(3)
         plt.clf()
         plt.title('Rewards')
+        plt.ylim([-2, 1.1])
         plt.plot(self.reward_history, 'x', markersize=12)
+        plt.plot(self.critic_history)
 
-    def transform_obs(self, obs, v_ref=None, phi_ref=None):
-        max_angle = np.pi/2
-        max_v = 7.5
+    def transform_obs(self, obs):
+        v_ref, d_ref = self.get_target_references(obs)
 
-        scaled_target_phi = phi_ref / max_angle
-        nn_obs = [scaled_target_phi]
+        cur_v = [obs[3]/self.max_v]
+        cur_d = [obs[4]/self.max_d]
+        vr_scale = [(v_ref)/self.max_v]
+        dr_scale = [d_ref/self.max_d]
 
-        # nn_obs = np.concatenate([nn_obs, obs[5:], self.mem_window])
-        nn_obs = np.concatenate([nn_obs, obs[5:]])
+        nn_obs = np.concatenate([cur_v, cur_d, vr_scale, dr_scale, obs[5:]])
 
         return nn_obs
 
@@ -142,6 +142,7 @@ class BaseModAgent:
         self.mod_history.clear()
         self.d_ref_history.clear()
         self.reward_history.clear()
+        self.critic_history.clear()
         self.steps = 0
         self.pind = 1
 
@@ -153,17 +154,16 @@ class ModVehicleTrain(BaseModAgent):
         self.current_v_ref = None
         self.current_phi_ref = None
 
-        self.mem_save = True
-
     def act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)
 
-        nn_obs = self.transform_obs(obs, v_ref, d_ref)
+        nn_obs = self.transform_obs(obs)
         nn_action = self.agent.act(nn_obs)
         self.cur_nn_act = nn_action
 
         self.d_ref_history.append(d_ref)
         self.mod_history.append(self.cur_nn_act[0])
+        self.critic_history.append(self.agent.get_critic_value(nn_obs, nn_action))
         self.state_action = [nn_obs, self.cur_nn_act]
 
         v_ref, d_ref = self.modify_references(self.cur_nn_act, v_ref, d_ref, obs)
@@ -173,35 +173,27 @@ class ModVehicleTrain(BaseModAgent):
         return [v_ref, d_ref]
 
     def update_reward(self, reward, action):
-        beta = 0.1 / self.center_act
-        d_action = abs(action[0])
+        beta = 0.1
         if reward == -1:
             new_reward = -1
         else:
-            dd_action = abs(action[0] - self.prev_nn_act)
-            new_reward = 0.05 - d_action * beta - dd_action *beta/2
-            # new_reward = 0.01
+            new_reward = 0.2 - abs(action[0]) * beta
 
         self.reward_history.append(new_reward)
 
         return new_reward
 
     def add_memory_entry(self, reward, done, s_prime, buffer):
-        # if self.mem_save:
-        if True:
-            new_reward = self.update_reward(reward, self.state_action[1])
-            self.prev_nn_act = self.state_action[1][0]
+        new_reward = self.update_reward(reward, self.state_action[1])
+        self.prev_nn_act = self.state_action[1][0]
 
-            v_ref, d_ref = self.get_target_references(s_prime)
-            nn_s_prime = self.transform_obs(s_prime, v_ref, d_ref)
-            done_mask = 0.0 if done else 1.0
+        nn_s_prime = self.transform_obs(s_prime)
+        done_mask = 0.0 if done else 1.0
 
-            mem_entry = (self.state_action[0], self.state_action[1], nn_s_prime, new_reward, done_mask)
+        mem_entry = (self.state_action[0], self.state_action[1], nn_s_prime, new_reward, done_mask)
 
-            # if new_reward != 0 or np.random.random() < 0.2: 
-            buffer.add(mem_entry)
+        buffer.add(mem_entry)
 
-            # self.mem_save = False
         return new_reward
 
 

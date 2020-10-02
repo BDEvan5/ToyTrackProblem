@@ -54,6 +54,8 @@ def TrainModVehicle(agent_name, load=True):
     complete_his, crash_his = [], []
 
     done, state, score, crashes = False, env.reset(None), 0.0, 0.0
+    env_map.reset_map()
+
     wpts = vehicle.init_agent(env_map)
     for n in range(100000):
         a = vehicle.act(state)
@@ -68,21 +70,23 @@ def TrainModVehicle(agent_name, load=True):
         vehicle.agent.train(buffer, 2)
 
         if n % print_n == 0 and n > 0:
-            rewards.append(score)
+            
             reward_crashes.append(crashes)
             mean = np.mean(rewards)
             b = buffer.size()
             print(f"Run: {n} --> Score: {score:.2f} --> Mean: {mean:.2f} --> ")
-            score = 0
+            
             lib.plot(rewards, figure_n=2)
 
             vehicle.agent.save()
         
         if done:
+            rewards.append(score)
+            score = 0
             lengths.append(env.steps)
+            vehicle.show_vehicle_history()
+            env.render_snapshot(wpts=wpts, wait=False)
             if plot_n % 10 == 0:
-                vehicle.show_vehicle_history()
-                env.render_snapshot(wpts=wpts, wait=False)
 
                 crash_his.append(crash_laps)
                 complete_his.append(completes)
@@ -90,7 +94,7 @@ def TrainModVehicle(agent_name, load=True):
                 completes = 0
 
             plot_n += 1
-            # env_map.reset_map()
+            env_map.reset_map()
             vehicle.reset_lap()
             state = env.reset()
 
@@ -190,8 +194,8 @@ def testVehicle(vehicle, show=False):
 def RunModAgent():
     agent_name = "TestingWillem"
     
-    TrainModVehicle(agent_name, False)
-    # TrainModVehicle(agent_name, True)
+    # TrainModVehicle(agent_name, False)
+    TrainModVehicle(agent_name, True)
 
     # vehicle = ModVehicleTrain(agent_name, True)
     # testVehicle(vehicle)

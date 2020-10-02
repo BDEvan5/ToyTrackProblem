@@ -133,6 +133,16 @@ class TD3(object):
             
         return action.clip(-self.max_action, self.max_action)
 
+    def get_critic_value(self, state, action):
+        state = torch.FloatTensor(state)
+        action = torch.FloatTensor(action)
+
+        current_Q1, current_Q2 = self.critic(state[None, :], action[:, None])
+        ret = current_Q1.detach().item()
+
+        return ret
+
+
     def train(self, replay_buffer, iterations):
         for it in range(iterations):
             # Sample replay buffer 
