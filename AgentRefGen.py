@@ -60,7 +60,8 @@ class FullAgentBase:
         plt.figure(3)
         plt.clf()
         plt.plot(self.reward_history, 'x', markersize=15)
-        plt.title("Reward history")
+        plt.plot(self.critic_history)
+        plt.title("Reward history vs critic")
         plt.pause(0.001)
 
     def reset_lap(self):
@@ -69,6 +70,7 @@ class FullAgentBase:
         self.v_history.clear()
         self.d_ref_history.clear()
         self.v_ref_history.clear()
+        self.critic_history.clear()
         self.prev_s = 0
           
     def get_target_references(self, obs):
@@ -157,6 +159,7 @@ class RefGenVehicleTrain(FullAgentBase):
         self.prev_s = 0
 
         self.reward_history = []
+        self.critic_history = []
         
     def act(self, obs):
         nn_obs = self.transform_obs(obs)
@@ -166,7 +169,8 @@ class RefGenVehicleTrain(FullAgentBase):
 
         self.last_obs = obs
 
-        nn_action = self.agent.select_action(nn_obs)
+        nn_action = self.agent.act(nn_obs)
+        self.critic_history.append(self.agent.get_critic_value(nn_obs, nn_action))
         self.last_action = nn_action
 
         ret_action = self.trasform_action(nn_action)
@@ -270,22 +274,13 @@ class RefGenVehicleTest(FullAgentBase):
 
         self.v_history.append(action[0])
         self.d_history.append(action[1])
+        self.critic_history.append(self.agent.get_critic_value(nn_obs, action))
         self.last_action = action
-
 
         ret_action = [(action[0] +1)*self.max_v/2+1, action[1]* self.max_d]
 
         self.steps += 1
 
         return ret_action
-
-    # def act(self, obs):
-    #     v_ref, d_ref = self.get_target_references(obs)
-
-    #     ret_action = [v_ref, d_ref]
-    #     self.v_history.append(ret_action[0])
-    #     self.d_history.append(ret_action[1])
-
-    #     return ret_action
 
 
