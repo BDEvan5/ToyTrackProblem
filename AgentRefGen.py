@@ -74,9 +74,7 @@ class FullAgentBase:
         self.prev_s = 0
           
     def get_target_references(self, obs):
-        self._set_target(obs)
-
-        target = self.wpts[self.pind]
+        target, self.pind = self.env_map.find_target(obs)
         th_target = lib.get_bearing(obs[0:2], target)
         alpha = lib.sub_angles_complex(th_target, obs[2])
 
@@ -98,31 +96,6 @@ class FullAgentBase:
 
         return v_ref, delta_ref
 
-    def _set_target(self, obs):
-    #     dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-    #     shift_distance = 1
-    #     while dis_cur_target < shift_distance: # how close to say you were there
-    #         if self.pind < len(self.wpts)-2:
-    #             self.pind += 1
-    #             dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-    #         else:
-    #             self.pind = 0
-          
-    # def find_target(self, obs):
-        distances = [lib.get_distance(obs[0:2], self.wpts[i]) for i in range(len(self.wpts))]
-        ind = np.argmin(distances)
-        N = len(self.wpts)
-        if ind == N-1:
-            ind = 1
-
-        front_dis = lib.get_distance(self.wpts[ind], self.wpts[ind+1])
-        back_dis = lib.get_distance(self.wpts[ind], self.wpts[ind-1])
-
-        if front_dis < back_dis * 0.5:
-            self.pind = ind + 1
-        else:
-            self.pind = ind
-
     def init_agent(self, env_map):
         self.env_map = env_map
 
@@ -138,6 +111,7 @@ class FullAgentBase:
         self.deltas = np.arctan(2*0.33*np.sin(alphas)/lds)
 
         self.pind = 1
+        self.env_map.set_wpts(self.wpts)
 
         return self.wpts
 

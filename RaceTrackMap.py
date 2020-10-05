@@ -30,6 +30,9 @@ class TrackMap:
         lengths.insert(0, 0)
         self.cum_lengs = np.cumsum(lengths)
 
+        self.wpts = None # used for the target
+        self.target = None
+
     def load_map(self):
         track = []
         filename = 'Maps/' + self.name + ".csv"
@@ -160,3 +163,30 @@ class TrackMap:
 
 
         return s
+
+    def set_wpts(self, wpts):
+        self.wpts = wpts
+
+    def find_target(self, obs):
+        distances = [lib.get_distance(obs[0:2], self.wpts[i]) for i in range(len(self.wpts))]
+        ind = np.argmin(distances)
+        N = len(self.wpts)
+
+        look_ahead = 3
+        pind = ind + look_ahead
+        if pind >= N-look_ahead:
+            pind = 1
+
+        # front_dis = lib.get_distance(self.wpts[ind], self.wpts[ind+1])
+        # back_dis = lib.get_distance(self.wpts[ind], self.wpts[ind-1])
+
+
+        # if front_dis < back_dis * 0.5:
+        #     pind = ind + 1
+        # else:
+        #     pind = ind
+
+        target = self.wpts[pind]
+        self.target = target
+
+        return target, pind

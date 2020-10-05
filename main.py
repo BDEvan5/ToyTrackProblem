@@ -131,7 +131,7 @@ def TrainRefGenVehicle(agent_name, load):
         l = vehicle.agent.train(buffer, 2)
         # score += n_r
         score += l
-        # env.render(False, wpts)
+        env.render(False, wpts)
 
         if done:
             print(f"#{i}: Ep done in {env.steps} steps --> NewReward: {score} ")
