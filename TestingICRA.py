@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from TrackSimulator import TrackSim
 from RaceTrackMap import TrackMap
-from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper, ReplayBufferAuto
+from ModelsRL import ReplayBufferTD3
 import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
@@ -25,8 +25,8 @@ def RunVehicleLap(vehicle, env, show=False):
     print(f"Lap time for({vehicle.name}): {env.steps}")
     if show:
         # vehicle.show_vehicle_history()
-        # env.render_snapshot(wpts=wpts, wait=False)
-        env.render_snapshot(wpts=wpts, wait=True)
+        env.render_snapshot(wpts=wpts, wait=False)
+        # env.render_snapshot(wpts=wpts, wait=True)
 
     return r, env.steps
 
@@ -70,7 +70,7 @@ def test_vehicles(vehicle_list, laps=100):
 
 """Training Functions"""            
 def train_mod(agent_name):
-    buffer = ReplayBufferDQN()
+    buffer = ReplayBufferTD3()
 
     env_map = TrackMap('TrackMap1000')
     vehicle = ModVehicleTrain(agent_name, False) # restart every time
@@ -158,7 +158,8 @@ def main_train():
 
 
 def main_test():
-    mod_name = "ModICRA"
+    # mod_name = "ModICRA"
+    mod_name = "TestingWillem"
     gen_name = "GenICRA"
 
     vehicle_list = []
@@ -166,13 +167,13 @@ def main_test():
     mod_vehicle = ModVehicleTest(mod_name, True)
     vehicle_list.append(mod_vehicle)
 
-    opt_vehicle = OptimalAgent()
-    vehicle_list.append(opt_vehicle)
+    # opt_vehicle = OptimalAgent()
+    # vehicle_list.append(opt_vehicle)
 
     # gen_vehicle = RepRaceVehicle(gen_name)
     # vehicle_list.append(gen_vehicle)
 
-    test_vehicles(vehicle_list, 2)
+    test_vehicles(vehicle_list, 100)
 
 
 if __name__ == "__main__":
@@ -184,5 +185,5 @@ if __name__ == "__main__":
     # RunOptimalAgent()
     # RunFullAgent()
 
-    # main_test()
-    main_train()
+    main_test()
+    # main_train()

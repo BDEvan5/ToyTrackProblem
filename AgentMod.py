@@ -209,16 +209,14 @@ class ModVehicleTest(BaseModAgent):
     def act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)
 
-        nn_obs = self.transform_obs(obs, v_ref, d_ref)
-        nn_action = self.agent.greedy_action(nn_obs)
+        nn_obs = self.transform_obs(obs)
+        nn_action = self.agent.act(nn_obs, noise=0)
         self.cur_nn_act = nn_action
 
-        self.out_his.append(self.agent.get_out(nn_obs))
-        self.mod_history.append(self.cur_nn_act)
+        self.d_ref_history.append(d_ref)
+        self.mod_history.append(self.cur_nn_act[0])
+        self.critic_history.append(self.agent.get_critic_value(nn_obs, nn_action))
         self.state_action = [nn_obs, self.cur_nn_act]
-
-        # self.mem_window.pop(0)
-        # self.mem_window.append(float(self.cur_nn_act[0]/self.action_space)) # normalises it.
 
         v_ref, d_ref = self.modify_references(self.cur_nn_act, v_ref, d_ref, obs)
 
