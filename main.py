@@ -6,7 +6,7 @@ import torch
 
 from TrackSimulator import TrackSim
 from RaceTrackMap import TrackMap
-from CommonTestUtils import ReplayBufferDQN, ReplayBufferSuper, ReplayBufferAuto
+from ModelsRL import ReplayBufferDQN, ReplayBufferTD3
 import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
@@ -39,7 +39,8 @@ def RunOptimalAgent():
 
 """Training functions: PURE MOD"""
 def TrainModVehicle(agent_name, load=True):
-    buffer = ReplayBufferDQN()
+    # buffer = ReplayBufferDQN()
+    buffer = ReplayBufferTD3()
 
     env_map = TrackMap('TrackMap1000')
     vehicle = ModVehicleTrain(agent_name, load)
@@ -53,8 +54,10 @@ def TrainModVehicle(agent_name, load=True):
     complete_his, crash_his = [], []
 
     done, state, score, crashes = False, env.reset(None), 0.0, 0.0
+    env_map.reset_map()
+
     wpts = vehicle.init_agent(env_map)
-    for n in range(100000):
+    for n in range(200000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
@@ -64,35 +67,26 @@ def TrainModVehicle(agent_name, load=True):
         state = s_prime
         
         # env.render(False)
-        vehicle.agent.train_episodes(buffer)
+        vehicle.agent.train(buffer, 2)
 
         if n % print_n == 0 and n > 0:
-            rewards.append(score)
+            
             reward_crashes.append(crashes)
-            exp = vehicle.agent.model.exploration_rate
             mean = np.mean(rewards)
             b = buffer.size()
-            print(f"Run: {n} --> Score: {score:.2f} --> Mean: {mean:.2f} --> exp: {exp} --> ")
-            score = 0
+            print(f"Run: {n} --> Score: {score:.2f} --> Mean: {mean:.2f} --> ")
+            
             lib.plot(rewards, figure_n=2)
-            plt.figure(2)
-            plt.plot(reward_crashes)
-            plt.pause(0.0001)
-            crashes = 0
 
             vehicle.agent.save()
         
         if done:
+            rewards.append(score)
+            score = 0
             lengths.append(env.steps)
+            vehicle.show_vehicle_history()
+            env.render_snapshot(wpts=wpts, wait=False)
             if plot_n % 10 == 0:
-                vehicle.show_vehicle_history()
-                env.render_snapshot(wpts=wpts, wait=False)
-
-                # 10 ep moving avg of laps
-                plt.figure(5)
-                plt.clf()
-                plt.plot(crash_his)
-                plt.plot(complete_his)
 
                 crash_his.append(crash_laps)
                 complete_his.append(completes)
@@ -156,7 +150,7 @@ def TrainRefGenVehicle(agent_name, load):
 
 
 """General test function"""
-def testVehicle(vehicle, show=False):
+def testVehicle(vehicle, show=False, obs=True):
     env_map = TrackMap('TrackMap1000')
     env = TrackSim(env_map)
 
@@ -168,12 +162,13 @@ def testVehicle(vehicle, show=False):
     done, state, score = False, env.reset(None), 0.0
     for i in range(10): # 10 laps
         print(f"Running lap: {i}")
-        # env_map.reset_map()
+        if obs:
+            env_map.reset_map()
         while not done:
             a = vehicle.act(state)
             s_p, r, done, _ = env.step(a)
             state = s_p
-            env.render(False, wpts)
+            # env.render(False, wpts)
         print(f"Lap time updates: {env.steps}")
         if show:
             # vehicle.show_vehicle_history()
@@ -204,7 +199,7 @@ def RunModAgent():
     # TrainModVehicle(agent_name, True)
 
     vehicle = ModVehicleTrain(agent_name, True)
-    testVehicle(vehicle)
+    testVehicle(vehicle, obs=True, show=True)
 
 def RunRefGenAgent():
     agent_name = "TestingFull"
