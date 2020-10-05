@@ -22,7 +22,6 @@ def RunVehicleLap(vehicle, env, show=False):
         state = s_p
         # env.render(False, wpts)
 
-    print(f"Lap time for({vehicle.name}): {env.steps}")
     if show:
         # vehicle.show_vehicle_history()
         env.render_snapshot(wpts=wpts, wait=False)
@@ -49,6 +48,7 @@ def test_vehicles(vehicle_list, laps=100):
 
             # r, steps = RunVehicleLap(vehicle, env, False)
             r, steps = RunVehicleLap(vehicle, env, True)
+            print(f"#{i}: Lap time for ({vehicle.name}): {env.steps} --> Reward: {r}")
             endings[i, j] = r
             lap_times[i, j] = steps
             if r == -1:
@@ -94,7 +94,7 @@ def train_mod(agent_name):
         score += nr
         state = s_prime
         
-        vehicle.agent.train_episodes(buffer)
+        vehicle.agent.train(buffer, 2)
 
         if n % print_n == 0 and n > 0:
             rewards.append(score)
