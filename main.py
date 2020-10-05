@@ -150,7 +150,7 @@ def TrainRefGenVehicle(agent_name, load):
 
 
 """General test function"""
-def testVehicle(vehicle, show=False):
+def testVehicle(vehicle, show=False, obs=True):
     env_map = TrackMap('TrackMap1000')
     env = TrackSim(env_map)
 
@@ -162,12 +162,13 @@ def testVehicle(vehicle, show=False):
     done, state, score = False, env.reset(None), 0.0
     for i in range(10): # 10 laps
         print(f"Running lap: {i}")
-        # env_map.reset_map()
+        if obs:
+            env_map.reset_map()
         while not done:
             a = vehicle.act(state)
             s_p, r, done, _ = env.step(a)
             state = s_p
-            env.render(False, wpts)
+            # env.render(False, wpts)
         print(f"Lap time updates: {env.steps}")
         if show:
             # vehicle.show_vehicle_history()
@@ -195,10 +196,10 @@ def RunModAgent():
     agent_name = "TestingWillem"
     
     # TrainModVehicle(agent_name, False)
-    TrainModVehicle(agent_name, True)
+    # TrainModVehicle(agent_name, True)
 
-    # vehicle = ModVehicleTrain(agent_name, True)
-    # testVehicle(vehicle)
+    vehicle = ModVehicleTrain(agent_name, True)
+    testVehicle(vehicle, obs=True, show=True)
 
 def RunRefGenAgent():
     agent_name = "TestingFull"

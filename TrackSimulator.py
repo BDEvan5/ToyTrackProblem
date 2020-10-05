@@ -242,7 +242,9 @@ class TrackSim:
         plt.plot(r_line[:, 0]*self.ds, r_line[:, 1]*self.ds, linewidth=1)
 
         # plt.imshow(self.env_map.obs_map.T, origin='lower')
-        plt.imshow(self.env_map.scan_map.T, origin='lower')
+        # plt.imshow(self.env_map.scan_map.T, origin='lower')
+        ret_map = self.env_map.get_show_map()
+        plt.imshow(ret_map.T, origin='lower')
 
         plt.xlim([0, 100])
         plt.ylim([0, 100])
