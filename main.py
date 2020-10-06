@@ -9,7 +9,7 @@ from RaceTrackMap import TrackMap
 from ModelsRL import ReplayBufferDQN, ReplayBufferTD3
 import LibFunctions as lib
 
-from AgentOptimal import OptimalAgent
+from AgentOptimal import OptimalAgent, AgentMPC
 from AgentMod import ModVehicleTest, ModVehicleTrain
 from AgentRefGen import RefGenVehicleTrain, RefGenVehicleTest
 
@@ -25,6 +25,34 @@ def RunOptimalAgent():
     # env.render(True, wpts)
     while not done:
         action = agent.act(state)
+        s_p, r, done, _ = env.step(action)
+        score += r
+        state = s_p
+
+        # env.render(True)
+        # env.render(False, wpts)
+
+    print(f"Score: {score}")
+    env.show_history()
+    env.render_snapshot(wait=True, wpts=wpts)
+
+def RunAgentMPC():
+    env_map = TrackMap()
+
+    env = TrackSim(env_map)
+    vehicle = AgentMPC()
+
+    done, state, score = False, env.reset(None), 0.0
+    wpts = vehicle.init_agent(env_map)
+    # env.render(True, wpts)
+
+    vehicle.init_ocp()
+    action = vehicle.run_first_solve(env_map.start[0], env_map.start[1])
+    s_p, r, done, _ = env.step(action)
+    state = s_p
+    while not done:
+        # action = vehicle.act(state)
+        action = vehicle.mpc_act(state)
         s_p, r, done, _ = env.step(action)
         score += r
         state = s_p
@@ -215,8 +243,8 @@ if __name__ == "__main__":
 
     # RunModAgent()
     # RunOptimalAgent()
-    RunRefGenAgent()
-
+    # RunRefGenAgent()
+    RunAgentMPC()
 
 
 

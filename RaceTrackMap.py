@@ -177,15 +177,6 @@ class TrackMap:
         if pind >= N-look_ahead:
             pind = 1
 
-        # front_dis = lib.get_distance(self.wpts[ind], self.wpts[ind+1])
-        # back_dis = lib.get_distance(self.wpts[ind], self.wpts[ind-1])
-
-
-        # if front_dis < back_dis * 0.5:
-        #     pind = ind + 1
-        # else:
-        #     pind = ind
-
         target = self.wpts[pind]
         self.target = target
 
