@@ -562,8 +562,7 @@ class AgentMPC:
             # Combine first control inputs
             current_U = vertcat(delta_sol[0], V_sol[0])
 
-            # Simulate dynamics (applying the first control input) and update the current state
-            current_X = self.Sim_system_dyn(x0=current_X, u=current_U, T=t_sol[1]-t_sol[0])["xf"]
+            current_X = self.simulate(current_X, current_U, t_sol)
 
             # Set the parameter X0 to the new current_X
             ocp.set_value(self.X_0, current_X)
@@ -604,6 +603,14 @@ class AgentMPC:
             ocp.set_initial(self.theta, theta_sol)
             ocp.set_initial(self.delta, delta_sol)
             ocp.set_initial(self.V, V_sol)
+
+    def simulate(self, current_X, current_U, t_sol):
+        # Simulate dynamics (applying the first control input) and update the current state
+        current_X = self.Sim_system_dyn(x0=current_X, u=current_U, T=t_sol[1]-t_sol[0])["xf"]
+
+        return current_X
+
+
 
     def plot_results(self):
         T_start = 0
