@@ -62,8 +62,8 @@ def get_current_waypoints(start_index, wp, N, dist):
 # Problem parameters
 # -------------------------------
 
-Nsim    = 30            # how much samples to simulate
-L       = 0.33             # bicycle model length
+Nsim    = 20            # how much samples to simulate
+L       = 0.03             # bicycle model length
 nx      = 3             # the system is composed of 3 states
 nu      = 2             # the system has 2 control inputs
 N       = 10            # number of control intervals
@@ -87,8 +87,6 @@ tracking_error = np.zeros((Nsim+1, 1))
 
 ocp = Ocp(T=FreeTime(10.0))
 
-# Bicycle model
-
 # Define states
 x     = ocp.state()
 y     = ocp.state()
@@ -110,13 +108,6 @@ X_0 = ocp.parameter(nx)
 X = vertcat(x, y, theta)
 ocp.subject_to(ocp.at_t0(X) == X_0)
 
-# Initial guess
-# ocp.set_initial(x,      0)
-# ocp.set_initial(y,      0)
-# ocp.set_initial(theta,  0)
-
-# ocp.set_initial(V,    0.5)
-
 # Path constraints
 ocp.subject_to( 0 <= (V <= 1) )
 #ocp.subject_to( -0.3 <= (ocp.der(V) <= 0.3) )
@@ -130,10 +121,6 @@ waypoints = ocp.parameter(2, grid='control')
 waypoint_last = ocp.parameter(2)
 p = vertcat(x,y)
 
-# waypoints = ocp.parameter(3, grid='control')
-# waypoint_last = ocp.parameter(3)
-# p = vertcat(x,y,theta)
-
 ocp.add_objective(ocp.sum(sumsqr(p-waypoints), grid='control'))
 ocp.add_objective(sumsqr(ocp.at_tf(p)-waypoint_last))
 
@@ -144,36 +131,26 @@ options["print_time"] = False
 ocp.solver('ipopt', options)
 
 # Make it concrete for this ocp
-ocp.method(MultipleShooting(N=N, M=1, intg='rk', grid=FreeGrid(min=0.05, max=2)))
-
-# Define reference path
-# pathpoints = 30
-# ref_path = {}
-# ref_path['x'] = 5*sin(np.linspace(0,2*pi, pathpoints+1))
-# ref_path['y'] = np.linspace(1,2, pathpoints+1)**2*10
-# wp = horzcat(ref_path['x'], ref_path['y']).T
+# ocp.method(MultipleShooting(N=N, M=1, intg='rk', grid=FreeGrid(min=0.05, max=2)))
+ocp.method(MultipleShooting(N=N, M=1, intg='rk', grid=FreeGrid(min=0, max=5)))
 
 # my path
 env_map = TrackMap()
 # env = TrackSim(env_map)
 wpts = env_map.get_min_curve_path()
 ref_path = {}
-ref_path['x'] = wpts[:, 0] * 10
-ref_path['y'] = wpts[:, 1] * 10
+mul = 1
+ref_path['x'] = wpts[:, 0] *mul
+ref_path['y'] = wpts[:, 1] *mul
 wp = horzcat(ref_path['x'], ref_path['y']).T
 
+distance = 5 *mul
 
-# ocp.set_initial(x,      env_map.start[0])
-# ocp.set_initial(y,      env_map.start[1])
 ocp.set_initial(x,      0)
 ocp.set_initial(y,      0)
 ocp.set_initial(theta,  0)
 
 ocp.set_initial(V,    0.5)
-
-# theta_path = [arctan2(ref_path['y'][k+1]-ref_path['y'][k], ref_path['x'][k+1]-ref_path['x'][k]) for k in range(pathpoints)]
-# ref_path['theta'] = theta_path + [theta_path[-1]]
-# wp = horzcat(ref_path['x'], ref_path['y'], ref_path['theta']).T
 
 # -------------------------------
 # Solve the OCP wrt a parameter value (for the first time)
@@ -183,7 +160,7 @@ ocp.set_initial(V,    0.5)
 index_closest_point = 0
 
 # Create a list of N waypoints
-current_waypoints = get_current_waypoints(index_closest_point, wp, N, dist=6)
+current_waypoints = get_current_waypoints(index_closest_point, wp, N, dist=distance)
 
 # Set initial value for waypoint parameters
 a = current_waypoints[:,:-1]
@@ -217,9 +194,6 @@ V_hist[0,:]       = V_sol
 
 tracking_error[0] = sol.value(ocp.objective)
 
-# Look at the Constrain Jacobian and the Lagrange Hessian structure
-# ocp.spy()
-
 # -------------------------------
 # Simulate the MPC solving the OCP (with the updated state) several times
 # -------------------------------
@@ -240,7 +214,7 @@ for i in range(Nsim):
     index_closest_point = find_closest_point(current_X[:2], ref_path, index_closest_point)
 
     # Create a list of N waypoints
-    current_waypoints = get_current_waypoints(index_closest_point, wp, N, dist=6)
+    current_waypoints = get_current_waypoints(index_closest_point, wp, N, dist=distance)
 
     # Set initial value for waypoint parameters
     ocp.set_value(waypoints, current_waypoints[:,:-1])
@@ -326,7 +300,7 @@ for k in range(Nsim+1):
     ax5.plot(T_start, V_hist[k,0],     'b.')
 
     T_start = T_start + (time_hist[k,1] - time_hist[k,0])
-    plt.pause(0.5)
+    plt.pause(0.05)
 
 ax3.legend(['x pos [m]','y pos [m]'])
 
