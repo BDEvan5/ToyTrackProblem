@@ -188,7 +188,6 @@ class ModVehicleTrain(BaseModAgent):
         self.prev_nn_act = self.state_action[1][0]
 
         nn_s_prime = self.transform_obs(s_prime)
-        # done_mask = 0.0 if done else 1.0
 
         mem_entry = (self.state_action[0], self.state_action[1], nn_s_prime, new_reward, done)
 

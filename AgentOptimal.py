@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 
 
 import LibFunctions as lib
-from TrajectoryPlanner import MinCurvatureTrajectory, generate_velocities
+from TrajectoryPlanner import MinCurvatureTrajectory
 
 
 
