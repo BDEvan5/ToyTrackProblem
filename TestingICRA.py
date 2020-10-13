@@ -8,7 +8,7 @@ import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
-from AgentRep import RepTrainVehicle, RepRaceVehicle
+
 
 
 """Testing Function"""
@@ -50,11 +50,11 @@ def test_vehicles(vehicle_list, laps=100):
             r, steps = RunVehicleLap(vehicle, env, True)
             print(f"#{i}: Lap time for ({vehicle.name}): {env.steps} --> Reward: {r}")
             endings[i, j] = r
-            lap_times[i, j] = steps
             if r == -1:
                 crashes[j] += 1
             else:
                 completes[j] += 1
+                lap_times[i, j] = steps
 
     print(f"\nTesting Complete ")
     print(f"-----------------------------------------------------")
@@ -86,21 +86,21 @@ def train_mod(agent_name):
     done, state, score = False, env.reset(None), 0.0
     wpts = vehicle.init_agent(env_map)
     env_map.reset_map()
-    for n in range(100000):
+    for n in range(50000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
         nr = vehicle.add_memory_entry(r, done, s_prime, buffer)
-        score += nr
+        # score += nr
+        score += r
         state = s_prime
         
         vehicle.agent.train(buffer, 2)
 
         if n % print_n == 0 and n > 0:
             rewards.append(score)
-            exp = vehicle.agent.model.exploration_rate
             mean = np.mean(rewards)
-            print(f"#{n} --> Score: {score:.2f} --> Mean: {mean:.2f} --> exp: {exp:.3f}")
+            print(f"#{n} --> Score: {score:.2f} --> Mean: {mean:.2f} ")
             score = 0
 
             lib.plot(rewards, figure_n=2)
@@ -150,40 +150,31 @@ def train_mod(agent_name):
 
 """Main functions"""
 def main_train():
-    mod_name = "ModICRA"
-    gen_name = "GenICRA"
+    mod_name = "ModICRA_R20"
 
     train_mod(mod_name)
-    # train_gen(gen_name)
+
 
 
 def main_test():
-    # mod_name = "ModICRA"
-    mod_name = "TestingWillem"
-    gen_name = "GenICRA"
-
     vehicle_list = []
+
+    vehicle_name = "TestingWillem"
+    mod_vehicle = ModVehicleTest(vehicle_name, True)
+    vehicle_list.append(mod_vehicle)
     
-    mod_vehicle = ModVehicleTest(mod_name, True)
+    vehicle_name = "ModICRA_R10"
+    mod_vehicle = ModVehicleTest(vehicle_name, True)
     vehicle_list.append(mod_vehicle)
 
     # opt_vehicle = OptimalAgent()
     # vehicle_list.append(opt_vehicle)
-
-    # gen_vehicle = RepRaceVehicle(gen_name)
-    # vehicle_list.append(gen_vehicle)
 
     test_vehicles(vehicle_list, 100)
 
 
 if __name__ == "__main__":
 
-    # RunModAgent()
-    # RunRepAgent()
-    # RunAutoAgent()
-    # RunOptimalControlAgent()
-    # RunOptimalAgent()
-    # RunFullAgent()
 
-    main_test()
     # main_train()
+    main_test()
