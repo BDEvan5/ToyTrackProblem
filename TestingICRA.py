@@ -163,7 +163,7 @@ def main_test():
     mod_vehicle = ModVehicleTest(vehicle_name, True)
     vehicle_list.append(mod_vehicle)
     
-    vehicle_name = "ModICRA_R10"
+    vehicle_name = "ModICRA_R20"
     mod_vehicle = ModVehicleTest(vehicle_name, True)
     vehicle_list.append(mod_vehicle)
 
@@ -176,5 +176,5 @@ def main_test():
 if __name__ == "__main__":
 
 
-    # main_train()
-    main_test()
+    main_train()
+    # main_test()

@@ -30,14 +30,12 @@ class BaseModAgent:
         self.max_d = 0.4
 
         # agent stuff 
-        self.action_space = 5
-        self.center_act = int((self.action_space - 1) / 2)
         self.state_action = None
         self.cur_nn_act = None
-        self.prev_nn_act = self.center_act
+        self.prev_nn_act = 0
 
-        # self.agent = DQN(11, self.action_space, name)
-        self.agent = TD3(14, 1, 1, name)
+        action_space = 4 + 20
+        self.agent = TD3(action_space, 1, 1, name)
         self.agent.try_load(load)
 
     def init_agent(self, env_map):
