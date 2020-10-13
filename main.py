@@ -113,7 +113,7 @@ def TrainModVehicle(agent_name, load=True):
 def TrainRefGenVehicle(agent_name, load):
     print(f"Training Full Vehicle performance")
     env_map = TrackMap('TrackMap1000')
-    buffer = ReplayBufferAuto()
+    buffer = ReplayBufferTD3()
 
     env = TrackSim(env_map)
     vehicle = RefGenVehicleTrain(agent_name, load)
@@ -213,9 +213,9 @@ def RunRefGenAgent():
 
 if __name__ == "__main__":
 
-    RunModAgent()
+    # RunModAgent()
     # RunOptimalAgent()
-    # RunRefGenAgent()
+    RunRefGenAgent()
 
 
 

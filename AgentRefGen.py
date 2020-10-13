@@ -60,7 +60,8 @@ class FullAgentBase:
         plt.figure(3)
         plt.clf()
         plt.plot(self.reward_history, 'x', markersize=15)
-        plt.title("Reward history")
+        plt.plot(self.critic_history)
+        plt.title("Reward history vs critic")
         plt.pause(0.001)
 
     def reset_lap(self):
@@ -69,12 +70,11 @@ class FullAgentBase:
         self.v_history.clear()
         self.d_ref_history.clear()
         self.v_ref_history.clear()
+        self.critic_history.clear()
         self.prev_s = 0
           
     def get_target_references(self, obs):
-        self._set_target(obs)
-
-        target = self.wpts[self.pind]
+        target, self.pind = self.env_map.find_target(obs)
         th_target = lib.get_bearing(obs[0:2], target)
         alpha = lib.sub_angles_complex(th_target, obs[2])
 
@@ -96,31 +96,6 @@ class FullAgentBase:
 
         return v_ref, delta_ref
 
-    def _set_target(self, obs):
-    #     dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-    #     shift_distance = 1
-    #     while dis_cur_target < shift_distance: # how close to say you were there
-    #         if self.pind < len(self.wpts)-2:
-    #             self.pind += 1
-    #             dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-    #         else:
-    #             self.pind = 0
-          
-    # def find_target(self, obs):
-        distances = [lib.get_distance(obs[0:2], self.wpts[i]) for i in range(len(self.wpts))]
-        ind = np.argmin(distances)
-        N = len(self.wpts)
-        if ind == N-1:
-            ind = 1
-
-        front_dis = lib.get_distance(self.wpts[ind], self.wpts[ind+1])
-        back_dis = lib.get_distance(self.wpts[ind], self.wpts[ind-1])
-
-        if front_dis < back_dis * 0.5:
-            self.pind = ind + 1
-        else:
-            self.pind = ind
-
     def init_agent(self, env_map):
         self.env_map = env_map
 
@@ -136,6 +111,7 @@ class FullAgentBase:
         self.deltas = np.arctan(2*0.33*np.sin(alphas)/lds)
 
         self.pind = 1
+        self.env_map.set_wpts(self.wpts)
 
         return self.wpts
 
@@ -157,6 +133,7 @@ class RefGenVehicleTrain(FullAgentBase):
         self.prev_s = 0
 
         self.reward_history = []
+        self.critic_history = []
         
     def act(self, obs):
         nn_obs = self.transform_obs(obs)
@@ -166,7 +143,8 @@ class RefGenVehicleTrain(FullAgentBase):
 
         self.last_obs = obs
 
-        nn_action = self.agent.select_action(nn_obs)
+        nn_action = self.agent.act(nn_obs)
+        self.critic_history.append(self.agent.get_critic_value(nn_obs, nn_action))
         self.last_action = nn_action
 
         ret_action = self.trasform_action(nn_action)
@@ -179,8 +157,8 @@ class RefGenVehicleTrain(FullAgentBase):
 
     def add_memory_entry(self, buffer, reward, s_prime, done):
         # new_reward = self.update_reward_curvature(reward, self.last_action, s_prime)
-        # new_reward = self.update_reward_deviation(reward, self.last_action, s_prime)
-        new_reward = self.update_reward_progress(reward, self.last_action, s_prime)
+        new_reward = self.update_reward_deviation(reward, self.last_action, s_prime)
+        # new_reward = self.update_reward_progress(reward, self.last_action, s_prime)
 
         nn_obs = self.transform_obs(self.last_obs)
         s_p_nn = self.transform_obs(s_prime)
@@ -210,7 +188,7 @@ class RefGenVehicleTrain(FullAgentBase):
             v_dif = abs(v_ref - action[0])
             d_dif = abs(d_ref - action[1])
 
-            new_reward = 0.4 - d_dif*0.5 #- v_dif * 0.02
+            new_reward = 0.2 - d_dif*0.5 #- v_dif * 0.02
 
         self.reward_history.append(new_reward)
 
@@ -270,22 +248,13 @@ class RefGenVehicleTest(FullAgentBase):
 
         self.v_history.append(action[0])
         self.d_history.append(action[1])
+        self.critic_history.append(self.agent.get_critic_value(nn_obs, action))
         self.last_action = action
-
 
         ret_action = [(action[0] +1)*self.max_v/2+1, action[1]* self.max_d]
 
         self.steps += 1
 
         return ret_action
-
-    # def act(self, obs):
-    #     v_ref, d_ref = self.get_target_references(obs)
-
-    #     ret_action = [v_ref, d_ref]
-    #     self.v_history.append(ret_action[0])
-    #     self.d_history.append(ret_action[1])
-
-    #     return ret_action
 
 

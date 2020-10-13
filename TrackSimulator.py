@@ -241,8 +241,6 @@ class TrackSim:
         plt.plot(l_line[:, 0]*self.ds, l_line[:, 1]*self.ds, linewidth=1)
         plt.plot(r_line[:, 0]*self.ds, r_line[:, 1]*self.ds, linewidth=1)
 
-        # plt.imshow(self.env_map.obs_map.T, origin='lower')
-        # plt.imshow(self.env_map.scan_map.T, origin='lower')
         ret_map = self.env_map.get_show_map()
         plt.imshow(ret_map.T, origin='lower')
 
@@ -274,6 +272,10 @@ class TrackSim:
         
             plt.plot(xs, ys)
             # plt.plot(xs, ys, 'x', markersize=20)
+
+        t_x = self.env_map.target[0] * self.ds
+        t_y = self.env_map.target[1] * self.ds
+        plt.plot(t_x, t_y, 'x', markersize=18)
 
         s = f"Reward: [{self.reward:.1f}]" 
         plt.text(100, 80, s)

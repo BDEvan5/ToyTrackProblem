@@ -105,6 +105,7 @@ class Critic(nn.Module):
         x1 = self.l3(x1)
         return x1
 
+
 class TD3(object):
     def __init__(self, state_dim, action_dim, max_action, name):
         self.name = name
@@ -137,7 +138,7 @@ class TD3(object):
         state = torch.FloatTensor(state)
         action = torch.FloatTensor(action)
 
-        current_Q1, current_Q2 = self.critic(state[None, :], action[:, None])
+        current_Q1, current_Q2 = self.critic(state[None, :], action[None, :])
         ret = current_Q1.detach().item()
 
         return ret
