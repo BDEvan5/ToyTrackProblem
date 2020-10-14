@@ -24,7 +24,7 @@ class TrackMap:
         self.scan_map = None
         self.obs_res = 0.1
 
-        self.load_map()
+        self.load_map_csv()
         self.set_up_scan_map()
         lengths = [lib.get_distance(self.track_pts[i], self.track_pts[i+1]) for i in range(self.N-1)]
         lengths.insert(0, 0)
@@ -33,7 +33,7 @@ class TrackMap:
         self.wpts = None # used for the target
         self.target = None
 
-    def load_map(self):
+    def load_map_csv(self):
         track = []
         filename = 'Maps/' + self.name + ".csv"
         with open(filename, 'r') as csvfile:
@@ -55,6 +55,9 @@ class TrackMap:
         self.end = self.track_pts[-1]
 
         self.random_obs(0)
+
+    
+
 
     def get_min_curve_path(self):
         path_name = 'Maps/' + self.name + "_path.npy"
@@ -190,3 +193,69 @@ class TrackMap:
         self.target = target
 
         return target, pind
+
+
+class MapConverter:
+    def __init__(self, map_name):
+        self.name = map_name
+        self.yaml_file = None
+        self.scan_map = None
+
+    def load_map_pgm(self):
+        map_name = 'maps/' + self.name 
+        self.read_yaml_file(map_name + '.yaml')
+
+        map_file_name = self.yaml_file['image']
+        pgm_name = 'maps/' + map_file_name
+
+        self.read_pgm_map(pgm_name)
+
+    def read_pgm_map(self, pgm_name):
+        with open(pgm_name) as f:
+            lines = f.readlines()
+
+        # This ignores commented lines
+        for l in list(lines):
+            if l[0] == '#':
+                lines.remove(l)
+        # here,it makes sure it is ASCII format (P2)
+        assert lines[0].strip() == 'P2' 
+
+        # Converts data to a list of integers
+        data = []
+        for line in lines[1:]:
+            data.extend([int(c) for c in line.split()])
+
+        data = (np.array(data[3:]),(data[1],data[0]),data[2])
+        data = np.reshape(data[0],data[1])
+
+        self.scan_map = data
+
+    def read_yaml_file(self, file_name, print_out=False):
+        with open(file_name) as file:
+            documents = yaml.full_load(file)
+
+            yaml_file = documents.items()
+            if print_out:
+                for item, doc in yaml_file:
+                    print(item, ":", doc)
+
+        self.yaml_file = dict(yaml_file)
+
+    def show_map(self):
+        plt.figure(1)
+        plt.imshow(self.scan_map)
+
+        plt.show()
+
+
+
+
+def test_map_converter():
+    name = 'columbia'
+    myConv = MapConverter(name)
+    myConv.load_map_pgm()
+    myConv.show_map()
+
+if __name__ == "__main__":
+    test_map_converter()
