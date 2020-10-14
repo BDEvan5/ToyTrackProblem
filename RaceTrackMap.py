@@ -5,6 +5,7 @@ import csv
 
 import LibFunctions as lib
 from TrajectoryPlanner import MinCurvatureTrajectory
+from PathFinder import PathFinderStarA
 
 
 class TrackMap:
@@ -55,9 +56,6 @@ class TrackMap:
         self.end = self.track_pts[-1]
 
         self.random_obs(0)
-
-    
-
 
     def get_min_curve_path(self):
         path_name = 'Maps/' + self.name + "_path.npy"
@@ -201,6 +199,11 @@ class MapConverter:
         self.yaml_file = None
         self.scan_map = None
 
+        self.resolution = None
+        self.width = None
+        self.height = None
+        self.origin = None
+
     def load_map_pgm(self):
         map_name = 'maps/' + self.name 
         self.read_yaml_file(map_name + '.yaml')
@@ -242,11 +245,19 @@ class MapConverter:
 
         self.yaml_file = dict(yaml_file)
 
+        self.origin = self.yaml_file['origin']
+        self.resolution = self.yaml_file['resolution']
+
     def show_map(self):
         plt.figure(1)
         plt.imshow(self.scan_map)
 
         plt.show()
+
+    def find_a_path(self):
+        #TODO: keep working on finding a path here.
+        pass 
+        # path_finder = PathFinderStarA(self.check_o, )
 
 
 
