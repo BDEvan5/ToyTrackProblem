@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import LibFunctions as lib
-from RaceTrackMap import TrackMap
+from RaceTrackMap import TrackMap, MinMapNpy
 
 
 class CarModel:
@@ -369,6 +369,61 @@ class TrackSim:
         if wait:
             plt.show()
 
+    def min_render(self, wait=False):
+        fig = plt.figure(4)
+        plt.clf()  
+
+        ret_map = self.env_map.scan_map
+        plt.imshow(ret_map)
+
+        # plt.xlim([0, self.env_map.width])
+        # plt.ylim([0, self.env_map.height])
+
+        s_x, s_y = self.env_map.convert_to_plot(self.env_map.start)
+        plt.plot(s_x, s_y, '*', markersize=12)
+
+        # plt.plot(self.car.x*self.ds, self.car.y*self.ds, '+', markersize=16)
+        c_x, c_y = self.env_map.convert_to_plot([self.car.x, self.car.y])
+        plt.plot(c_x, c_y, '+', markersize=16)
+
+        # for i in range(self.scan_sim.number_of_beams):
+        #     angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
+        #     fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
+        #     dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
+        #     range_val = lib.add_locations([self.car.x, self.car.y], dx)
+        #     x = [self.car.x*self.ds, range_val[0]*self.ds]
+        #     y = [self.car.y*self.ds, range_val[1]*self.ds]
+        #     plt.plot(x, y)
+
+        # for pos in self.action_memory:
+        #     plt.plot(pos[0]*self.ds, pos[1]*self.ds, 'x', markersize=6)
+
+        text_start = self.env_map.width + 10
+        spacing = int(self.env_map.height / 10)
+        s = f"Reward: [{self.reward:.1f}]" 
+        plt.text(text_start, spacing*1, s)
+        s = f"Action: [{self.action[0]:.2f}, {self.action[1]:.2f}]"
+        plt.text(text_start, spacing*2, s) 
+        s = f"Done: {self.done}"
+        plt.text(text_start, spacing*3, s) 
+        s = f"Pos: [{self.car.x:.2f}, {self.car.y:.2f}]"
+        plt.text(text_start, spacing*4, s)
+        s = f"Vel: [{self.car.velocity:.2f}]"
+        plt.text(text_start, spacing*5, s)
+        s = f"Theta: [{(self.car.theta * 180 / np.pi):.2f}]"
+        plt.text(text_start, spacing*6, s) 
+        s = f"Delta x100: [{(self.car.steering*100):.2f}]"
+        plt.text(text_start, spacing*7, s) 
+        s = f"Theta Dot: [{(self.car.th_dot):.2f}]"
+        plt.text(text_start, spacing*8, s) 
+
+        s = f"Steps: {self.steps}"
+        plt.text(100, 35, s)
+
+        plt.pause(0.0001)
+        if wait:
+            plt.show()
+            
 
 def CorridorAction(obs):
     # all this does is go in the direction of the biggest range finder
@@ -397,6 +452,7 @@ def CorridorCS(obs):
 
     ld = 0.3 # lookahead distance
     delta_ref = np.arctan(2*0.33*np.sin(theta_dot)/ld)
+    delta_ref = np.clip(delta_ref, -0.4, 0.4)
 
     v_ref = 2
 
@@ -405,22 +461,23 @@ def CorridorCS(obs):
 
 
 def sim_driver():
-    race_map = TrackMap()
+    # race_map = TrackMap()
+    race_map = MinMapNpy('torino')
     env = TrackSim(race_map)
 
     done, state, score = False, env.reset(None), 0.0
     while not done:
         action = CorridorCS(state)
-        s_p, r, done, _ = env.step_cs(action)
+        s_p, r, done, _ = env.step(action)
         score += r
         state = s_p
 
         # env.render(True)
-        env.render(False)
+        env.min_render(False)
 
     print(f"Score: {score}")
     env.show_history()
-    env.render_snapshot(True)
+    # env.render_snapshot(True)
 
 
 

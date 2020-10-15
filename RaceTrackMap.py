@@ -215,12 +215,13 @@ class MapConverter:
         pgm_name = 'maps/' + map_file_name
 
         self.read_pgm_map_codec(pgm_name)
+        print(f"Map size: {self.width * self.resolution}, {self.height * self.resolution}")
 
     def read_pgm_map_codec(self, pgm_name):
         with open(pgm_name, 'rb') as f:
             codec = f.readline()
 
-        if codec == "P2":
+        if codec == b"P2\n":
             self.read_p2(pgm_name)
         elif codec == b'P5\n':
             self.read_p5(pgm_name)
@@ -229,7 +230,7 @@ class MapConverter:
 
     def read_p2(self, pgm_name):
         print(f"Reading P2 maps")
-        with open(pgm_name, 'rb') as f:
+        with open(pgm_name, 'r') as f:
             lines = f.readlines()
 
         # This ignores commented lines
@@ -272,13 +273,7 @@ class MapConverter:
             
         self.height = height
         self.width = width
-        self.scan_map = np.array(raster)
-
-
-    
-        
-
-        print(f"Map size: {self.width * self.resolution}, {self.height * self.resolution}")
+        self.scan_map = np.array(raster)        
 
     def read_yaml_file(self, file_name, print_out=False):
         with open(file_name) as file:
@@ -318,15 +313,57 @@ class MapConverter:
         pass 
         # path_finder = PathFinderStarA(self.check_o, )
 
+    def save_scan_map(self):
+        np.save(f'Maps/{self.name}.npy', self.scan_map)
+
+class MinMapNpy:
+    def __init__(self, map_name):
+        self.name = map_name
+        self.scan_map = None
+        self.start = None
+        self.width = None
+        self.height = None
+        self.resolution = None
+
+        self.load_map()
+
+    def load_map(self):
+        self.scan_map = np.load(f'Maps/{self.name}.npy')
+
+        self.start = [17, 28]
+        self.resolution = 0.05
+        self.width = self.scan_map.shape[1]
+        self.height = self.scan_map.shape[0]
+        #TODO: set up yaml file loading
+
+    def convert_to_plot(self, pt):
+        x = pt[0] / self.resolution
+        y = self.height - (pt[1] / self.resolution)
+
+        return x, y
+
+    def check_scan_location(self, x_in):
+        x = int(round(x_in[0] / self.resolution))
+        y = int(round(x_in[1] / self.resolution))
+
+        if x < 0 or x > self.width-1:
+            return True
+        if y < 0 or y > self.height-1:
+            return True
+        if self.scan_map[y, x] == True:
+            return True
+
+        return False
+
 
 
 
 def test_map_converter():
-    name = 'columbia'
     names = ['columbia', 'levine', 'levine_blocked', 'levinelobby', 'mtl', 'porto', 'torino']
     myConv = MapConverter(names[6])
     myConv.load_map_pgm()
     myConv.find_a_path()
+    myConv.save_scan_map()
     myConv.show_map()
 
 if __name__ == "__main__":
