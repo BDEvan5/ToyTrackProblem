@@ -83,18 +83,6 @@ class ScanSimulator:
 
         return self.scan_output
 
-    # def trace_ray(self, x, y, theta, noise=True):
-    #     # obs_res = 10
-    #     for j in range(self.n_searches): # number of search points
-    #         fs = self.step_size * (j + 1)  # search from 1 step away from the point
-    #         dx =  [np.sin(theta) * fs, np.cos(theta) * fs]
-    #         search_val = lib.add_locations([x, y], dx)
-    #         if self._check_location(search_val):
-    #             break       
-
-    #     ray = (j) / self.n_searches #* (1 + np.random.normal(0, self.std_noise))
-    #     return ray
-
     def trace_ray(self, x, y, theta, noise=True):
         # obs_res = 10
         for j in range(self.n_searches): # number of search points
