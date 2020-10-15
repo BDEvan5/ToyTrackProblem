@@ -204,6 +204,9 @@ class MapConverter:
         self.height = None
         self.origin = None
 
+        self.wpts = None
+        self.start = None
+
     def load_map_pgm(self):
         map_name = 'maps/' + self.name 
         self.read_yaml_file(map_name + '.yaml')
@@ -211,10 +214,22 @@ class MapConverter:
         map_file_name = self.yaml_file['image']
         pgm_name = 'maps/' + map_file_name
 
-        self.read_pgm_map(pgm_name)
+        self.read_pgm_map_codec(pgm_name)
 
-    def read_pgm_map(self, pgm_name):
-        with open(pgm_name) as f:
+    def read_pgm_map_codec(self, pgm_name):
+        with open(pgm_name, 'rb') as f:
+            codec = f.readline()
+
+        if codec == "P2":
+            self.read_p2(pgm_name)
+        elif codec == b'P5\n':
+            self.read_p5(pgm_name)
+        else:
+            raise Exception(f"Incorrect format of PGM: {codec}")
+
+    def read_p2(self, pgm_name):
+        print(f"Reading P2 maps")
+        with open(pgm_name, 'rb') as f:
             lines = f.readlines()
 
         # This ignores commented lines
@@ -222,7 +237,7 @@ class MapConverter:
             if l[0] == '#':
                 lines.remove(l)
         # here,it makes sure it is ASCII format (P2)
-        assert lines[0].strip() == 'P2' 
+        codec = lines[0].strip()
 
         # Converts data to a list of integers
         data = []
@@ -230,9 +245,40 @@ class MapConverter:
             data.extend([int(c) for c in line.split()])
 
         data = (np.array(data[3:]),(data[1],data[0]),data[2])
+        self.width = data[1][1]
+        self.height = data[1][0]
+
         data = np.reshape(data[0],data[1])
 
         self.scan_map = data
+    
+    def read_p5(self, pgm_name):
+        print(f"Reading P5 maps")
+        with open(pgm_name, 'rb') as pgmf:
+            assert pgmf.readline() == b'P5\n'
+            comment = pgmf.readline()
+            comment = pgmf.readline()
+            wh_line = pgmf.readline().split()
+            (width, height) = [int(i) for i in wh_line]
+            depth = int(pgmf.readline())
+            assert depth <= 255
+
+            raster = []
+            for y in range(height):
+                row = []
+                for y in range(width):
+                    row.append(ord(pgmf.read(1)))
+                raster.append(row)
+            
+        self.height = height
+        self.width = width
+        self.scan_map = np.array(raster)
+
+
+    
+        
+
+        print(f"Map size: {self.width * self.resolution}, {self.height * self.resolution}")
 
     def read_yaml_file(self, file_name, print_out=False):
         with open(file_name) as file:
@@ -252,9 +298,22 @@ class MapConverter:
         plt.figure(1)
         plt.imshow(self.scan_map)
 
+        s_x, s_y = self.convert_to_plot(self.start)
+        plt.plot(s_x, s_y, 'x', markersize=20)
+
         plt.show()
 
+    def convert_to_plot(self, pt):
+        x = pt[0] / self.resolution
+        y = self.height - pt[1] / self.resolution
+
+        return x, y
+
     def find_a_path(self):
+        x = self.width * self.resolution + self.origin[0]
+        y = self.height * self.resolution + self.origin[1]
+        self.start = [x, y]
+        print(f"Start: {self.start}")
         #TODO: keep working on finding a path here.
         pass 
         # path_finder = PathFinderStarA(self.check_o, )
@@ -264,8 +323,10 @@ class MapConverter:
 
 def test_map_converter():
     name = 'columbia'
-    myConv = MapConverter(name)
+    names = ['columbia', 'levine', 'levine_blocked', 'levinelobby', 'mtl', 'porto', 'torino']
+    myConv = MapConverter(names[6])
     myConv.load_map_pgm()
+    myConv.find_a_path()
     myConv.show_map()
 
 if __name__ == "__main__":
