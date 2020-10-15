@@ -1,4 +1,5 @@
 import numpy as np 
+from scipy import ndimage
 from matplotlib import pyplot as plt
 import yaml
 import csv
@@ -258,7 +259,7 @@ class MapConverter:
         with open(pgm_name, 'rb') as pgmf:
             assert pgmf.readline() == b'P5\n'
             comment = pgmf.readline()
-            comment = pgmf.readline()
+            # comment = pgmf.readline()
             wh_line = pgmf.readline().split()
             (width, height) = [int(i) for i in wh_line]
             depth = int(pgmf.readline())
@@ -316,6 +317,19 @@ class MapConverter:
     def save_scan_map(self):
         np.save(f'Maps/{self.name}.npy', self.scan_map)
 
+    def run_transform(self):
+        transform = ndimage.distance_transform_edt(self.scan_map)
+
+        plt.imshow(transform)
+
+        s_x, s_y = self.convert_to_plot(self.start)
+        plt.plot(s_x, s_y, 'x', markersize=20)
+
+        plt.show()
+
+
+
+
 class MinMapNpy:
     def __init__(self, map_name):
         self.name = map_name
@@ -360,11 +374,12 @@ class MinMapNpy:
 
 
 def test_map_converter():
-    names = ['columbia', 'levine', 'levine_blocked', 'levinelobby', 'mtl', 'porto', 'torino']
-    myConv = MapConverter(names[6])
+    names = ['columbia', 'levine', 'levine_blocked', 'levinelobby', 'mtl', 'porto', 'torino', 'race_track']
+    myConv = MapConverter(names[7])
     myConv.load_map_pgm()
     myConv.find_a_path()
     myConv.save_scan_map()
+    myConv.run_transform()
     myConv.show_map()
 
 if __name__ == "__main__":
