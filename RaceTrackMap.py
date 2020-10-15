@@ -343,14 +343,15 @@ class MinMapNpy:
         return x, y
 
     def check_scan_location(self, x_in):
-        x = int(round(x_in[0] / self.resolution))
-        y = int(round(x_in[1] / self.resolution))
+        x, y = self.convert_to_plot(x_in)
+        x = int(x)
+        y = int(y)
 
         if x < 0 or x > self.width-1:
             return True
         if y < 0 or y > self.height-1:
             return True
-        if self.scan_map[y, x] == True:
+        if self.scan_map[y, x] == False: # map is opposite
             return True
 
         return False

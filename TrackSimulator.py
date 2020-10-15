@@ -83,6 +83,18 @@ class ScanSimulator:
 
         return self.scan_output
 
+    # def trace_ray(self, x, y, theta, noise=True):
+    #     # obs_res = 10
+    #     for j in range(self.n_searches): # number of search points
+    #         fs = self.step_size * (j + 1)  # search from 1 step away from the point
+    #         dx =  [np.sin(theta) * fs, np.cos(theta) * fs]
+    #         search_val = lib.add_locations([x, y], dx)
+    #         if self._check_location(search_val):
+    #             break       
+
+    #     ray = (j) / self.n_searches #* (1 + np.random.normal(0, self.std_noise))
+    #     return ray
+
     def trace_ray(self, x, y, theta, noise=True):
         # obs_res = 10
         for j in range(self.n_searches): # number of search points
@@ -172,7 +184,8 @@ class TrackSim:
         self.car.prev_loc = [self.car.x, self.car.y]
         self.car.velocity = 0
         self.car.steering = 0
-        self.car.theta = 0
+        # self.car.theta = 0
+        self.car.theta = -np.pi/2
 
         return self.get_state_obs()
 
@@ -382,24 +395,27 @@ class TrackSim:
         s_x, s_y = self.env_map.convert_to_plot(self.env_map.start)
         plt.plot(s_x, s_y, '*', markersize=12)
 
-        # plt.plot(self.car.x*self.ds, self.car.y*self.ds, '+', markersize=16)
         c_x, c_y = self.env_map.convert_to_plot([self.car.x, self.car.y])
         plt.plot(c_x, c_y, '+', markersize=16)
 
-        # for i in range(self.scan_sim.number_of_beams):
-        #     angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
-        #     fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
-        #     dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
-        #     range_val = lib.add_locations([self.car.x, self.car.y], dx)
-        #     x = [self.car.x*self.ds, range_val[0]*self.ds]
-        #     y = [self.car.y*self.ds, range_val[1]*self.ds]
-        #     plt.plot(x, y)
+        for i in range(self.scan_sim.number_of_beams):
+            angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
+            fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
+            dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
+            range_val = lib.add_locations([self.car.x, self.car.y], dx)
+            r_x, r_y = self.env_map.convert_to_plot(range_val)
+            x = [c_x, r_x]
+            y = [c_y, r_y]
 
-        # for pos in self.action_memory:
-        #     plt.plot(pos[0]*self.ds, pos[1]*self.ds, 'x', markersize=6)
+            plt.plot(x, y)
+
+        for pos in self.action_memory:
+            p_x, p_y = self.env_map.convert_to_plot(pos)
+            plt.plot(p_x, p_y, 'x', markersize=6)
 
         text_start = self.env_map.width + 10
         spacing = int(self.env_map.height / 10)
+
         s = f"Reward: [{self.reward:.1f}]" 
         plt.text(text_start, spacing*1, s)
         s = f"Action: [{self.action[0]:.2f}, {self.action[1]:.2f}]"
@@ -418,7 +434,7 @@ class TrackSim:
         plt.text(text_start, spacing*8, s) 
 
         s = f"Steps: {self.steps}"
-        plt.text(100, 35, s)
+        plt.text(100, spacing*9, s)
 
         plt.pause(0.0001)
         if wait:
@@ -447,10 +463,18 @@ def CorridorAction(obs):
 def CorridorCS(obs):
     ranges = obs[5:]
     max_range = np.argmax(ranges)
+
+    wa = 0
+    for i in range(10):
+        wa += ranges[i] * i
+    w_range = wa / 9
+
+    max_range = int(round(w_range))
+
     dth = (np.pi * 2/ 3) / 9
     theta_dot = dth * max_range - np.pi/3
 
-    ld = 0.3 # lookahead distance
+    ld = 0.5 # lookahead distance
     delta_ref = np.arctan(2*0.33*np.sin(theta_dot)/ld)
     delta_ref = np.clip(delta_ref, -0.4, 0.4)
 
@@ -472,11 +496,12 @@ def sim_driver():
         score += r
         state = s_p
 
-        # env.render(True)
+        # env.min_render(True)
         env.min_render(False)
 
     print(f"Score: {score}")
     env.show_history()
+    env.min_render(True)
     # env.render_snapshot(True)
 
 
