@@ -351,7 +351,7 @@ class MapConverter:
 
         d_search = 1 
         n_search = 11
-        dth = np.pi / (n_search-1)
+        dth = (np.pi * 4/5) / (n_search-1)
 
         # makes a list of search locations
         search_list = []
