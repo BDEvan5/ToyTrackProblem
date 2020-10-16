@@ -6,7 +6,6 @@ import csv
 
 import LibFunctions as lib
 from TrajectoryPlanner import MinCurvatureTrajectory
-from PathFinder import PathFinderStarA
 
 
 class TrackMap:
@@ -62,7 +61,7 @@ class TrackMap:
     def get_min_curve_path(self):
         path_name = 'Maps/' + self.name + "_path.npy"
         try:
-            # raise Exception
+            raise Exception
             path = np.load(path_name)
             print(f"Path loaded from file: min curve")
         except:
@@ -213,10 +212,6 @@ class TrackMap:
             for pt in wpts:
                 plt.plot(pt[0], pt[1], '+', markersize=14)
 
-            # deviation = np.array([track[:, 2] * nset[:, 0], track[:, 3] * nset[:, 0]]).T
-            # r_line = track[:, 0:2] + deviation
-            # plt.plot(r_line[:, 0], r_line[:, 1], linewidth=3)
-
         plt.pause(0.0001)
         if wait:
             plt.show()
@@ -229,17 +224,13 @@ class MapConverter:
         self.scan_map = None
         self.dt = None
         self.cline = None
+        self.track = None
         self.search_space = None
 
         self.resolution = None
         self.width = None
         self.height = None
-        self.origin = None
-
-        self.wpts = None
         self.start = None
-
-        self.track = None
         self.crop_x = None
         self.crop_y = None
 
@@ -247,6 +238,7 @@ class MapConverter:
         self.load_map_pgm()
         self.set_map_params()
         self.crop_map()
+        # self.show_map()
         self.find_centreline()
         self.find_nvecs()
         self.set_widths()
@@ -333,6 +325,13 @@ class MapConverter:
 
         self.resolution = self.yaml_file['resolution']
 
+        try:
+            self.start = self.yaml_file['start']
+            self.crop_x = self.yaml_file['crop_x']
+            self.crop_y = self.yaml_file['crop_y']
+        except:
+            self.set_map_params()
+
     def convert_to_plot(self, pt):
         x = pt[0] / self.resolution
         y =  pt[1] / self.resolution
@@ -366,7 +365,7 @@ class MapConverter:
         pt = self.start
         self.cline = [pt]
         th = np.pi/2 # start theta
-        while lib.get_distance(pt, self.start) > 0.2 or len(self.cline) < 10:
+        while lib.get_distance(pt, self.start) > d_search or len(self.cline) < 10:
             vals = []
             self.search_space = []
             for i in range(n_search):
@@ -384,7 +383,7 @@ class MapConverter:
             pt = lib.add_locations(pt, d_loc)
             self.cline.append(pt)
 
-            # self.plot_raceline_finding()
+            self.plot_raceline_finding()
 
             th = lib.get_bearing(self.cline[-2], pt)
             print(f"Adding pt: {pt}")
@@ -492,6 +491,15 @@ class MapConverter:
         if wait:
             plt.show()
 
+    def show_map(self):
+        plt.figure(1)
+        plt.imshow(self.scan_map)
+
+        sx, sy = self.convert_to_plot(self.start)
+        plt.plot(sx, sy, 'x', markersize=20)
+
+        plt.show()
+
     def crop_map(self):
         x = self.crop_x
         y = self.crop_y
@@ -506,10 +514,10 @@ class MapConverter:
 
     def set_map_params(self):
         # this is a function to set the map parameters
-        self.crop_x = [480, 1050]
-        self.crop_y = [250, 720]
+        self.crop_x = [0, -1]
+        self.crop_y = [0, -1]
 
-        self.start = [8.65, 18.8]
+        self.start = [15, 3.5]
         print(f"start: {self.start}")
 
         self.yaml_file['start'] = self.start
@@ -578,10 +586,11 @@ class MinMapNpy:
 
 def test_map_converter():
     names = ['columbia', 'levine', 'levine_blocked', 'levinelobby', 'mtl', 'porto', 'torino', 'race_track']
-    myConv = MapConverter(names[7])
+    name = names[0]
+    myConv = MapConverter(name)
     myConv.run_conversion()
 
-    t = TrackMap('race_track')
+    t = TrackMap(name)
     t.get_min_curve_path()
     t.plot_race_line(t.path, True)
 
