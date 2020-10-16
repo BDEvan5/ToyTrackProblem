@@ -211,6 +211,9 @@ class MapConverter:
         self.wpts = None
         self.start = None
 
+        self.track = None
+
+
     def load_map_pgm(self):
         map_name = 'maps/' + self.name 
         self.read_yaml_file(map_name + '.yaml')
@@ -321,7 +324,6 @@ class MapConverter:
         self.start = [x, y]
         print(f"Start: {self.start}")
 
-
     def save_scan_map(self):
         np.save(f'Maps/{self.name}.npy', self.scan_map)
 
@@ -376,16 +378,104 @@ class MapConverter:
             pt = lib.add_locations(pt, d_loc)
             self.cline.append(pt)
 
-            self.plot_raceline()
+            # self.plot_raceline_finding()
 
 
             th = lib.get_bearing(self.cline[-2], pt)
             print(f"Adding pt: {pt}")
 
+        self.cline = np.array(self.cline)
+        print(f"Raceline found")
+        # self.plot_raceline_finding()
 
-        self.plot_raceline()
+    def get_nvec(self, x0, x2):
+        th = lib.get_bearing(x0, x2)
+        new_th = th + np.pi/2
+        nvec = lib.theta_to_xy(new_th)
 
-    def plot_raceline(self, wait=False):
+        return nvec
+
+    def find_nvecs(self):
+        if self.cline is None:
+            raise Exception(f"No centreline to work with")
+
+        N = len(self.cline)
+        track = self.cline
+
+        new_track, nvecs = [], []
+        new_track.append(track[0, :])
+        nvecs.append(self.get_nvec(track[0, :], track[1, :]))
+        for i in range(1, len(track)-1):
+            pt1 = new_track[-1]
+            pt2 = track[min((i, N)), :]
+            pt3 = track[min((i+1, N-1)), :]
+
+            th1 = lib.get_bearing(pt1, pt2)
+            th2 = lib.get_bearing(pt2, pt3)
+            if th1 == th2:
+                pass
+            else:
+                # th = lib.add_angles_complex(th1, th2) / 2
+
+                dth = lib.sub_angles_complex(th1, th2) / 2
+                th = lib.add_angles_complex(th2, dth)
+
+                new_th = th + np.pi/2
+                nvec = lib.theta_to_xy(new_th)
+                nvecs.append(nvec)
+                new_track.append(track[i])
+
+        self.track = np.concatenate([new_track, nvecs], axis=-1)
+
+    def set_widths(self, width =1):
+        track = self.track
+        N = len(track)
+        ths = [lib.get_bearing(track[i, 0:2], track[i+1, 0:2]) for i in range(N-1)]
+
+        ls, rs = [width], [width]
+        for i in range(N-2):
+            dth = lib.sub_angles_complex(ths[i+1], ths[i])
+            dw = dth / (np.pi) * width
+            l = width #+  dw
+            r = width #- dw
+            ls.append(l)
+            rs.append(r)
+
+        ls.append(width)
+        rs.append(width)
+
+        ls = np.array(ls)
+        rs = np.array(rs)
+
+        new_track = np.concatenate([track, ls[:, None], rs[:, None]], axis=-1)
+
+        self.track = new_track
+
+    def plot_race_line(self, nset=None, wait=False):
+        plt.figure(2)
+        plt.clf()
+
+        track = self.track
+        c_line = track[:, 0:2]
+        l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
+        r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
+
+        # plt.figure(1)
+        plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
+        plt.plot(l_line[:, 0], l_line[:, 1], linewidth=1)
+        plt.plot(r_line[:, 0], r_line[:, 1], linewidth=1)
+        plt.plot(r_line[:, 0], r_line[:, 1], 'x', markersize=12)
+
+        if nset is not None:
+            deviation = np.array([track[:, 2] * nset[:, 0], track[:, 3] * nset[:, 0]]).T
+            r_line = track[:, 0:2] + deviation
+            plt.plot(r_line[:, 0], r_line[:, 1], linewidth=3)
+
+        plt.pause(0.0001)
+        if wait:
+            plt.show()
+
+    def plot_raceline_finding(self, wait=False):
         plt.figure(1)
         plt.clf()
         plt.imshow(self.dt)
@@ -481,7 +571,12 @@ def test_map_converter():
     myConv.save_scan_map()
     myConv.run_transform()
     myConv.find_centreline()
-    myConv.show_map()
+
+    myConv.find_nvecs()
+    myConv.set_widths()
+    myConv.plot_race_line(wait=True)
+
+    # myConv.show_map()
 
 if __name__ == "__main__":
     test_map_converter()
