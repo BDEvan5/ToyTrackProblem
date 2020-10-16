@@ -238,7 +238,7 @@ class MapConverter:
         self.load_map_pgm()
         self.set_map_params()
         self.crop_map()
-        # self.show_map()
+        self.show_map()
         self.find_centreline()
         self.find_nvecs()
         self.set_widths()
@@ -294,7 +294,7 @@ class MapConverter:
         print(f"Reading P5 maps")
         with open(pgm_name, 'rb') as pgmf:
             assert pgmf.readline() == b'P5\n'
-            comment = pgmf.readline()
+            # comment = pgmf.readline()
             # comment = pgmf.readline()
             wh_line = pgmf.readline().split()
             (width, height) = [int(i) for i in wh_line]
@@ -514,10 +514,10 @@ class MapConverter:
 
     def set_map_params(self):
         # this is a function to set the map parameters
-        self.crop_x = [0, -1]
-        self.crop_y = [0, -1]
+        self.crop_x = [650, 1400]
+        self.crop_y = [740, 1200]
 
-        self.start = [15, 3.5]
+        self.start = [15, 5.2]
         print(f"start: {self.start}")
 
         self.yaml_file['start'] = self.start
@@ -586,7 +586,7 @@ class MinMapNpy:
 
 def test_map_converter():
     names = ['columbia', 'levine', 'levine_blocked', 'levinelobby', 'mtl', 'porto', 'torino', 'race_track']
-    name = names[0]
+    name = names[1]
     myConv = MapConverter(name)
     myConv.run_conversion()
 
