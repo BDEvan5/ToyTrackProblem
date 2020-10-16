@@ -423,7 +423,7 @@ class MapConverter:
 
         self.track = np.concatenate([track, nvecs], axis=-1)
 
-    def set_widths(self, width =1):
+    def set_widths(self, width =0.8):
         track = self.track
         N = len(track)
         ths = [lib.get_bearing(track[i, 0:2], track[i+1, 0:2]) for i in range(N-1)]
@@ -514,13 +514,13 @@ class MapConverter:
 
     def set_map_params(self):
         # this is a function to set the map parameters
-        # self.crop_x = [0, -1]
-        # self.crop_y = [0, -1]
-
         self.crop_x = [0, -1]
-        self.crop_y = [100, -1]
+        self.crop_y = [0, -1]
 
-        self.start = [12, 3]
+        self.crop_x = [50, 400]
+        self.crop_y = [180, 330]
+
+        self.start = [12, 2]
         print(f"start: {self.start}")
 
         self.yaml_file['start'] = self.start
@@ -589,7 +589,7 @@ class MinMapNpy:
 
 def test_map_converter():
     names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
-    name = names[2]
+    name = names[3]
     myConv = MapConverter(name)
     myConv.run_conversion()
 
