@@ -394,13 +394,14 @@ class MapConverter:
 
     def run_conversion(self, show_map=False):
         self.load_map_pgm()
-        self.set_map_params()
+        # self.set_map_params()
         self.crop_map()
         self.show_map()
         self.find_centreline()
         self.find_nvecs()
         self.set_widths()
         self.save_map()
+        self.make_binary()
         self.plot_race_line(wait=show_map)
 
     def load_map_pgm(self):
@@ -453,7 +454,7 @@ class MapConverter:
         with open(pgm_name, 'rb') as pgmf:
             assert pgmf.readline() == b'P5\n'
             comment = pgmf.readline()
-            comment = pgmf.readline()
+            # comment = pgmf.readline()
             wh_line = pgmf.readline().split()
             (width, height) = [int(i) for i in wh_line]
             depth = int(pgmf.readline())
@@ -669,6 +670,16 @@ class MapConverter:
 
         print(f"Map cropped: {self.height}, {self.width}")
 
+    def make_binary(self):
+        avg = np.mean(self.scan_map)
+        for i in range(self.height):
+            for j in range(self.width):
+                if self.scan_map[i, j] > avg:
+                    self.scan_map[i, j] = False
+                else:
+                    self.scan_map[i, j] = True 
+
+        self.show_map()
         np.save(f'Maps/{self.name}.npy', self.scan_map)
 
     def set_map_params(self):
@@ -705,7 +716,7 @@ class MapConverter:
 
 def test_map_converter():
     names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
-    name = names[4]
+    name = names[5]
     myConv = MapConverter(name)
     myConv.run_conversion()
 
