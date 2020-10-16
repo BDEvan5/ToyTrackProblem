@@ -32,8 +32,8 @@ def RunOptimalAgent():
         score += r
         state = s_p
 
-        # env.render(True, wpts)
-        env.env_map.render_map(4, True)
+        env.render(True, wpts)
+        # env.env_map.render_map(4, True)
         # env.render(False, wpts)
 
     print(f"Score: {score}")

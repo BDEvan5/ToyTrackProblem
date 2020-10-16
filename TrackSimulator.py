@@ -233,45 +233,25 @@ class TrackSim:
         fig = plt.figure(4)
         plt.clf()  
 
-        ds = self.env_map.resolution
-
-        c_line = self.env_map.track_pts
-        track = self.env_map.track
-        l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
-        r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
-
-        # plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
-        plt.plot(l_line[:, 0]*self.ds, l_line[:, 1]*self.ds, linewidth=1)
-        plt.plot(r_line[:, 0]*self.ds, r_line[:, 1]*self.ds, linewidth=1)
-
-        ret_map = self.env_map.scan_map
-        plt.imshow(ret_map.T, origin='lower')
-
-        # plt.xlim([0, 100])
-        # plt.ylim([0, 100])
-
-        plt.plot(self.env_map.start[0]*self.ds, self.env_map.start[1]*self.ds, '*', markersize=12)
-
-        # plt.plot(self.env_map.end[0]*self.ds, self.env_map.end[1]*self.ds, '*', markersize=12)
-        plt.plot(self.car.x*self.ds, self.car.y*self.ds, '+', markersize=16)
+        self.env_map.render_map(4)
 
         for i in range(self.scan_sim.number_of_beams):
             angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
             fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations([self.car.x, self.car.y], dx)
-            x = [self.car.x*self.ds, range_val[0]*self.ds]
-            y = [self.car.y*self.ds, range_val[1]*self.ds]
+            cx, cy = self.env_map.convert_position([self.car.x, self.car.y])
+            rx, ry = self.env_map.convert_position(range_val)
+            x = [cx, rx]
+            y = [cy, ry]
             plt.plot(x, y)
 
         for pos in self.action_memory:
-            plt.plot(pos[0]*self.ds, pos[1]*self.ds, 'x', markersize=6)
+            x, y = self.env_map.convert_position(pos)
+            plt.plot(x, y, 'x', markersize=6)
 
         if wpts is not None:
-            xs, ys = [], []
-            for pt in wpts:
-                xs.append(pt[0]*self.ds)
-                ys.append(pt[1]*self.ds)
+            xs, ys = self.env_map.convert_positions(wpts)
         
             plt.plot(xs, ys)
             # plt.plot(xs, ys, 'x', markersize=20)
@@ -280,8 +260,8 @@ class TrackSim:
         # t_y = self.env_map.target[1] * self.ds
         # plt.plot(t_x, t_y, 'x', markersize=18)
 
-        text_x = self.env_map.scan_map.shape[0] + 10
-        text_y = self.env_map.scan_map.shape[1] / 10
+        text_x = self.env_map.scan_map.shape[1] + 10
+        text_y = self.env_map.scan_map.shape[0] / 10
 
         s = f"Reward: [{self.reward:.1f}]" 
         plt.text(text_x, text_y * 1, s)
