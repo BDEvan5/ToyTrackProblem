@@ -199,6 +199,9 @@ class MapConverter:
         self.name = map_name
         self.yaml_file = None
         self.scan_map = None
+        self.dt = None
+        self.cline = None
+        self.search_space = None
 
         self.resolution = None
         self.width = None
@@ -301,7 +304,14 @@ class MapConverter:
 
     def convert_to_plot(self, pt):
         x = pt[0] / self.resolution
-        y = self.height - pt[1] / self.resolution
+        y =  pt[1] / self.resolution
+        # y = self.height - pt[1] / self.resolution
+
+        return x, y
+        
+    def convert_to_plot_int(self, pt):
+        x = int(round(np.clip(pt[0] / self.resolution, 0, self.width-1)))
+        y = int(round(np.clip(pt[1] / self.resolution, 0, self.height-1)))
 
         return x, y
 
@@ -310,22 +320,110 @@ class MapConverter:
         y = self.height * self.resolution + self.origin[1]
         self.start = [x, y]
         print(f"Start: {self.start}")
-        #TODO: keep working on finding a path here.
-        pass 
-        # path_finder = PathFinderStarA(self.check_o, )
+
 
     def save_scan_map(self):
         np.save(f'Maps/{self.name}.npy', self.scan_map)
 
     def run_transform(self):
         transform = ndimage.distance_transform_edt(self.scan_map)
+        self.dt = transform
 
         plt.imshow(transform)
 
         s_x, s_y = self.convert_to_plot(self.start)
         plt.plot(s_x, s_y, 'x', markersize=20)
 
-        plt.show()
+        plt.pause(0.0001)
+        # plt.show()
+
+    def find_centreline(self):
+        dt = np.array(self.dt) 
+
+        d_search = 1 # distance between points
+        n_search = 11
+        dth = np.pi / (n_search-1)
+
+        # makes a list of search locations
+        search_list = []
+        for i in range(n_search):
+            th = -np.pi/2 + dth * i
+            x = -np.sin(th) * d_search
+            y = np.cos(th) * d_search
+            loc = [x, y]
+            search_list.append(loc)
+
+        # print(f"Search List: {search_list}")
+
+        pt = self.start
+        self.cline = [pt]
+        th = np.pi/2 # start theta
+        while lib.get_distance(pt, self.start) > 0.2 or len(self.cline) < 10:
+            vals = []
+            self.search_space = []
+            for i in range(n_search):
+                d_loc = lib.transform_coords(search_list[i], -th)
+                search_loc = lib.add_locations(pt, d_loc)
+
+                self.search_space.append(search_loc)
+
+                x, y = self.convert_to_plot_int(search_loc)
+                val = dt[y, x]
+                vals.append(val)
+
+            ind = np.argmax(vals)
+            d_loc = lib.transform_coords(search_list[ind], -th)
+            pt = lib.add_locations(pt, d_loc)
+            self.cline.append(pt)
+
+            self.plot_raceline()
+
+
+            th = lib.get_bearing(self.cline[-2], pt)
+            print(f"Adding pt: {pt}")
+
+
+        self.plot_raceline()
+
+    def plot_raceline(self, wait=False):
+        plt.figure(1)
+        plt.clf()
+        plt.imshow(self.dt)
+
+
+        for pt in self.cline:
+            s_x, s_y = self.convert_to_plot(pt)
+            plt.plot(s_x, s_y, '+', markersize=16)
+
+        for pt in self.search_space:
+            s_x, s_y = self.convert_to_plot(pt)
+            plt.plot(s_x, s_y, 'x', markersize=12)
+
+
+        plt.pause(0.001)
+
+        if wait:
+            plt.show()
+
+    def crop_map(self):
+        # s_x, s_y = self.convert_to_plot_int(self.start)
+        # ns_x = s_x - 480
+        # ns_y = s_y - 250
+
+        # self.start = [ns_x * self.resolution, ns_y * self.resolution]
+
+        self.start = [8.65, 18.8]
+        print(f"start: {self.start}")
+
+        new_map = self.scan_map[250:720, 480:1050]
+        self.scan_map = new_map
+
+        self.width = self.scan_map.shape[1]
+        self.height =  self.scan_map.shape[0]
+
+        # self.find_a_path()
+
+        print(f"Map cropped: {self.height}, {self.width}")
 
 
 
@@ -378,8 +476,11 @@ def test_map_converter():
     myConv = MapConverter(names[7])
     myConv.load_map_pgm()
     myConv.find_a_path()
+    myConv.crop_map()
+    # myConv.show_map()
     myConv.save_scan_map()
     myConv.run_transform()
+    myConv.find_centreline()
     myConv.show_map()
 
 if __name__ == "__main__":
