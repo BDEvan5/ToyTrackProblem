@@ -32,6 +32,7 @@ class TrackMap:
         lengths.insert(0, 0)
         self.cum_lengs = np.cumsum(lengths)
 
+        self.path = None
         self.wpts = None # used for the target
         self.target = None
 
@@ -72,6 +73,8 @@ class TrackMap:
 
             np.save(path_name, path)
             print(f"Path saved: min curve")
+
+        self.path = path
 
         return path
 
@@ -193,6 +196,31 @@ class TrackMap:
 
         return target, pind
 
+    def plot_race_line(self, wpts=None, wait=False):
+        plt.figure(2)
+        plt.clf()
+
+        track = self.track
+        c_line = track[:, 0:2]
+        l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
+        r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
+
+        plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
+        plt.plot(l_line[:, 0], l_line[:, 1], linewidth=1)
+        plt.plot(r_line[:, 0], r_line[:, 1], linewidth=1)
+
+        if wpts is not None:
+            for pt in wpts:
+                plt.plot(pt[0], pt[1], '+', markersize=14)
+
+            # deviation = np.array([track[:, 2] * nset[:, 0], track[:, 3] * nset[:, 0]]).T
+            # r_line = track[:, 0:2] + deviation
+            # plt.plot(r_line[:, 0], r_line[:, 1], linewidth=3)
+
+        plt.pause(0.0001)
+        if wait:
+            plt.show()
+
 
 class MapConverter:
     def __init__(self, map_name):
@@ -212,7 +240,18 @@ class MapConverter:
         self.start = None
 
         self.track = None
+        self.crop_x = None
+        self.crop_y = None
 
+    def run_conversion(self, show_map=False):
+        self.load_map_pgm()
+        self.set_map_params()
+        self.crop_map()
+        self.find_centreline()
+        self.find_nvecs()
+        self.set_widths()
+        self.save_map()
+        self.plot_race_line(wait=show_map)
 
     def load_map_pgm(self):
         map_name = 'maps/' + self.name 
@@ -221,10 +260,7 @@ class MapConverter:
         map_file_name = self.yaml_file['image']
         pgm_name = 'maps/' + map_file_name
 
-        self.read_pgm_map_codec(pgm_name)
-        print(f"Map size: {self.width * self.resolution}, {self.height * self.resolution}")
 
-    def read_pgm_map_codec(self, pgm_name):
         with open(pgm_name, 'rb') as f:
             codec = f.readline()
 
@@ -234,6 +270,8 @@ class MapConverter:
             self.read_p5(pgm_name)
         else:
             raise Exception(f"Incorrect format of PGM: {codec}")
+
+        print(f"Map size: {self.width * self.resolution}, {self.height * self.resolution}")
 
     def read_p2(self, pgm_name):
         print(f"Reading P2 maps")
@@ -293,17 +331,7 @@ class MapConverter:
 
         self.yaml_file = dict(yaml_file)
 
-        self.origin = self.yaml_file['origin']
         self.resolution = self.yaml_file['resolution']
-
-    def show_map(self):
-        plt.figure(1)
-        plt.imshow(self.scan_map)
-
-        s_x, s_y = self.convert_to_plot(self.start)
-        plt.plot(s_x, s_y, 'x', markersize=20)
-
-        plt.show()
 
     def convert_to_plot(self, pt):
         x = pt[0] / self.resolution
@@ -318,31 +346,11 @@ class MapConverter:
 
         return x, y
 
-    def find_a_path(self):
-        x = self.width * self.resolution + self.origin[0]
-        y = self.height * self.resolution + self.origin[1]
-        self.start = [x, y]
-        print(f"Start: {self.start}")
-
-    def save_scan_map(self):
-        np.save(f'Maps/{self.name}.npy', self.scan_map)
-
-    def run_transform(self):
-        transform = ndimage.distance_transform_edt(self.scan_map)
-        self.dt = transform
-
-        plt.imshow(transform)
-
-        s_x, s_y = self.convert_to_plot(self.start)
-        plt.plot(s_x, s_y, 'x', markersize=20)
-
-        plt.pause(0.0001)
-        # plt.show()
-
     def find_centreline(self):
+        self.dt = ndimage.distance_transform_edt(self.scan_map)
         dt = np.array(self.dt) 
 
-        d_search = 1 # distance between points
+        d_search = 1 
         n_search = 11
         dth = np.pi / (n_search-1)
 
@@ -354,8 +362,6 @@ class MapConverter:
             y = np.cos(th) * d_search
             loc = [x, y]
             search_list.append(loc)
-
-        # print(f"Search List: {search_list}")
 
         pt = self.start
         self.cline = [pt]
@@ -380,52 +386,43 @@ class MapConverter:
 
             # self.plot_raceline_finding()
 
-
             th = lib.get_bearing(self.cline[-2], pt)
             print(f"Adding pt: {pt}")
 
         self.cline = np.array(self.cline)
+        self.N = len(self.cline)
         print(f"Raceline found")
         # self.plot_raceline_finding()
 
-    def get_nvec(self, x0, x2):
-        th = lib.get_bearing(x0, x2)
-        new_th = th + np.pi/2
-        nvec = lib.theta_to_xy(new_th)
-
-        return nvec
-
     def find_nvecs(self):
-        if self.cline is None:
-            raise Exception(f"No centreline to work with")
-
-        N = len(self.cline)
+        N = self.N
         track = self.cline
 
-        new_track, nvecs = [], []
-        new_track.append(track[0, :])
-        nvecs.append(self.get_nvec(track[0, :], track[1, :]))
+        nvecs = []
+        # new_track.append(track[0, :])
+        nvec = lib.theta_to_xy(np.pi/2 + lib.get_bearing(track[0, :], track[1, :]))
+        nvecs.append(nvec)
         for i in range(1, len(track)-1):
-            pt1 = new_track[-1]
+            pt1 = track[i-1]
             pt2 = track[min((i, N)), :]
             pt3 = track[min((i+1, N-1)), :]
 
             th1 = lib.get_bearing(pt1, pt2)
             th2 = lib.get_bearing(pt2, pt3)
             if th1 == th2:
-                pass
+                th = th1
             else:
-                # th = lib.add_angles_complex(th1, th2) / 2
-
                 dth = lib.sub_angles_complex(th1, th2) / 2
                 th = lib.add_angles_complex(th2, dth)
 
-                new_th = th + np.pi/2
-                nvec = lib.theta_to_xy(new_th)
-                nvecs.append(nvec)
-                new_track.append(track[i])
+            new_th = th + np.pi/2
+            nvec = lib.theta_to_xy(new_th)
+            nvecs.append(nvec)
 
-        self.track = np.concatenate([new_track, nvecs], axis=-1)
+        nvec = lib.theta_to_xy(np.pi/2 + lib.get_bearing(track[-2, :], track[-1, :]))
+        nvecs.append(nvec)
+
+        self.track = np.concatenate([track, nvecs], axis=-1)
 
     def set_widths(self, width =1):
         track = self.track
@@ -496,24 +493,42 @@ class MapConverter:
             plt.show()
 
     def crop_map(self):
-        # s_x, s_y = self.convert_to_plot_int(self.start)
-        # ns_x = s_x - 480
-        # ns_y = s_y - 250
+        x = self.crop_x
+        y = self.crop_y
+        self.scan_map = self.scan_map[y[0]:y[1], x[0]:x[1]]
+        
+        self.width = self.scan_map.shape[1]
+        self.height =  self.scan_map.shape[0]
 
-        # self.start = [ns_x * self.resolution, ns_y * self.resolution]
+        print(f"Map cropped: {self.height}, {self.width}")
+
+        np.save(f'Maps/{self.name}.npy', self.scan_map)
+
+    def set_map_params(self):
+        # this is a function to set the map parameters
+        self.crop_x = [480, 1050]
+        self.crop_y = [250, 720]
 
         self.start = [8.65, 18.8]
         print(f"start: {self.start}")
 
-        new_map = self.scan_map[250:720, 480:1050]
-        self.scan_map = new_map
+        self.yaml_file['start'] = self.start
+        self.yaml_file['crop_x'] = self.crop_x
+        self.yaml_file['crop_y'] = self.crop_y
 
-        self.width = self.scan_map.shape[1]
-        self.height =  self.scan_map.shape[0]
+        yaml_name = 'maps/' + self.name + '.yaml'
+        with open(yaml_name, 'w') as yaml_file:
+            yaml.dump(self.yaml_file, yaml_file)
 
-        # self.find_a_path()
+    def save_map(self):
+        filename = 'Maps/' + self.name + '.csv'
 
-        print(f"Map cropped: {self.height}, {self.width}")
+        with open(filename, 'w') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            csvwriter.writerows(self.track)
+
+        print(f"Track Saved in File: {filename}")
+
 
 
 
@@ -564,19 +579,12 @@ class MinMapNpy:
 def test_map_converter():
     names = ['columbia', 'levine', 'levine_blocked', 'levinelobby', 'mtl', 'porto', 'torino', 'race_track']
     myConv = MapConverter(names[7])
-    myConv.load_map_pgm()
-    myConv.find_a_path()
-    myConv.crop_map()
-    # myConv.show_map()
-    myConv.save_scan_map()
-    myConv.run_transform()
-    myConv.find_centreline()
+    myConv.run_conversion()
 
-    myConv.find_nvecs()
-    myConv.set_widths()
-    myConv.plot_race_line(wait=True)
+    t = TrackMap('race_track')
+    t.get_min_curve_path()
+    t.plot_race_line(t.path, True)
 
-    # myConv.show_map()
 
 if __name__ == "__main__":
     test_map_converter()
