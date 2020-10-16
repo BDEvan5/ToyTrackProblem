@@ -514,10 +514,13 @@ class MapConverter:
 
     def set_map_params(self):
         # this is a function to set the map parameters
-        self.crop_x = [650, 1400]
-        self.crop_y = [740, 1200]
+        # self.crop_x = [0, -1]
+        # self.crop_y = [0, -1]
 
-        self.start = [15, 5.2]
+        self.crop_x = [0, -1]
+        self.crop_y = [100, -1]
+
+        self.start = [12, 3]
         print(f"start: {self.start}")
 
         self.yaml_file['start'] = self.start
@@ -585,7 +588,7 @@ class MinMapNpy:
 
 
 def test_map_converter():
-    names = ['columbia', 'levine', 'levine_blocked', 'levinelobby', 'mtl', 'porto', 'torino', 'race_track']
+    names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
     name = names[2]
     myConv = MapConverter(name)
     myConv.run_conversion()
