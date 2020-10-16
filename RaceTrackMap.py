@@ -294,7 +294,7 @@ class MapConverter:
         print(f"Reading P5 maps")
         with open(pgm_name, 'rb') as pgmf:
             assert pgmf.readline() == b'P5\n'
-            # comment = pgmf.readline()
+            comment = pgmf.readline()
             # comment = pgmf.readline()
             wh_line = pgmf.readline().split()
             (width, height) = [int(i) for i in wh_line]
@@ -586,7 +586,7 @@ class MinMapNpy:
 
 def test_map_converter():
     names = ['columbia', 'levine', 'levine_blocked', 'levinelobby', 'mtl', 'porto', 'torino', 'race_track']
-    name = names[1]
+    name = names[2]
     myConv = MapConverter(name)
     myConv.run_conversion()
 
