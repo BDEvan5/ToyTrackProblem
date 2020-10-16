@@ -34,10 +34,10 @@ def RunOptimalAgent():
 
         # env.render(True, wpts)
         # env.env_map.render_map(4, True)
-        env.render(False, wpts)
+        # env.render(False, wpts)
 
     print(f"Score: {score}")
-    env.show_history()
+    # env.show_history()
     env.render(wait=True, wpts=wpts)
 
 

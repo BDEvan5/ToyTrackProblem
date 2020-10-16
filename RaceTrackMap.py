@@ -104,9 +104,9 @@ class SimMap(MapBase):
             return True
 
         x, y = self.convert_int_position(x_in)
-        if self.scan_map[x, y]:
+        if self.scan_map[y, x]:
             return True
-        if self.obs_map[x, y]:
+        if self.obs_map[y, x]:
             return True
         return False
 

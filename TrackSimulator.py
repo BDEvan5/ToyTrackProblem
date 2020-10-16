@@ -173,7 +173,7 @@ class TrackSim:
         self.car.velocity = 0
         self.car.steering = 0
         # self.car.theta = 0
-        self.car.theta = -np.pi/2
+        self.car.theta = np.pi/2
 
         return self.get_state_obs()
 
@@ -223,17 +223,21 @@ class TrackSim:
         if self.steps > 2000:
             self.done = True
             self.done_reason = f"Max steps"
-        start_y = self.env_map.start[1]
-        if self.car.prev_loc[1] < start_y - 0.5 and self.car.y > start_y - 0.5:
-            if abs(self.car.x - self.env_map.start[0]) < 1:
-                self.done = True
-                self.done_reason = f"Lap complete"
+        # start_y = self.env_map.start[1]
+        # if self.car.prev_loc[1] < start_y - 0.5 and self.car.y > start_y - 0.5:
+        #     if abs(self.car.x - self.env_map.start[0]) < 1:
+        #         self.done = True
+        #         self.done_reason = f"Lap complete"
+
+        car = [self.car.x, self.car.y]
+        if lib.get_distance(car, self.env_map.start) < 0.5 and self.steps > 15:
+            self.done = True
+            self.reward = 1
+            self.done_reason = f"Lap complete"
 
     def render(self, wait=False, wpts=None):
-        fig = plt.figure(4)
-        plt.clf()  
-
         self.env_map.render_map(4)
+        fig = plt.figure(4)
 
         for i in range(self.scan_sim.number_of_beams):
             angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
