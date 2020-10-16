@@ -8,6 +8,160 @@ import LibFunctions as lib
 from TrajectoryPlanner import MinCurvatureTrajectory
 
 
+class MapBase:
+    def __init__(self, map_name):
+        self.name = map_name
+
+        self.scan_map = None
+
+        self.track = None
+        self.track_pts = None
+        self.nvecs = None
+        self.ws = None
+        self.N = None
+
+        self.start = None
+        self.wpts = None
+
+        self.height = None
+        self.width = None
+        self.resolution = None
+
+        self.read_yaml_file()
+        self.load_map_csv()
+
+    def read_yaml_file(self, print_out=False):
+        file_name = 'maps/' + self.name + '.yaml'
+        with open(file_name) as file:
+            documents = yaml.full_load(file)
+
+            yaml_file = documents.items()
+            if print_out:
+                for item, doc in yaml_file:
+                    print(item, ":", doc)
+
+        self.yaml_file = dict(yaml_file)
+
+        self.resolution = self.yaml_file['resolution']
+        self.start = self.yaml_file['start']
+
+    def load_map_csv(self):
+        track = []
+        filename = 'Maps/' + self.name + ".csv"
+        with open(filename, 'r') as csvfile:
+            csvFile = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)  
+        
+            for lines in csvFile:  
+                track.append(lines)
+
+        track = np.array(track)
+        print(f"Track Loaded")
+
+        self.track = track
+        self.N = len(track)
+        self.track_pts = track[:, 0:2]
+        self.nvecs = track[:, 2: 4]
+        self.ws = track[:, 4:6]
+
+        self.scan_map = np.load(f'Maps/{self.name}.npy')
+
+
+        self.width = self.scan_map.shape[1]
+        self.height = self.scan_map.shape[0]
+
+    def convert_position(self, pt):
+        x = pt[0] / self.resolution
+        y =  pt[1] / self.resolution
+
+        return x, y
+
+    def convert_positions(self, pts):
+        xs, ys = [], []
+        for pt in pts:
+            x, y = self.convert_position(pt)
+            xs.append(x)
+            ys.append(y)
+
+        return np.array(xs), np.array(ys)
+        
+    def convert_int_position(self, pt):
+        x = int(round(np.clip(pt[0] / self.resolution, 0, self.width-1)))
+        y = int(round(np.clip(pt[1] / self.resolution, 0, self.height-1)))
+
+        return x, y
+
+    # def show_map(self, figure=4):
+
+
+class SimMap(MapBase):
+    def __init__(self, map_name):
+        MapBase.__init__(self, map_name)
+
+        self.obs_map = np.zeros_like(self.scan_map)
+
+    def check_scan_location(self, x_in):
+        if x_in[0] < 0 or x_in[1] < 0:
+            return True
+
+        x, y = self.convert_int_position(x_in)
+        if self.scan_map[x, y]:
+            return True
+        if self.obs_map[x, y]:
+            return True
+        return False
+
+    def get_min_curve_path(self):
+        path_name = 'Maps/' + self.name + "_path.npy"
+        try:
+            raise Exception
+            path = np.load(path_name)
+            print(f"Path loaded from file: min curve")
+        except:
+            track = self.track
+            n_set = MinCurvatureTrajectory(track, self.obs_map)
+            deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+            path = track[:, 0:2] + deviation
+
+            np.save(path_name, path)
+            print(f"Path saved: min curve")
+
+        self.wpts = path
+
+        return path
+
+    def render_map(self, figure_n=4, wait=False):
+        plt.figure(figure_n)
+        plt.clf()
+
+        track = self.track
+        c_line = track[:, 0:2]
+        l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
+        r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
+
+        cx, cy = self.convert_positions(c_line)
+        plt.plot(cx, cy, linewidth=2)
+        lx, ly = self.convert_positions(l_line)
+        plt.plot(lx, ly, linewidth=1)
+        rx, ry = self.convert_positions(r_line)
+        plt.plot(rx, ry, linewidth=1)
+
+        if self.wpts is not None:
+            for pt in self.wpts:
+                x, y = self.convert_position(pt)
+                plt.plot(x, y, '+', markersize=14)
+
+        plt.imshow(self.scan_map)
+
+        plt.axes().set_aspect('equal', 'datalim')
+        plt.pause(0.0001)
+        if wait:
+            plt.show()
+
+
+
+
+
+
 class TrackMap:
     def __init__(self, csv_map="TrackMap1000"):
         self.name = csv_map
@@ -112,7 +266,8 @@ class TrackMap:
     def set_up_scan_map(self):
         try:
             # raise Exception
-            self.scan_map = np.load("Maps/scan_map.npy")
+            # self.scan_map = np.load("Maps/scan_map.npy")
+            self.scan_map = np.load(f'Maps/{self.name}.npy')
         except:
             resolution = 100
             self.scan_map = np.zeros((resolution, resolution))
@@ -129,7 +284,8 @@ class TrackMap:
         # plt.show()
 
     def get_show_map(self):
-        ret_map  = np.clip(self.obs_map + self.scan_map, 0 , 1)
+        # ret_map  = np.clip(self.obs_map + self.scan_map, 0 , 1)
+        ret_map = self.scan_map
         return ret_map
 
     def check_scan_location(self, x_in):

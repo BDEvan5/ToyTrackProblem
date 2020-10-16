@@ -5,7 +5,7 @@ import sys
 import torch
 
 from TrackSimulator import TrackSim
-from RaceTrackMap import TrackMap
+from RaceTrackMap import TrackMap, SimMap
 from ModelsRL import ReplayBufferDQN, ReplayBufferTD3
 import LibFunctions as lib
 
@@ -13,9 +13,12 @@ from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
 from AgentRefGen import RefGenVehicleTrain, RefGenVehicleTest
 
+names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
+name = names[5]
 
 def RunOptimalAgent():
-    env_map = TrackMap()
+    # env_map = TrackMap(name)
+    env_map = SimMap(name)
 
     env = TrackSim(env_map)
     agent = OptimalAgent()
@@ -29,7 +32,8 @@ def RunOptimalAgent():
         score += r
         state = s_p
 
-        # env.render(True)
+        # env.render(True, wpts)
+        env.env_map.render_map(4, True)
         # env.render(False, wpts)
 
     print(f"Score: {score}")
@@ -214,8 +218,8 @@ def RunRefGenAgent():
 if __name__ == "__main__":
 
     # RunModAgent()
-    # RunOptimalAgent()
-    RunRefGenAgent()
+    RunOptimalAgent()
+    # RunRefGenAgent()
 
 
 

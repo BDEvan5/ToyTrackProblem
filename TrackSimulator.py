@@ -233,6 +233,8 @@ class TrackSim:
         fig = plt.figure(4)
         plt.clf()  
 
+        ds = self.env_map.resolution
+
         c_line = self.env_map.track_pts
         track = self.env_map.track
         l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
@@ -242,15 +244,15 @@ class TrackSim:
         plt.plot(l_line[:, 0]*self.ds, l_line[:, 1]*self.ds, linewidth=1)
         plt.plot(r_line[:, 0]*self.ds, r_line[:, 1]*self.ds, linewidth=1)
 
-        ret_map = self.env_map.get_show_map()
+        ret_map = self.env_map.scan_map
         plt.imshow(ret_map.T, origin='lower')
 
-        plt.xlim([0, 100])
-        plt.ylim([0, 100])
+        # plt.xlim([0, 100])
+        # plt.ylim([0, 100])
 
         plt.plot(self.env_map.start[0]*self.ds, self.env_map.start[1]*self.ds, '*', markersize=12)
 
-        plt.plot(self.env_map.end[0]*self.ds, self.env_map.end[1]*self.ds, '*', markersize=12)
+        # plt.plot(self.env_map.end[0]*self.ds, self.env_map.end[1]*self.ds, '*', markersize=12)
         plt.plot(self.car.x*self.ds, self.car.y*self.ds, '+', markersize=16)
 
         for i in range(self.scan_sim.number_of_beams):
@@ -274,29 +276,34 @@ class TrackSim:
             plt.plot(xs, ys)
             # plt.plot(xs, ys, 'x', markersize=20)
 
-        t_x = self.env_map.target[0] * self.ds
-        t_y = self.env_map.target[1] * self.ds
-        plt.plot(t_x, t_y, 'x', markersize=18)
+        # t_x = self.env_map.target[0] * self.ds
+        # t_y = self.env_map.target[1] * self.ds
+        # plt.plot(t_x, t_y, 'x', markersize=18)
+
+        text_x = self.env_map.scan_map.shape[0] + 10
+        text_y = self.env_map.scan_map.shape[1] / 10
 
         s = f"Reward: [{self.reward:.1f}]" 
-        plt.text(100, 80, s)
+        plt.text(text_x, text_y * 1, s)
         s = f"Action: [{self.action[0]:.2f}, {self.action[1]:.2f}]"
-        plt.text(100, 70, s) 
+        plt.text(text_x, text_y * 2, s) 
         s = f"Done: {self.done}"
-        plt.text(100, 65, s) 
+        plt.text(text_x, text_y * 3, s) 
         s = f"Pos: [{self.car.x:.2f}, {self.car.y:.2f}]"
-        plt.text(100, 60, s)
+        plt.text(text_x, text_y * 4, s)
         s = f"Vel: [{self.car.velocity:.2f}]"
-        plt.text(100, 55, s)
+        plt.text(text_x, text_y * 5, s)
         s = f"Theta: [{(self.car.theta * 180 / np.pi):.2f}]"
-        plt.text(100, 50, s) 
+        plt.text(text_x, text_y * 6, s) 
         s = f"Delta x100: [{(self.car.steering*100):.2f}]"
-        plt.text(100, 45, s) 
-        s = f"Theta Dot: [{(self.car.th_dot):.2f}]"
-        plt.text(100, 40, s) 
+        plt.text(text_x, text_y * 7, s) 
+        s = f"Done reason: {self.done_reason}"
+        plt.text(text_x, text_y * 8, s) 
+        
 
         s = f"Steps: {self.steps}"
-        plt.text(100, 35, s)
+        plt.text(text_x, text_y * 9, s)
+
 
         plt.pause(0.0001)
         if wait:
@@ -316,8 +323,8 @@ class TrackSim:
         ret_map = self.env_map.get_show_map()
         plt.imshow(ret_map.T, origin='lower')
 
-        plt.xlim([0, 100])
-        plt.ylim([0, 100])
+        # plt.xlim([0, 100])
+        # plt.ylim([0, 100])
 
         plt.plot(self.env_map.start[0]*self.ds, self.env_map.start[1]*self.ds, '*', markersize=12)
 
@@ -345,26 +352,29 @@ class TrackSim:
             plt.plot(xs, ys)
             # plt.plot(xs, ys, 'x', markersize=20)
 
+        text_x = self.env_map.scan_map.shape[0] + 10
+        text_y = self.env_map.scan_map.shape[1] / 10
+
         s = f"Reward: [{self.reward:.1f}]" 
-        plt.text(100, 80, s)
+        plt.text(text_x, text_y * 1, s)
         s = f"Action: [{self.action[0]:.2f}, {self.action[1]:.2f}]"
-        plt.text(100, 70, s) 
+        plt.text(text_x, text_y * 2, s) 
         s = f"Done: {self.done}"
-        plt.text(100, 65, s) 
+        plt.text(text_x, text_y * 3, s) 
         s = f"Pos: [{self.car.x:.2f}, {self.car.y:.2f}]"
-        plt.text(100, 60, s)
+        plt.text(text_x, text_y * 4, s)
         s = f"Vel: [{self.car.velocity:.2f}]"
-        plt.text(100, 55, s)
+        plt.text(text_x, text_y * 5, s)
         s = f"Theta: [{(self.car.theta * 180 / np.pi):.2f}]"
-        plt.text(100, 50, s) 
+        plt.text(text_x, text_y * 6, s) 
         s = f"Delta x100: [{(self.car.steering*100):.2f}]"
-        plt.text(100, 45, s) 
+        plt.text(text_x, text_y * 7, s) 
         s = f"Done reason: {self.done_reason}"
-        plt.text(100, 40, s) 
+        plt.text(text_x, text_y * 8, s) 
         
 
         s = f"Steps: {self.steps}"
-        plt.text(100, 35, s)
+        plt.text(text_x, text_y * 9, s)
 
         plt.pause(0.0001)
         if wait:
