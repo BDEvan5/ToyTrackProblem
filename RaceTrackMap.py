@@ -148,7 +148,8 @@ class SimMap(MapBase):
         if self.wpts is not None:
             for pt in self.wpts:
                 x, y = self.convert_position(pt)
-                plt.plot(x, y, '+', markersize=14)
+                # plt.plot(x, y, '+', markersize=14)
+                plt.plot(x, y, '--')
 
         plt.imshow(self.scan_map)
 

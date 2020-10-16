@@ -32,13 +32,13 @@ def RunOptimalAgent():
         score += r
         state = s_p
 
-        env.render(True, wpts)
+        # env.render(True, wpts)
         # env.env_map.render_map(4, True)
-        # env.render(False, wpts)
+        env.render(False, wpts)
 
     print(f"Score: {score}")
     env.show_history()
-    env.render_snapshot(wait=True, wpts=wpts)
+    env.render(wait=True, wpts=wpts)
 
 
 """Training functions: PURE MOD"""
