@@ -65,7 +65,6 @@ class MapBase:
 
         self.scan_map = np.load(f'Maps/{self.name}.npy')
 
-
         self.width = self.scan_map.shape[1]
         self.height = self.scan_map.shape[0]
 

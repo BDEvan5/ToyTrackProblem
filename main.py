@@ -15,10 +15,11 @@ from AgentRefGen import RefGenVehicleTrain, RefGenVehicleTest
 
 names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
 name = names[5]
+myMap = 'TrackMap1000'
 
 def RunOptimalAgent():
     # env_map = TrackMap(name)
-    env_map = SimMap(name)
+    env_map = SimMap(myMap)
 
     env = TrackSim(env_map)
     agent = OptimalAgent()
