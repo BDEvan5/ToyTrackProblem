@@ -212,6 +212,7 @@ class TrackMap:
             for pt in wpts:
                 plt.plot(pt[0], pt[1], '+', markersize=14)
 
+        plt.axes().set_aspect('equal', 'datalim')
         plt.pause(0.0001)
         if wait:
             plt.show()
@@ -295,7 +296,7 @@ class MapConverter:
         with open(pgm_name, 'rb') as pgmf:
             assert pgmf.readline() == b'P5\n'
             comment = pgmf.readline()
-            # comment = pgmf.readline()
+            comment = pgmf.readline()
             wh_line = pgmf.readline().split()
             (width, height) = [int(i) for i in wh_line]
             depth = int(pgmf.readline())
@@ -467,6 +468,7 @@ class MapConverter:
             r_line = track[:, 0:2] + deviation
             plt.plot(r_line[:, 0], r_line[:, 1], linewidth=3)
 
+
         plt.pause(0.0001)
         if wait:
             plt.show()
@@ -514,13 +516,13 @@ class MapConverter:
 
     def set_map_params(self):
         # this is a function to set the map parameters
-        self.crop_x = [0, -1]
-        self.crop_y = [0, -1]
+        # self.crop_x = [0, -1]
+        # self.crop_y = [0, -1]
 
-        self.crop_x = [50, 400]
-        self.crop_y = [180, 330]
+        self.crop_x = [200, 500]
+        self.crop_y = [100, 600]
 
-        self.start = [12, 2]
+        self.start = [8, 2.8]
         print(f"start: {self.start}")
 
         self.yaml_file['start'] = self.start
@@ -589,7 +591,7 @@ class MinMapNpy:
 
 def test_map_converter():
     names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
-    name = names[3]
+    name = names[4]
     myConv = MapConverter(name)
     myConv.run_conversion()
 
