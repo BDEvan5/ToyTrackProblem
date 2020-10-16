@@ -546,49 +546,6 @@ class MapConverter:
 
 
 
-class MinMapNpy:
-    def __init__(self, map_name):
-        self.name = map_name
-        self.scan_map = None
-        self.start = None
-        self.width = None
-        self.height = None
-        self.resolution = None
-
-        self.load_map()
-
-    def load_map(self):
-        self.scan_map = np.load(f'Maps/{self.name}.npy')
-
-        self.start = [17, 28]
-        self.resolution = 0.05
-        self.width = self.scan_map.shape[1]
-        self.height = self.scan_map.shape[0]
-        #TODO: set up yaml file loading
-
-    def convert_to_plot(self, pt):
-        x = pt[0] / self.resolution
-        y = self.height - (pt[1] / self.resolution)
-
-        return x, y
-
-    def check_scan_location(self, x_in):
-        x, y = self.convert_to_plot(x_in)
-        x = int(x)
-        y = int(y)
-
-        if x < 0 or x > self.width-1:
-            return True
-        if y < 0 or y > self.height-1:
-            return True
-        if self.scan_map[y, x] == False: # map is opposite
-            return True
-
-        return False
-
-
-
-
 def test_map_converter():
     names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
     name = names[4]

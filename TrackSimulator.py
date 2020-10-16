@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import LibFunctions as lib
-from RaceTrackMap import TrackMap, MinMapNpy
+from RaceTrackMap import TrackMap
 
 
 class CarModel:
@@ -428,25 +428,6 @@ class TrackSim:
         if wait:
             plt.show()
             
-
-def CorridorAction(obs):
-    # all this does is go in the direction of the biggest range finder
-    ranges = obs[5:]
-    max_range = np.argmax(ranges)
-    dth = np.pi / 9
-    theta_dot = dth * max_range - np.pi/2
-
-    kp_delta = 5
-    L = 0.33
-    # d_dot = d_heading * kp_delta
-    delta = np.arctan(theta_dot * L / (obs[3]+0.001))
-    d_dot = (delta - obs[4]) * kp_delta
-
-    a = 0
-    if obs[3] < 6:
-        a = 8
-
-    return [a, d_dot]
 
 def CorridorCS(obs):
     ranges = obs[5:]
