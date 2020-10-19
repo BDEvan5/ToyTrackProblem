@@ -19,7 +19,8 @@ myMap = 'TrackMap1000'
 
 def RunOptimalAgent():
     # env_map = TrackMap(name)
-    env_map = SimMap(myMap)
+    # env_map = SimMap(myMap)
+    env_map = SimMap(name)
 
     env = TrackSim(env_map)
     agent = OptimalAgent()
@@ -47,7 +48,8 @@ def TrainModVehicle(agent_name, load=True):
     # buffer = ReplayBufferDQN()
     buffer = ReplayBufferTD3()
 
-    env_map = TrackMap('TrackMap1000')
+    # env_map = TrackMap('TrackMap1000')
+    # env_map = SimMap(name)
     vehicle = ModVehicleTrain(agent_name, load)
 
     env = TrackSim(env_map)

@@ -172,8 +172,8 @@ class TrackSim:
         self.car.prev_loc = [self.car.x, self.car.y]
         self.car.velocity = 0
         self.car.steering = 0
-        self.car.theta = 0
-        # self.car.theta = np.pi/2
+        # self.car.theta = 0
+        self.car.theta = np.pi/2
 
         return self.get_state_obs()
 
@@ -217,7 +217,7 @@ class TrackSim:
         horizontal_force = self.car.mass * self.car.th_dot * self.car.velocity
         self.y_forces.append(horizontal_force)
         if horizontal_force > self.car.max_friction_force:
-            self.done = True
+            # self.done = True
             self.reward = -1
             self.done_reason = f"Friction limit reached: {horizontal_force} > {self.car.max_friction_force}"
         if self.steps > 2000:

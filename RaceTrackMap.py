@@ -13,6 +13,7 @@ class MapBase:
         self.name = map_name
 
         self.scan_map = None
+        self.obs_map = None
 
         self.track = None
         self.track_pts = None
@@ -21,11 +22,14 @@ class MapBase:
         self.N = None
 
         self.start = None
-        self.wpts = None
+        self.wpts = []
 
         self.height = None
         self.width = None
         self.resolution = None
+
+        self.crop_x = None
+        self.crop_y = None
 
         self.read_yaml_file()
         self.load_map_csv()
@@ -44,6 +48,8 @@ class MapBase:
 
         self.resolution = self.yaml_file['resolution']
         self.start = self.yaml_file['start']
+        self.crop_x = self.yaml_file['crop_x']
+        self.crop_y = self.yaml_file['crop_y']
 
     def load_map_csv(self):
         track = []
@@ -89,15 +95,6 @@ class MapBase:
 
         return x, y
 
-    # def show_map(self, figure=4):
-
-
-class SimMap(MapBase):
-    def __init__(self, map_name):
-        MapBase.__init__(self, map_name)
-
-        self.obs_map = np.zeros_like(self.scan_map)
-
     def check_scan_location(self, x_in):
         if x_in[0] < 0 or x_in[1] < 0:
             return True
@@ -108,25 +105,6 @@ class SimMap(MapBase):
         if self.obs_map[y, x]:
             return True
         return False
-
-    def get_min_curve_path(self):
-        path_name = 'Maps/' + self.name + "_path.npy"
-        try:
-            raise Exception
-            path = np.load(path_name)
-            print(f"Path loaded from file: min curve")
-        except:
-            track = self.track
-            n_set = MinCurvatureTrajectory(track, self.obs_map)
-            deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
-            path = track[:, 0:2] + deviation
-
-            np.save(path_name, path)
-            print(f"Path saved: min curve")
-
-        self.wpts = path
-
-        return path
 
     def render_map(self, figure_n=4, wait=False):
         plt.figure(figure_n)
@@ -156,6 +134,33 @@ class SimMap(MapBase):
         plt.pause(0.0001)
         if wait:
             plt.show()
+
+
+class SimMap(MapBase):
+    def __init__(self, map_name):
+        MapBase.__init__(self, map_name)
+
+        self.obs_map = np.zeros_like(self.scan_map)
+
+    def get_min_curve_path(self):
+        path_name = 'Maps/' + self.name + "_path.npy"
+        try:
+            raise Exception
+            path = np.load(path_name)
+            print(f"Path loaded from file: min curve")
+        except:
+            track = self.track
+            n_set = MinCurvatureTrajectory(track, self.obs_map)
+            deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+            path = track[:, 0:2] + deviation
+
+            np.save(path_name, path)
+            print(f"Path saved: min curve")
+
+        self.wpts = path
+
+        return path
+
 
 
 
@@ -374,38 +379,34 @@ class TrackMap:
             plt.show()
 
 
-class MapConverter:
+class MapConverter(MapBase):
     def __init__(self, map_name):
+        MapBase.__init__(self, map_name)
         self.name = map_name
         self.yaml_file = None
-        self.scan_map = None
+
         self.dt = None
         self.cline = None
-        self.track = None
         self.search_space = None
 
-        self.resolution = None
-        self.width = None
-        self.height = None
-        self.start = None
         self.crop_x = None
         self.crop_y = None
 
     def run_conversion(self, show_map=False):
         self.load_map_pgm()
-        # self.set_map_params()
         self.crop_map()
         self.show_map()
         self.find_centreline()
         self.find_nvecs()
-        self.set_widths()
-        self.save_map()
+        # self.set_widths()
         self.make_binary()
-        self.plot_race_line(wait=show_map)
+        self.set_true_widths()
+        self.save_map()
+        self.render_map(wait=show_map)
+
 
     def load_map_pgm(self):
-        map_name = 'maps/' + self.name 
-        self.read_yaml_file(map_name + '.yaml')
+        self.read_yaml_file()
 
         map_file_name = self.yaml_file['image']
         pgm_name = 'maps/' + map_file_name
@@ -421,6 +422,7 @@ class MapConverter:
         else:
             raise Exception(f"Incorrect format of PGM: {codec}")
 
+        self.obs_map = np.zeros_like(self.scan_map)
         print(f"Map size: {self.width * self.resolution}, {self.height * self.resolution}")
 
     def read_p2(self, pgm_name):
@@ -470,26 +472,6 @@ class MapConverter:
         self.width = width
         self.scan_map = np.array(raster)        
 
-    def read_yaml_file(self, file_name, print_out=False):
-        with open(file_name) as file:
-            documents = yaml.full_load(file)
-
-            yaml_file = documents.items()
-            if print_out:
-                for item, doc in yaml_file:
-                    print(item, ":", doc)
-
-        self.yaml_file = dict(yaml_file)
-
-        self.resolution = self.yaml_file['resolution']
-
-        try:
-            self.start = self.yaml_file['start']
-            self.crop_x = self.yaml_file['crop_x']
-            self.crop_y = self.yaml_file['crop_y']
-        except:
-            self.set_map_params()
-
     def convert_to_plot(self, pt):
         x = pt[0] / self.resolution
         y =  pt[1] / self.resolution
@@ -503,7 +485,7 @@ class MapConverter:
 
         return x, y
 
-    def find_centreline(self):
+    def find_centreline(self, show=False):
         self.dt = ndimage.distance_transform_edt(self.scan_map)
         dt = np.array(self.dt) 
 
@@ -541,7 +523,8 @@ class MapConverter:
             pt = lib.add_locations(pt, d_loc)
             self.cline.append(pt)
 
-            self.plot_raceline_finding()
+            if show:
+                self.plot_raceline_finding()
 
             th = lib.get_bearing(self.cline[-2], pt)
             print(f"Adding pt: {pt}")
@@ -581,7 +564,7 @@ class MapConverter:
 
         self.track = np.concatenate([track, nvecs], axis=-1)
 
-    def set_widths(self, width =0.8):
+    def set_widths(self, width =0.6):
         track = self.track
         N = len(track)
         ths = [lib.get_bearing(track[i, 0:2], track[i+1, 0:2]) for i in range(N-1)]
@@ -602,6 +585,38 @@ class MapConverter:
         rs = np.array(rs)
 
         new_track = np.concatenate([track, ls[:, None], rs[:, None]], axis=-1)
+
+        self.track = new_track
+
+    def set_true_widths(self):
+        nvecs = self.track[:, 2:4]
+        tx = self.track[:, 0]
+        ty = self.track[:, 1]
+
+        stp_sze = 0.1
+        sf = 0.5 # safety factor
+        nws, pws = [], []
+        for i in range(self.N):
+            pt = [tx[i], ty[i]]
+            nvec = nvecs[i]
+
+            j = stp_sze
+            s_pt = s_pt = lib.add_locations(pt, nvec, j)
+            while not self.check_scan_location(s_pt):
+                j += stp_sze
+                s_pt = lib.add_locations(pt, nvec, j)
+            pws.append(j*sf)
+
+            j = stp_sze
+            s_pt = s_pt = lib.sub_locations(pt, nvec, j)
+            while not self.check_scan_location(s_pt):
+                j += stp_sze
+                s_pt = lib.sub_locations(pt, nvec, j)
+            nws.append(j*sf)
+
+        nws, pws = np.array(nws), np.array(pws)
+
+        new_track = np.concatenate([self.track, nws[:, None], pws[:, None]], axis=-1)
 
         self.track = new_track
 
@@ -710,12 +725,9 @@ class MapConverter:
         print(f"Track Saved in File: {filename}")
 
 
-
-
-
 def test_map_converter():
     names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
-    name = names[5]
+    name = names[1]
     myConv = MapConverter(name)
     myConv.run_conversion()
 

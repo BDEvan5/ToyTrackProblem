@@ -70,12 +70,10 @@ class OptimalAgent:
         ld = lib.get_distance(obs[0:2], target)
         delta_ref = np.arctan(2*0.33*np.sin(alpha)/ld)
 
-        # ds = self.deltas[self.pind:self.pind+1]
         ds = self.deltas[min(self.pind, len(self.deltas)-1)]
         max_d = abs(ds)
-        # max_d = max(abs(ds))
 
-        max_friction_force = 3.74 * 9.81 * 0.523 *0.9
+        max_friction_force = 3.74 * 9.81 * 0.523 *0.6
         d_plan = max(abs(delta_ref), abs(obs[4]), max_d)
         theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
         v_ref = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
