@@ -93,8 +93,8 @@ def train_mod(agent_name):
         s_prime, r, done, _ = env.step(a)
 
         nr = vehicle.add_memory_entry(r, done, s_prime, buffer)
-        # score += nr
-        score += r
+        score += nr
+        # score += r
         state = s_prime
         
         vehicle.agent.train(buffer, 2)
