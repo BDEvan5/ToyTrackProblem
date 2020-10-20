@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import LibFunctions as lib
-from RaceTrackMap import TrackMap
+
 
 
 class CarModel:

@@ -5,7 +5,7 @@ import sys
 import torch
 
 from TrackSimulator import TrackSim
-from RaceTrackMap import TrackMap, SimMap
+from RaceTrackMap import  SimMap
 from ModelsRL import ReplayBufferDQN, ReplayBufferTD3
 import LibFunctions as lib
 
