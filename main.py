@@ -5,7 +5,7 @@ import sys
 import torch
 
 from TrackSimulator import TrackSim
-from RaceTrackMap import TrackMap
+from RaceTrackMap import  SimMap
 from ModelsRL import ReplayBufferDQN, ReplayBufferTD3
 import LibFunctions as lib
 
@@ -13,9 +13,14 @@ from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
 from AgentRefGen import RefGenVehicleTrain, RefGenVehicleTest
 
+names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
+name = names[5]
+myMap = 'TrackMap1000'
 
 def RunOptimalAgent():
-    env_map = TrackMap()
+    # env_map = TrackMap(name)
+    # env_map = SimMap(myMap)
+    env_map = SimMap(name)
 
     env = TrackSim(env_map)
     agent = OptimalAgent()
@@ -29,20 +34,20 @@ def RunOptimalAgent():
         score += r
         state = s_p
 
-        # env.render(True)
+        # env.render(True, wpts)
+        # env.env_map.render_map(4, True)
         # env.render(False, wpts)
 
     print(f"Score: {score}")
-    env.show_history()
-    env.render_snapshot(wait=True, wpts=wpts)
+    # env.show_history()
+    env.render(wait=True, wpts=wpts)
 
 
 """Training functions: PURE MOD"""
 def TrainModVehicle(agent_name, load=True):
-    # buffer = ReplayBufferDQN()
     buffer = ReplayBufferTD3()
 
-    env_map = TrackMap('TrackMap1000')
+    env_map = SimMap(name)
     vehicle = ModVehicleTrain(agent_name, load)
 
     env = TrackSim(env_map)
@@ -85,7 +90,7 @@ def TrainModVehicle(agent_name, load=True):
             score = 0
             lengths.append(env.steps)
             vehicle.show_vehicle_history()
-            env.render_snapshot(wpts=wpts, wait=False)
+            env.render(wpts=wpts, wait=False)
             if plot_n % 10 == 0:
 
                 crash_his.append(crash_laps)
@@ -193,9 +198,9 @@ def testVehicle(vehicle, show=False, obs=True):
 
 """Total functions"""
 def RunModAgent():
-    agent_name = "TestingWillem"
+    agent_name = "TestingMod"
     
-    # TrainModVehicle(agent_name, False)
+    TrainModVehicle(agent_name, False)
     # TrainModVehicle(agent_name, True)
 
     vehicle = ModVehicleTrain(agent_name, True)
@@ -213,9 +218,9 @@ def RunRefGenAgent():
 
 if __name__ == "__main__":
 
-    # RunModAgent()
+    RunModAgent()
     # RunOptimalAgent()
-    RunRefGenAgent()
+    # RunRefGenAgent()
 
 
 

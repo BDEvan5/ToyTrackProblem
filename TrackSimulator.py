@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import LibFunctions as lib
-from RaceTrackMap import TrackMap
+
 
 
 class CarModel:
@@ -172,7 +172,8 @@ class TrackSim:
         self.car.prev_loc = [self.car.x, self.car.y]
         self.car.velocity = 0
         self.car.steering = 0
-        self.car.theta = 0
+        # self.car.theta = 0
+        self.car.theta = np.pi/2
 
         return self.get_state_obs()
 
@@ -216,187 +217,153 @@ class TrackSim:
         horizontal_force = self.car.mass * self.car.th_dot * self.car.velocity
         self.y_forces.append(horizontal_force)
         if horizontal_force > self.car.max_friction_force:
-            self.done = True
+            # self.done = True
             self.reward = -1
             self.done_reason = f"Friction limit reached: {horizontal_force} > {self.car.max_friction_force}"
         if self.steps > 2000:
             self.done = True
             self.done_reason = f"Max steps"
-        start_y = self.env_map.start[1]
-        if self.car.prev_loc[1] < start_y - 0.5 and self.car.y > start_y - 0.5:
-            if abs(self.car.x - self.env_map.start[0]) < 1:
-                self.done = True
-                self.done_reason = f"Lap complete"
+        # start_y = self.env_map.start[1]
+        # if self.car.prev_loc[1] < start_y - 0.5 and self.car.y > start_y - 0.5:
+        #     if abs(self.car.x - self.env_map.start[0]) < 1:
+        #         self.done = True
+        #         self.done_reason = f"Lap complete"
+
+        car = [self.car.x, self.car.y]
+        if lib.get_distance(car, self.env_map.start) < 0.5 and self.steps > 15:
+            self.done = True
+            self.reward = 1
+            self.done_reason = f"Lap complete"
 
     def render(self, wait=False, wpts=None):
+        self.env_map.render_map(4)
         fig = plt.figure(4)
-        plt.clf()  
-
-        c_line = self.env_map.track_pts
-        track = self.env_map.track
-        l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
-        r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
-
-        # plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
-        plt.plot(l_line[:, 0]*self.ds, l_line[:, 1]*self.ds, linewidth=1)
-        plt.plot(r_line[:, 0]*self.ds, r_line[:, 1]*self.ds, linewidth=1)
-
-        ret_map = self.env_map.get_show_map()
-        plt.imshow(ret_map.T, origin='lower')
-
-        plt.xlim([0, 100])
-        plt.ylim([0, 100])
-
-        plt.plot(self.env_map.start[0]*self.ds, self.env_map.start[1]*self.ds, '*', markersize=12)
-
-        plt.plot(self.env_map.end[0]*self.ds, self.env_map.end[1]*self.ds, '*', markersize=12)
-        plt.plot(self.car.x*self.ds, self.car.y*self.ds, '+', markersize=16)
 
         for i in range(self.scan_sim.number_of_beams):
             angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
             fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
             dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
             range_val = lib.add_locations([self.car.x, self.car.y], dx)
-            x = [self.car.x*self.ds, range_val[0]*self.ds]
-            y = [self.car.y*self.ds, range_val[1]*self.ds]
+            cx, cy = self.env_map.convert_position([self.car.x, self.car.y])
+            rx, ry = self.env_map.convert_position(range_val)
+            x = [cx, rx]
+            y = [cy, ry]
             plt.plot(x, y)
 
         for pos in self.action_memory:
-            plt.plot(pos[0]*self.ds, pos[1]*self.ds, 'x', markersize=6)
+            x, y = self.env_map.convert_position(pos)
+            plt.plot(x, y, 'x', markersize=6)
 
-        if wpts is not None:
-            xs, ys = [], []
-            for pt in wpts:
-                xs.append(pt[0]*self.ds)
-                ys.append(pt[1]*self.ds)
-        
-            plt.plot(xs, ys)
-            # plt.plot(xs, ys, 'x', markersize=20)
 
-        t_x = self.env_map.target[0] * self.ds
-        t_y = self.env_map.target[1] * self.ds
-        plt.plot(t_x, t_y, 'x', markersize=18)
+        # t_x = self.env_map.target[0] * self.ds
+        # t_y = self.env_map.target[1] * self.ds
+        # plt.plot(t_x, t_y, 'x', markersize=18)
+
+        text_x = self.env_map.scan_map.shape[1] + 10
+        text_y = self.env_map.scan_map.shape[0] / 10
 
         s = f"Reward: [{self.reward:.1f}]" 
-        plt.text(100, 80, s)
+        plt.text(text_x, text_y * 1, s)
         s = f"Action: [{self.action[0]:.2f}, {self.action[1]:.2f}]"
-        plt.text(100, 70, s) 
+        plt.text(text_x, text_y * 2, s) 
         s = f"Done: {self.done}"
-        plt.text(100, 65, s) 
+        plt.text(text_x, text_y * 3, s) 
         s = f"Pos: [{self.car.x:.2f}, {self.car.y:.2f}]"
-        plt.text(100, 60, s)
+        plt.text(text_x, text_y * 4, s)
         s = f"Vel: [{self.car.velocity:.2f}]"
-        plt.text(100, 55, s)
+        plt.text(text_x, text_y * 5, s)
         s = f"Theta: [{(self.car.theta * 180 / np.pi):.2f}]"
-        plt.text(100, 50, s) 
+        plt.text(text_x, text_y * 6, s) 
         s = f"Delta x100: [{(self.car.steering*100):.2f}]"
-        plt.text(100, 45, s) 
-        s = f"Theta Dot: [{(self.car.th_dot):.2f}]"
-        plt.text(100, 40, s) 
+        plt.text(text_x, text_y * 7, s) 
+        s = f"Done reason: {self.done_reason}"
+        plt.text(text_x, text_y * 8, s) 
+        
 
         s = f"Steps: {self.steps}"
-        plt.text(100, 35, s)
+        plt.text(text_x, text_y * 9, s)
+
+
+        plt.pause(0.0001)
+        if wait:
+            plt.show()
+
+    def min_render(self, wait=False):
+        fig = plt.figure(4)
+        plt.clf()  
+
+        ret_map = self.env_map.scan_map
+        plt.imshow(ret_map)
+
+        # plt.xlim([0, self.env_map.width])
+        # plt.ylim([0, self.env_map.height])
+
+        s_x, s_y = self.env_map.convert_to_plot(self.env_map.start)
+        plt.plot(s_x, s_y, '*', markersize=12)
+
+        c_x, c_y = self.env_map.convert_to_plot([self.car.x, self.car.y])
+        plt.plot(c_x, c_y, '+', markersize=16)
+
+        for i in range(self.scan_sim.number_of_beams):
+            angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
+            fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
+            dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
+            range_val = lib.add_locations([self.car.x, self.car.y], dx)
+            r_x, r_y = self.env_map.convert_to_plot(range_val)
+            x = [c_x, r_x]
+            y = [c_y, r_y]
+
+            plt.plot(x, y)
+
+        for pos in self.action_memory:
+            p_x, p_y = self.env_map.convert_to_plot(pos)
+            plt.plot(p_x, p_y, 'x', markersize=6)
+
+        text_start = self.env_map.width + 10
+        spacing = int(self.env_map.height / 10)
+
+        s = f"Reward: [{self.reward:.1f}]" 
+        plt.text(text_start, spacing*1, s)
+        s = f"Action: [{self.action[0]:.2f}, {self.action[1]:.2f}]"
+        plt.text(text_start, spacing*2, s) 
+        s = f"Done: {self.done}"
+        plt.text(text_start, spacing*3, s) 
+        s = f"Pos: [{self.car.x:.2f}, {self.car.y:.2f}]"
+        plt.text(text_start, spacing*4, s)
+        s = f"Vel: [{self.car.velocity:.2f}]"
+        plt.text(text_start, spacing*5, s)
+        s = f"Theta: [{(self.car.theta * 180 / np.pi):.2f}]"
+        plt.text(text_start, spacing*6, s) 
+        s = f"Delta x100: [{(self.car.steering*100):.2f}]"
+        plt.text(text_start, spacing*7, s) 
+        s = f"Theta Dot: [{(self.car.th_dot):.2f}]"
+        plt.text(text_start, spacing*8, s) 
+
+        s = f"Steps: {self.steps}"
+        plt.text(100, spacing*9, s)
 
         plt.pause(0.0001)
         if wait:
             plt.show()
             
-    def render_snapshot(self, wait=False, wpts=None):
-        fig = plt.figure(4)
-        plt.clf()  
-        c_line = self.env_map.track_pts
-        track = self.env_map.track
-        l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
-        r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
-
-        # plt.plot(c_line[:, 0], c_line[:, 1], linewidth=2)
-        plt.plot(l_line[:, 0]*self.ds, l_line[:, 1]*self.ds, linewidth=1)
-        plt.plot(r_line[:, 0]*self.ds, r_line[:, 1]*self.ds, linewidth=1)
-        ret_map = self.env_map.get_show_map()
-        plt.imshow(ret_map.T, origin='lower')
-
-        plt.xlim([0, 100])
-        plt.ylim([0, 100])
-
-        plt.plot(self.env_map.start[0]*self.ds, self.env_map.start[1]*self.ds, '*', markersize=12)
-
-        plt.plot(self.env_map.end[0]*self.ds, self.env_map.end[1]*self.ds, '*', markersize=12)
-        plt.plot(self.car.x*self.ds, self.car.y*self.ds, '+', markersize=16)
-
-        for i in range(self.scan_sim.number_of_beams):
-            angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
-            fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
-            dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
-            range_val = lib.add_locations([self.car.x, self.car.y], dx)
-            x = [self.car.x*self.ds, range_val[0]*self.ds]
-            y = [self.car.y*self.ds, range_val[1]*self.ds]
-            plt.plot(x, y)
-
-        for pos in self.action_memory:
-            plt.plot(pos[0]*self.ds, pos[1]*self.ds, 'x', markersize=6)
-
-        if wpts is not None:
-            xs, ys = [], []
-            for pt in wpts:
-                xs.append(pt[0]*self.ds)
-                ys.append(pt[1]*self.ds)
-        
-            plt.plot(xs, ys)
-            # plt.plot(xs, ys, 'x', markersize=20)
-
-        s = f"Reward: [{self.reward:.1f}]" 
-        plt.text(100, 80, s)
-        s = f"Action: [{self.action[0]:.2f}, {self.action[1]:.2f}]"
-        plt.text(100, 70, s) 
-        s = f"Done: {self.done}"
-        plt.text(100, 65, s) 
-        s = f"Pos: [{self.car.x:.2f}, {self.car.y:.2f}]"
-        plt.text(100, 60, s)
-        s = f"Vel: [{self.car.velocity:.2f}]"
-        plt.text(100, 55, s)
-        s = f"Theta: [{(self.car.theta * 180 / np.pi):.2f}]"
-        plt.text(100, 50, s) 
-        s = f"Delta x100: [{(self.car.steering*100):.2f}]"
-        plt.text(100, 45, s) 
-        s = f"Done reason: {self.done_reason}"
-        plt.text(100, 40, s) 
-        
-
-        s = f"Steps: {self.steps}"
-        plt.text(100, 35, s)
-
-        plt.pause(0.0001)
-        if wait:
-            plt.show()
-
-
-def CorridorAction(obs):
-    # all this does is go in the direction of the biggest range finder
-    ranges = obs[5:]
-    max_range = np.argmax(ranges)
-    dth = np.pi / 9
-    theta_dot = dth * max_range - np.pi/2
-
-    kp_delta = 5
-    L = 0.33
-    # d_dot = d_heading * kp_delta
-    delta = np.arctan(theta_dot * L / (obs[3]+0.001))
-    d_dot = (delta - obs[4]) * kp_delta
-
-    a = 0
-    if obs[3] < 6:
-        a = 8
-
-    return [a, d_dot]
 
 def CorridorCS(obs):
     ranges = obs[5:]
     max_range = np.argmax(ranges)
+
+    wa = 0
+    for i in range(10):
+        wa += ranges[i] * i
+    w_range = wa / 9
+
+    max_range = int(round(w_range))
+
     dth = (np.pi * 2/ 3) / 9
     theta_dot = dth * max_range - np.pi/3
 
-    ld = 0.3 # lookahead distance
+    ld = 0.5 # lookahead distance
     delta_ref = np.arctan(2*0.33*np.sin(theta_dot)/ld)
+    delta_ref = np.clip(delta_ref, -0.4, 0.4)
 
     v_ref = 2
 
@@ -405,22 +372,24 @@ def CorridorCS(obs):
 
 
 def sim_driver():
-    race_map = TrackMap()
+    # race_map = TrackMap()
+    race_map = MinMapNpy('torino')
     env = TrackSim(race_map)
 
     done, state, score = False, env.reset(None), 0.0
     while not done:
         action = CorridorCS(state)
-        s_p, r, done, _ = env.step_cs(action)
+        s_p, r, done, _ = env.step(action)
         score += r
         state = s_p
 
-        # env.render(True)
-        env.render(False)
+        # env.min_render(True)
+        env.min_render(False)
 
     print(f"Score: {score}")
     env.show_history()
-    env.render_snapshot(True)
+    env.min_render(True)
+    # env.render_snapshot(True)
 
 
 
