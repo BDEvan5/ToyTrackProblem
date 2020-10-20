@@ -110,6 +110,9 @@ class MapBase:
         f = plt.figure(figure_n)
         plt.clf()
 
+        plt.xlim([0, self.width])
+        plt.ylim([self.height, 0])
+
         track = self.track
         c_line = track[:, 0:2]
         l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T

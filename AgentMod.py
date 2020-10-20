@@ -5,12 +5,12 @@ from matplotlib import pyplot as plt
 from ModelsRL import TD3
 
 import LibFunctions as lib
-
+from TrackSimulator import ScanSimulator
 
 
 
 class BaseModAgent:
-    def __init__(self, name):
+    def __init__(self, name, n_beams):
         self.name = name
         self.env_map = None
         self.wpts = None
@@ -35,11 +35,14 @@ class BaseModAgent:
         self.prev_nn_act = 0
 
         self.agent = None      
+        self.scan_sim = ScanSimulator(n_beams, np.pi)
+        self.n_beams = n_beams
 
     def init_agent(self, env_map):
         self.env_map = env_map
-        self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
- 
+        
+        self.scan_sim.set_check_fcn(self.env_map.check_scan_location)
+
         self.wpts = self.env_map.get_min_curve_path()
 
         r_line = self.wpts
@@ -114,7 +117,9 @@ class BaseModAgent:
         vr_scale = [(v_ref)/self.max_v]
         dr_scale = [d_ref/self.max_d]
 
-        nn_obs = np.concatenate([cur_v, cur_d, vr_scale, dr_scale, obs[5:]])
+        scan = self.scan_sim.get_scan(obs[0], obs[1], obs[2])
+
+        nn_obs = np.concatenate([cur_v, cur_d, vr_scale, dr_scale, scan])
 
         return nn_obs
 
@@ -144,13 +149,13 @@ class BaseModAgent:
 
 
 class ModVehicleTrain(BaseModAgent):
-    def __init__(self, name, load, h_size):
-        BaseModAgent.__init__(self, name)
+    def __init__(self, name, load, h_size, n_beams):
+        BaseModAgent.__init__(self, name, n_beams)
 
         self.current_v_ref = None
         self.current_phi_ref = None
 
-        state_space = 4 + 20
+        state_space = 4 + self.n_beams
         self.agent = TD3(state_space, 1, 1, name)
         self.agent.try_load(load, h_size)
 
@@ -198,15 +203,15 @@ class ModVehicleTrain(BaseModAgent):
 
 
 class ModVehicleTest(BaseModAgent):
-    def __init__(self, name, directory):
-        BaseModAgent.__init__(self, name)
+    def __init__(self, name, directory, n_beams):
+        BaseModAgent.__init__(self, name, n_beams)
 
         self.current_v_ref = None
         self.current_phi_ref = None
 
         self.mem_save = True
 
-        state_space = 4 + 20
+        state_space = 4 + self.n_beams
         self.agent = TD3(state_space, 1, 1, name)
         self.agent.load(directory=directory)
 

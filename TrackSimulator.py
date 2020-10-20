@@ -95,7 +95,7 @@ class ScanSimulator:
         ray = (j) / self.n_searches #* (1 + np.random.normal(0, self.std_noise))
         return ray
 
-    def set_map(self, check_fcn):
+    def set_check_fcn(self, check_fcn):
         self._check_location = check_fcn
 
 
@@ -106,17 +106,12 @@ class TrackSim:
         self.env_map = env_map
 
         self.car = CarModel()
-        self.scan_sim = ScanSimulator(20, np.pi)
-        self.scan_sim.set_map(self.env_map.check_scan_location)
 
         self.done = False
         self.reward = 0
         self.action = np.zeros((2))
         self.action_memory = []
         self.steps = 0
-
-        self.obs_space = len(self.get_state_obs())
-        self.ds = 10
 
         self.steer_history = []
         self.velocity_history = []
@@ -141,7 +136,7 @@ class TrackSim:
          
         self.check_done_reward_track_train()
 
-        obs = self.get_state_obs()
+        obs = self.car.get_car_state()
         done = self.done
         reward = self.reward
 
@@ -175,7 +170,7 @@ class TrackSim:
         # self.car.theta = 0
         self.car.theta = np.pi/2
 
-        return self.get_state_obs()
+        return self.car.get_car_state()
 
     def show_history(self):
         plt.figure(3)
@@ -199,14 +194,6 @@ class TrackSim:
         self.car.prev_loc = [self.car.x, self.car.y]
         self.action_memory.clear()
         self.done = False
-
-    def get_state_obs(self):
-        car_state = self.car.get_car_state()
-        scan = self.scan_sim.get_scan(self.car.x, self.car.y, self.car.theta)
-
-        state = np.concatenate([car_state, scan])
-
-        return state
 
     def check_done_reward_track_train(self):
         self.reward = 0 # normal
@@ -235,29 +222,25 @@ class TrackSim:
             self.reward = 1
             self.done_reason = f"Lap complete"
 
-    def render(self, wait=False, wpts=None):
+    def render(self, wait=False, scan_sim=None):
         self.env_map.render_map(4)
         fig = plt.figure(4)
 
-        for i in range(self.scan_sim.number_of_beams):
-            angle = i * self.scan_sim.dth + self.car.theta - self.scan_sim.fov/2
-            fs = self.scan_sim.scan_output[i] * self.scan_sim.n_searches * self.scan_sim.step_size
-            dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
-            range_val = lib.add_locations([self.car.x, self.car.y], dx)
-            cx, cy = self.env_map.convert_position([self.car.x, self.car.y])
-            rx, ry = self.env_map.convert_position(range_val)
-            x = [cx, rx]
-            y = [cy, ry]
-            plt.plot(x, y)
+        if scan_sim is not None:
+            for i in range(scan_sim.number_of_beams):
+                angle = i * scan_sim.dth + self.car.theta - scan_sim.fov/2
+                fs = scan_sim.scan_output[i] * scan_sim.n_searches * scan_sim.step_size
+                dx =  [np.sin(angle) * fs, np.cos(angle) * fs]
+                range_val = lib.add_locations([self.car.x, self.car.y], dx)
+                cx, cy = self.env_map.convert_position([self.car.x, self.car.y])
+                rx, ry = self.env_map.convert_position(range_val)
+                x = [cx, rx]
+                y = [cy, ry]
+                plt.plot(x, y)
 
         for pos in self.action_memory:
             x, y = self.env_map.convert_position(pos)
             plt.plot(x, y, 'x', markersize=6)
-
-
-        # t_x = self.env_map.target[0] * self.ds
-        # t_y = self.env_map.target[1] * self.ds
-        # plt.plot(t_x, t_y, 'x', markersize=18)
 
         text_x = self.env_map.scan_map.shape[1] + 10
         text_y = self.env_map.scan_map.shape[0] / 10

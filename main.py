@@ -18,8 +18,6 @@ name = names[5]
 myMap = 'TrackMap1000'
 
 def RunOptimalAgent():
-    # env_map = TrackMap(name)
-    # env_map = SimMap(myMap)
     env_map = SimMap(name)
 
     env = TrackSim(env_map)

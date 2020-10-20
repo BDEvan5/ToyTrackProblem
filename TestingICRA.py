@@ -86,7 +86,7 @@ def train_mod(agent_name):
     buffer = ReplayBufferTD3()
 
     env_map = SimMap(name)
-    vehicle = ModVehicleTrain(agent_name, False, 200) # restart every time
+    vehicle = ModVehicleTrain(agent_name, False, 200, 20) # restart every time
 
     env = TrackSim(env_map)
 
@@ -107,7 +107,7 @@ def train_mod(agent_name):
         score += nr
         # score += r
         state = s_prime
-        
+        # env.render(False, vehicle.scan_sim)
         vehicle.agent.train(buffer, 2)
 
         if n % print_n == 0 and n > 0:
@@ -124,7 +124,7 @@ def train_mod(agent_name):
             lengths.append(env.steps)
             if plot_n % 10 == 0:
                 vehicle.show_vehicle_history()
-                env.render(wpts=wpts, wait=False)
+                env.render(scan_sim=vehicle.scan_sim, wait=False)
 
                 crash_his.append(crash_laps)
                 complete_his.append(completes)
@@ -156,7 +156,7 @@ def train_mod(agent_name):
 
 """Main functions"""
 def main_train():
-    mod_name = "ModICRA_R20"
+    mod_name = "ModICRA_build"
 
     train_mod(mod_name)
 
