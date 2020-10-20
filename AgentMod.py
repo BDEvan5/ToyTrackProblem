@@ -10,7 +10,7 @@ import LibFunctions as lib
 
 
 class BaseModAgent:
-    def __init__(self, name, load, h_size):
+    def __init__(self, name):
         self.name = name
         self.env_map = None
         self.wpts = None
@@ -34,9 +34,7 @@ class BaseModAgent:
         self.cur_nn_act = None
         self.prev_nn_act = 0
 
-        state_space = 4 + 20
-        self.agent = TD3(state_space, 1, 1, name, h_size)
-        self.agent.try_load(load)
+        self.agent = None      
 
     def init_agent(self, env_map):
         self.env_map = env_map
@@ -147,10 +145,14 @@ class BaseModAgent:
 
 class ModVehicleTrain(BaseModAgent):
     def __init__(self, name, load, h_size):
-        BaseModAgent.__init__(self, name, load, h_size)
+        BaseModAgent.__init__(self, name)
 
         self.current_v_ref = None
         self.current_phi_ref = None
+
+        state_space = 4 + 20
+        self.agent = TD3(state_space, 1, 1, name)
+        self.agent.try_load(load, h_size)
 
     def act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)
@@ -196,13 +198,17 @@ class ModVehicleTrain(BaseModAgent):
 
 
 class ModVehicleTest(BaseModAgent):
-    def __init__(self, name, load):
-        BaseModAgent.__init__(self, name, load, 0)
+    def __init__(self, name, directory):
+        BaseModAgent.__init__(self, name)
 
         self.current_v_ref = None
         self.current_phi_ref = None
 
         self.mem_save = True
+
+        state_space = 4 + 20
+        self.agent = TD3(state_space, 1, 1, name)
+        self.agent.load(directory=directory)
 
     def act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)

@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
+import os
+import shutil
 
 from TrackSimulator import TrackSim
 from RaceTrackMap import SimMap
@@ -72,6 +75,14 @@ def test_vehicles(vehicle_list, laps=100):
 
 """Training Functions"""            
 def train_mod(agent_name):
+    path = 'Vehicles/' + agent_name + '/'
+    if os.path.exists(path):
+        try:
+            os.rmdir(path)
+        except:
+            shutil.rmtree(path)
+    os.mkdir(path)
+
     buffer = ReplayBufferTD3()
 
     env_map = SimMap(name)
@@ -107,21 +118,13 @@ def train_mod(agent_name):
 
             lib.plot(rewards, figure_n=2)
 
-            vehicle.agent.save()
+            vehicle.agent.save(directory=path)
         
         if done:
             lengths.append(env.steps)
             if plot_n % 10 == 0:
                 vehicle.show_vehicle_history()
                 env.render(wpts=wpts, wait=False)
-
-                # # 10 ep moving avg of laps
-                # plt.figure(5)
-                # plt.clf()
-                # plt.title('Crash history vs complete history (10)')
-                # plt.plot(crash_his)
-                # plt.plot(complete_his)
-                # plt.legend(['Crashes', 'Complete'])
 
                 crash_his.append(crash_laps)
                 complete_his.append(completes)
@@ -138,10 +141,11 @@ def train_mod(agent_name):
             else:
                 completes += 1
 
-    vehicle.agent.save()
+    vehicle.agent.save(directory=path)
+
 
     plt.figure(2)
-    plt.savefig(f"Training Results: {vehicle.name}")
+    plt.savefig(path + f"Training Results: {vehicle.name}")
 
 
     return rewards
@@ -162,11 +166,11 @@ def main_test():
     vehicle_list = []
 
     vehicle_name = "TestingWillem"
-    mod_vehicle = ModVehicleTest(vehicle_name, True)
+    mod_vehicle = ModVehicleTest(vehicle_name, directory=path)
     vehicle_list.append(mod_vehicle)
     
     vehicle_name = "ModICRA_R20"
-    mod_vehicle = ModVehicleTest(vehicle_name, True)
+    mod_vehicle = ModVehicleTest(vehicle_name, directory=path)
     vehicle_list.append(mod_vehicle)
 
     # opt_vehicle = OptimalAgent()

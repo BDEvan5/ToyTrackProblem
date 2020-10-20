@@ -107,9 +107,8 @@ class Critic(nn.Module):
 
 
 class TD3(object):
-    def __init__(self, state_dim, action_dim, max_action, name, h_size=300):
+    def __init__(self, state_dim, action_dim, max_action, name):
         self.name = name
-        self.h_size = h_size
         self.state_dim = state_dim
         self.max_action = max_action
         self.act_dim = action_dim
@@ -122,8 +121,7 @@ class TD3(object):
         self.critic_target = None
         self.critic_optimizer = None
 
-    def create_agent(self):
-        h_size = self.h_size
+    def create_agent(self, h_size):
         state_dim = self.state_dim
         action_dim = self.act_dim
         max_action = self.max_action
@@ -224,7 +222,7 @@ class TD3(object):
 
         print("Agent Loaded")
 
-    def try_load(self, load=True):
+    def try_load(self, load=True, h_size=300):
         if load:
             try:
                 self.load()
@@ -233,7 +231,7 @@ class TD3(object):
                 pass
         else:
             print(f"Not loading - restarting training")
-            self.create_agent()
+            self.create_agent(h_size)
 
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-3)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-3)
