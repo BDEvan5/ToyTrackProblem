@@ -10,7 +10,7 @@ import LibFunctions as lib
 
 
 class BaseModAgent:
-    def __init__(self, name, load):
+    def __init__(self, name, load, h_size):
         self.name = name
         self.env_map = None
         self.wpts = None
@@ -34,8 +34,8 @@ class BaseModAgent:
         self.cur_nn_act = None
         self.prev_nn_act = 0
 
-        action_space = 4 + 20
-        self.agent = TD3(action_space, 1, 1, name)
+        state_space = 4 + 20
+        self.agent = TD3(state_space, 1, 1, name, h_size)
         self.agent.try_load(load)
 
     def init_agent(self, env_map):
@@ -146,8 +146,8 @@ class BaseModAgent:
 
 
 class ModVehicleTrain(BaseModAgent):
-    def __init__(self, name, load):
-        BaseModAgent.__init__(self, name, load)
+    def __init__(self, name, load, h_size):
+        BaseModAgent.__init__(self, name, load, h_size)
 
         self.current_v_ref = None
         self.current_phi_ref = None
@@ -197,7 +197,7 @@ class ModVehicleTrain(BaseModAgent):
 
 class ModVehicleTest(BaseModAgent):
     def __init__(self, name, load):
-        BaseModAgent.__init__(self, name, load)
+        BaseModAgent.__init__(self, name, load, 0)
 
         self.current_v_ref = None
         self.current_phi_ref = None

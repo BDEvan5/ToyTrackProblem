@@ -107,7 +107,7 @@ class MapBase:
         return False
 
     def render_map(self, figure_n=4, wait=False):
-        plt.figure(figure_n)
+        f = plt.figure(figure_n)
         plt.clf()
 
         track = self.track
@@ -133,7 +133,8 @@ class MapBase:
         else:
             plt.imshow(self.obs_map + self.scan_map)
 
-        plt.axes().set_aspect('equal', 'datalim')
+        plt.gca().set_aspect('equal', 'datalim')
+
         plt.pause(0.0001)
         if wait:
             plt.show()
@@ -185,8 +186,7 @@ class SimMap(MapBase):
                     self.obs_map[y+j, x+i] = 1
 
     def reset_map(self):
-        self.random_obs(10)
-
+        self.random_obs(20)
 
 
 class MapConverter(MapBase):

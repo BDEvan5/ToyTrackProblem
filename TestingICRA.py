@@ -2,14 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from TrackSimulator import TrackSim
-from RaceTrackMap import TrackMap
+from RaceTrackMap import SimMap
 from ModelsRL import ReplayBufferTD3
 import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
 
-
+names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
+name = names[5]
+myMap = 'TrackMap1000'
 
 """Testing Function"""
 def RunVehicleLap(vehicle, env, show=False):
@@ -33,7 +35,7 @@ def RunVehicleLap(vehicle, env, show=False):
 def test_vehicles(vehicle_list, laps=100):
     N = len(vehicle_list)
 
-    env = env_map = TrackMap('TrackMap1000')
+    env_map = SimMap(name)
     env = TrackSim(env_map)
 
     completes = np.zeros((N))
@@ -72,8 +74,8 @@ def test_vehicles(vehicle_list, laps=100):
 def train_mod(agent_name):
     buffer = ReplayBufferTD3()
 
-    env_map = TrackMap('TrackMap1000')
-    vehicle = ModVehicleTrain(agent_name, False) # restart every time
+    env_map = SimMap(name)
+    vehicle = ModVehicleTrain(agent_name, False, 200) # restart every time
 
     env = TrackSim(env_map)
 
@@ -111,7 +113,7 @@ def train_mod(agent_name):
             lengths.append(env.steps)
             if plot_n % 10 == 0:
                 vehicle.show_vehicle_history()
-                env.render_snapshot(wpts=wpts, wait=False)
+                env.render(wpts=wpts, wait=False)
 
                 # # 10 ep moving avg of laps
                 # plt.figure(5)
