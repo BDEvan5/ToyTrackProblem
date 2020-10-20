@@ -52,17 +52,18 @@ class ReplayBufferTD3(object):
     def size(self):
         return len(self.storage)
 
+nn_l1 = 400
+nn_l2 = 300
 
 class Actor(nn.Module):   
-    def __init__(self, state_dim, action_dim, max_action):
+    def __init__(self, state_dim, action_dim, max_action, h_size):
         super(Actor, self).__init__()
 
-        self.l1 = nn.Linear(state_dim, 400)
-        self.l2 = nn.Linear(400, 300)
-        self.l3 = nn.Linear(300, action_dim)
+        self.l1 = nn.Linear(state_dim, h_size)
+        self.l2 = nn.Linear(h_size, h_size)
+        self.l3 = nn.Linear(h_size, action_dim)
 
         self.max_action = max_action
-
 
     def forward(self, x):
         x = F.relu(self.l1(x))
@@ -71,19 +72,18 @@ class Actor(nn.Module):
         return x
 
 class Critic(nn.Module):
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, state_dim, action_dim, h_size):
         super(Critic, self).__init__()
 
         # Q1 architecture
-        self.l1 = nn.Linear(state_dim + action_dim, 400)
-        self.l2 = nn.Linear(400, 300)
-        self.l3 = nn.Linear(300, 1)
+        self.l1 = nn.Linear(state_dim + action_dim, h_size)
+        self.l2 = nn.Linear(h_size, h_size)
+        self.l3 = nn.Linear(h_size, 1)
 
         # Q2 architecture
-        self.l4 = nn.Linear(state_dim + action_dim, 400)
-        self.l5 = nn.Linear(400, 300)
-        self.l6 = nn.Linear(300, 1)
-
+        self.l4 = nn.Linear(state_dim + action_dim, h_size)
+        self.l5 = nn.Linear(h_size, h_size)
+        self.l6 = nn.Linear(h_size, 1)
 
     def forward(self, x, u):
         xu = torch.cat([x, u], 1)
@@ -109,18 +109,31 @@ class Critic(nn.Module):
 class TD3(object):
     def __init__(self, state_dim, action_dim, max_action, name):
         self.name = name
-        self.actor = Actor(state_dim, action_dim, max_action)
-        self.actor_target = Actor(state_dim, action_dim, max_action)
+        self.state_dim = state_dim
+        self.max_action = max_action
+        self.act_dim = action_dim
+
+        self.actor = None
+        self.actor_target = None
+        self.actor_optimizer = None
+
+        self.critic = None
+        self.critic_target = None
+        self.critic_optimizer = None
+
+    def create_agent(self, h_size):
+        state_dim = self.state_dim
+        action_dim = self.act_dim
+        max_action = self.max_action
+        self.actor = Actor(state_dim, action_dim, max_action, h_size)
+        self.actor_target = Actor(state_dim, action_dim, max_action, h_size)
         self.actor_target.load_state_dict(self.actor.state_dict())
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-3)
 
-        self.critic = Critic(state_dim, action_dim)
-        self.critic_target = Critic(state_dim, action_dim)
+        self.critic = Critic(state_dim, action_dim, h_size)
+        self.critic_target = Critic(state_dim, action_dim, h_size)
         self.critic_target.load_state_dict(self.critic.state_dict())
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-3)
-
-        self.max_action = max_action
-        self.act_dim = action_dim
 
     def select_action(self, state, noise=0.1):
         return self.act(state, noise=noise)
@@ -142,7 +155,6 @@ class TD3(object):
         ret = current_Q1.detach().item()
 
         return ret
-
 
     def train(self, replay_buffer, iterations):
         for it in range(iterations):
@@ -196,30 +208,36 @@ class TD3(object):
 
     def save(self, directory="./saves"):
         filename = self.name
-        torch.save(self.actor.state_dict(), '%s/%s_actor.pth' % (directory, filename))
-        torch.save(self.critic.state_dict(), '%s/%s_critic.pth' % (directory, filename))
-        torch.save(self.actor_target.state_dict(), '%s/%s_actor_target.pth' % (directory, filename))
-        torch.save(self.critic_target.state_dict(), '%s/%s_critic_target.pth' % (directory, filename))
+
+        torch.save(self.actor, '%s/%s_actor.pth' % (directory, filename))
+        torch.save(self.critic, '%s/%s_critic.pth' % (directory, filename))
+        torch.save(self.actor_target, '%s/%s_actor_target.pth' % (directory, filename))
+        torch.save(self.critic_target, '%s/%s_critic_target.pth' % (directory, filename))
 
     def load(self, directory="./saves"):
         filename = self.name
-        self.actor.load_state_dict(torch.load('%s/%s_actor.pth' % (directory, filename)))
-        self.critic.load_state_dict(torch.load('%s/%s_critic.pth' % (directory, filename)))
-        self.actor_target.load_state_dict(torch.load('%s/%s_actor_target.pth' % (directory, filename)))
-        self.critic_target.load_state_dict(torch.load('%s/%s_critic_target.pth' % (directory, filename)))
+        self.actor = torch.load('%s/%s_actor.pth' % (directory, filename))
+        self.critic = torch.load('%s/%s_critic.pth' % (directory, filename))
+        self.actor_target = torch.load('%s/%s_actor_target.pth' % (directory, filename))
+        self.critic_target = torch.load('%s/%s_critic_target.pth' % (directory, filename))
 
         print("Agent Loaded")
 
-    def try_load(self, load=True):
+    def try_load(self, load=True, h_size=300):
         if load:
             try:
                 self.load()
-            except:
+            except Exception as e:
+                print(f"Exception: {e}")
                 print(f"Unable to load model")
                 pass
         else:
-            # self.create_agent()
             print(f"Not loading - restarting training")
+            self.create_agent(h_size)
+
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-3)
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-3)
+
 
 #Hyperparameters
 GAMMA = 0.95

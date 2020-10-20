@@ -1,15 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
+import os
+import shutil
 
 from TrackSimulator import TrackSim
-from RaceTrackMap import TrackMap
+from RaceTrackMap import SimMap
 from ModelsRL import ReplayBufferTD3
 import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
-from AgentRep import RepTrainVehicle, RepRaceVehicle
 
+names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
+name = names[5]
+myMap = 'TrackMap1000'
 
 """Testing Function"""
 def RunVehicleLap(vehicle, env, show=False):
@@ -24,7 +29,7 @@ def RunVehicleLap(vehicle, env, show=False):
 
     if show:
         # vehicle.show_vehicle_history()
-        env.render_snapshot(wpts=wpts, wait=False)
+        env.render(wait=False)
         # env.render_snapshot(wpts=wpts, wait=True)
 
     return r, env.steps
@@ -33,7 +38,7 @@ def RunVehicleLap(vehicle, env, show=False):
 def test_vehicles(vehicle_list, laps=100):
     N = len(vehicle_list)
 
-    env = env_map = TrackMap('TrackMap1000')
+    env_map = SimMap(name)
     env = TrackSim(env_map)
 
     completes = np.zeros((N))
@@ -50,11 +55,11 @@ def test_vehicles(vehicle_list, laps=100):
             r, steps = RunVehicleLap(vehicle, env, True)
             print(f"#{i}: Lap time for ({vehicle.name}): {env.steps} --> Reward: {r}")
             endings[i, j] = r
-            lap_times[i, j] = steps
             if r == -1:
                 crashes[j] += 1
             else:
                 completes[j] += 1
+                lap_times[i, j] = steps
 
     print(f"\nTesting Complete ")
     print(f"-----------------------------------------------------")
@@ -69,78 +74,72 @@ def test_vehicles(vehicle_list, laps=100):
 
 
 """Training Functions"""            
-def train_mod(agent_name):
+def train_mod(agent_name, recreate=True):
+    path = 'Vehicles/' + agent_name + '/'
+
+    if recreate:
+        if os.path.exists(path):
+            try:
+                os.rmdir(path)
+            except:
+                shutil.rmtree(path)
+        os.mkdir(path)
+
     buffer = ReplayBufferTD3()
 
-    env_map = TrackMap('TrackMap1000')
-    vehicle = ModVehicleTrain(agent_name, False) # restart every time
-
+    env_map = SimMap(name)
     env = TrackSim(env_map)
+    vehicle = ModVehicleTrain(agent_name, recreate, 200, 10) # restart every time
 
-    print_n = 500
-    plot_n = 0
-    rewards, lengths = [], []
-    completes, crash_laps = 0, 0
-    complete_his, crash_his = [], []
+    print_n = 50
+    rewards, lengths, plot_n = [], [], 0
 
     done, state, score = False, env.reset(None), 0.0
-    wpts = vehicle.init_agent(env_map)
+    vehicle.init_agent(env_map)
     env_map.reset_map()
-    for n in range(100000):
+    for n in range(50000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
         nr = vehicle.add_memory_entry(r, done, s_prime, buffer)
         score += nr
+        # score += r
         state = s_prime
-        
+        # env.render(False, vehicle.scan_sim)
         vehicle.agent.train(buffer, 2)
 
-        if n % print_n == 0 and n > 0:
-            rewards.append(score)
-            exp = vehicle.agent.model.exploration_rate
-            mean = np.mean(rewards)
-            print(f"#{n} --> Score: {score:.2f} --> Mean: {mean:.2f} --> exp: {exp:.3f}")
-            score = 0
-
-            lib.plot(rewards, figure_n=2)
-
-            vehicle.agent.save()
         
         if done:
+            rewards.append(score)
             lengths.append(env.steps)
-            if plot_n % 10 == 0:
+            if plot_n % 10 == 0 or True:
                 vehicle.show_vehicle_history()
-                env.render_snapshot(wpts=wpts, wait=False)
+                env.render(scan_sim=vehicle.scan_sim, wait=False)
+                
+                mean = np.mean(rewards)
+                print(f"#{n} --> Score: {score:.2f} --> Mean: {mean:.2f} ")
 
-                # # 10 ep moving avg of laps
-                # plt.figure(5)
-                # plt.clf()
-                # plt.title('Crash history vs complete history (10)')
-                # plt.plot(crash_his)
-                # plt.plot(complete_his)
-                # plt.legend(['Crashes', 'Complete'])
+                lib.plot(rewards, figure_n=2)
+                vehicle.agent.save(directory=path)
 
-                crash_his.append(crash_laps)
-                complete_his.append(completes)
-                crash_laps = 0
-                completes = 0
-
+            score = 0
             plot_n += 1
             env_map.reset_map()
             vehicle.reset_lap()
             state = env.reset()
 
-            if r == -1:
-                crash_laps += 1
-            else:
-                completes += 1
+    vehicle.agent.save(directory=path)
 
-    vehicle.agent.save()
 
     plt.figure(2)
-    plt.savefig(f"Training Results: {vehicle.name}")
+    plt.savefig(path + f"TrainingPlot_{vehicle.name}")
 
+    data = []
+    for i in range(len(rewards)):
+        data.append([i*print_n, rewards[i]])
+    with open(path + f"TrainingData_{vehicle.name}.csv", 'w') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        csvwriter.writerows(data)
 
     return rewards
 
@@ -150,40 +149,31 @@ def train_mod(agent_name):
 
 """Main functions"""
 def main_train():
-    mod_name = "ModICRA"
-    gen_name = "GenICRA"
+    mod_name = "ModICRA_build"
 
-    train_mod(mod_name)
-    # train_gen(gen_name)
+    train_mod(mod_name, False)
+
 
 
 def main_test():
-    # mod_name = "ModICRA"
-    mod_name = "TestingWillem"
-    gen_name = "GenICRA"
-
     vehicle_list = []
-    
-    mod_vehicle = ModVehicleTest(mod_name, True)
+
+    vehicle_name = "ModICRA_build"
+    mod_vehicle = ModVehicleTest(vehicle_name)
     vehicle_list.append(mod_vehicle)
+    
+    # vehicle_name = "ModICRA_R20"
+    # mod_vehicle = ModVehicleTest(vehicle_name)
+    # vehicle_list.append(mod_vehicle)
 
     # opt_vehicle = OptimalAgent()
     # vehicle_list.append(opt_vehicle)
-
-    # gen_vehicle = RepRaceVehicle(gen_name)
-    # vehicle_list.append(gen_vehicle)
 
     test_vehicles(vehicle_list, 100)
 
 
 if __name__ == "__main__":
 
-    # RunModAgent()
-    # RunRepAgent()
-    # RunAutoAgent()
-    # RunOptimalControlAgent()
-    # RunOptimalAgent()
-    # RunFullAgent()
 
-    main_test()
-    # main_train()
+    main_train()
+    # main_test()

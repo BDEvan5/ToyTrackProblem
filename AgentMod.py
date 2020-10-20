@@ -5,12 +5,12 @@ from matplotlib import pyplot as plt
 from ModelsRL import TD3
 
 import LibFunctions as lib
-
+from TrackSimulator import ScanSimulator
 
 
 
 class BaseModAgent:
-    def __init__(self, name, load):
+    def __init__(self, name, n_beams):
         self.name = name
         self.env_map = None
         self.wpts = None
@@ -30,20 +30,18 @@ class BaseModAgent:
         self.max_d = 0.4
 
         # agent stuff 
-        self.action_space = 5
-        self.center_act = int((self.action_space - 1) / 2)
         self.state_action = None
         self.cur_nn_act = None
-        self.prev_nn_act = self.center_act
+        self.prev_nn_act = 0
 
-        # self.agent = DQN(11, self.action_space, name)
-        self.agent = TD3(14, 1, 1, name)
-        self.agent.try_load(load)
+        self.scan_sim = ScanSimulator(n_beams, np.pi)
+        self.n_beams = n_beams
 
     def init_agent(self, env_map):
         self.env_map = env_map
-        self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
- 
+        
+        self.scan_sim.set_check_fcn(self.env_map.check_scan_location)
+
         self.wpts = self.env_map.get_min_curve_path()
 
         r_line = self.wpts
@@ -106,7 +104,7 @@ class BaseModAgent:
         plt.figure(3)
         plt.clf()
         plt.title('Rewards')
-        plt.ylim([-1.5, 10])
+        plt.ylim([-1.5, 4])
         plt.plot(self.reward_history, 'x', markersize=12)
         plt.plot(self.critic_history)
 
@@ -118,7 +116,9 @@ class BaseModAgent:
         vr_scale = [(v_ref)/self.max_v]
         dr_scale = [d_ref/self.max_d]
 
-        nn_obs = np.concatenate([cur_v, cur_d, vr_scale, dr_scale, obs[5:]])
+        scan = self.scan_sim.get_scan(obs[0], obs[1], obs[2])
+
+        nn_obs = np.concatenate([cur_v, cur_d, vr_scale, dr_scale, scan])
 
         return nn_obs
 
@@ -148,11 +148,15 @@ class BaseModAgent:
 
 
 class ModVehicleTrain(BaseModAgent):
-    def __init__(self, name, load):
-        BaseModAgent.__init__(self, name, load)
+    def __init__(self, name, load, h_size, n_beams):
+        BaseModAgent.__init__(self, name, n_beams)
 
         self.current_v_ref = None
         self.current_phi_ref = None
+
+        state_space = 4 + self.n_beams
+        self.agent = TD3(state_space, 1, 1, name)
+        self.agent.try_load(load, h_size)
 
     def act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)
@@ -173,11 +177,11 @@ class ModVehicleTrain(BaseModAgent):
         return [v_ref, d_ref]
 
     def update_reward(self, reward, action):
-        beta = 0.1
+        beta = 0.2
         if reward == -1:
             new_reward = -1
         else:
-            new_reward = 0.2 - abs(action[0]) * beta
+            new_reward = 0.08 - abs(action[0]) * beta
 
         self.reward_history.append(new_reward)
 
@@ -198,13 +202,22 @@ class ModVehicleTrain(BaseModAgent):
 
 
 class ModVehicleTest(BaseModAgent):
-    def __init__(self, name, load):
-        BaseModAgent.__init__(self, name, load)
+    def __init__(self, name):
+        path = 'Vehicles/' + name + ''
+        state_space = 4 
+        self.agent = TD3(state_space, 1, 1, name)
+        self.agent.load(directory=path)
+
+        print(f"NN: {self.agent.actor.type}")
+
+        nn_size = self.agent.actor.l1.in_features
+        n_beams = nn_size - 4
+        BaseModAgent.__init__(self, name, n_beams)
 
         self.current_v_ref = None
         self.current_phi_ref = None
 
-        self.mem_save = True
+
 
     def act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)

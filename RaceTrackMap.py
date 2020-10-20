@@ -107,8 +107,11 @@ class MapBase:
         return False
 
     def render_map(self, figure_n=4, wait=False):
-        plt.figure(figure_n)
+        f = plt.figure(figure_n)
         plt.clf()
+
+        plt.xlim([0, self.width])
+        plt.ylim([self.height, 0])
 
         track = self.track
         c_line = track[:, 0:2]
@@ -123,17 +126,21 @@ class MapBase:
         plt.plot(rx, ry, linewidth=1)
 
         if self.wpts is not None:
+            xs, ys = [], []
             for pt in self.wpts:
                 x, y = self.convert_position(pt)
                 # plt.plot(x, y, '+', markersize=14)
-                plt.plot(x, y, '--')
+                xs.append(x)
+                ys.append(y)
+            plt.plot(xs, ys, '--', linewidth=2)
 
         if self.obs_map is None:
             plt.imshow(self.scan_map)
         else:
             plt.imshow(self.obs_map + self.scan_map)
 
-        plt.axes().set_aspect('equal', 'datalim')
+        plt.gca().set_aspect('equal', 'datalim')
+
         plt.pause(0.0001)
         if wait:
             plt.show()
@@ -148,7 +155,7 @@ class SimMap(MapBase):
     def get_min_curve_path(self):
         path_name = 'Maps/' + self.name + "_path.npy"
         try:
-            raise Exception
+            # raise Exception
             path = np.load(path_name)
             print(f"Path loaded from file: min curve")
         except:
@@ -185,8 +192,7 @@ class SimMap(MapBase):
                     self.obs_map[y+j, x+i] = 1
 
     def reset_map(self):
-        self.random_obs(10)
-
+        self.random_obs(20)
 
 
 class MapConverter(MapBase):
@@ -537,13 +543,13 @@ class MapConverter(MapBase):
 
 def test_map_converter():
     names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
-    name = names[1]
-    myConv = MapConverter(name)
-    myConv.run_conversion()
+    name = names[5]
+    # myConv = MapConverter(name)
+    # myConv.run_conversion()
 
-    t = TrackMap(name)
+    t = SimMap(name)
     t.get_min_curve_path()
-    t.plot_race_line(t.path, True)
+    t.render_map(wait=True)
 
 
 if __name__ == "__main__":
