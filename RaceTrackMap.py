@@ -128,7 +128,10 @@ class MapBase:
                 # plt.plot(x, y, '+', markersize=14)
                 plt.plot(x, y, '--')
 
-        plt.imshow(self.scan_map)
+        if self.obs_map is None:
+            plt.imshow(self.scan_map)
+        else:
+            plt.imshow(self.obs_map + self.scan_map)
 
         plt.axes().set_aspect('equal', 'datalim')
         plt.pause(0.0001)
@@ -161,8 +164,28 @@ class SimMap(MapBase):
 
         return path
 
+    def random_obs(self, n=10):
+        self.obs_map = np.zeros_like(self.obs_map)
 
+        # obs_size = [0.3, 0.4]
+        obs_size = [1, 1]
+        x, y = self.convert_int_position(obs_size)
+        obs_size = [x, y]
+    
+        rands = np.random.randint(1, self.N-1, n)
+        obs_locs = []
+        for i in range(n):
+            pt = self.track_pts[rands[i]][:, None]
+            obs_locs.append(pt[:, 0])
 
+        for obs in obs_locs:
+            for i in range(0, obs_size[0]):
+                for j in range(0, obs_size[1]):
+                    x, y = self.convert_int_position([obs[0], obs[1]])
+                    self.obs_map[y+j, x+i] = 1
+
+    def reset_map(self):
+        self.random_obs(10)
 
 
 
@@ -250,23 +273,6 @@ class TrackMap:
             return True
         return False
 
-    def random_obs(self, n=10):
-        resolution = 100
-        self.obs_map = np.zeros((resolution, resolution))
-        obs_size = [3, 4]
-        rands = np.random.randint(1, self.N-1, n)
-        obs_locs = []
-        for i in range(n):
-            # obs_locs.append(lib.get_rand_ints(40, 25))
-            pt = self.track_pts[rands[i]][:, None]
-            obs_locs.append(pt[:, 0])
-
-        for obs in obs_locs:
-            for i in range(0, obs_size[0]):
-                for j in range(0, obs_size[1]):
-                    x = min(int(round(i + obs[0]/ self.obs_res)), 99)
-                    y = min(int(round(j + obs[1]/ self.obs_res)), 99)
-                    self.obs_map[x, y] = 1
 
     def set_up_scan_map(self):
         try:
@@ -305,8 +311,7 @@ class TrackMap:
             return True
         return False
 
-    def reset_map(self):
-        self.random_obs(10)
+
 
     def get_s_progress(self, x):
         idx = self.find_nearest_point(x)

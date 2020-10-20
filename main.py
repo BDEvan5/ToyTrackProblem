@@ -45,11 +45,9 @@ def RunOptimalAgent():
 
 """Training functions: PURE MOD"""
 def TrainModVehicle(agent_name, load=True):
-    # buffer = ReplayBufferDQN()
     buffer = ReplayBufferTD3()
 
-    # env_map = TrackMap('TrackMap1000')
-    # env_map = SimMap(name)
+    env_map = SimMap(name)
     vehicle = ModVehicleTrain(agent_name, load)
 
     env = TrackSim(env_map)
@@ -92,7 +90,7 @@ def TrainModVehicle(agent_name, load=True):
             score = 0
             lengths.append(env.steps)
             vehicle.show_vehicle_history()
-            env.render_snapshot(wpts=wpts, wait=False)
+            env.render(wpts=wpts, wait=False)
             if plot_n % 10 == 0:
 
                 crash_his.append(crash_laps)
@@ -200,9 +198,9 @@ def testVehicle(vehicle, show=False, obs=True):
 
 """Total functions"""
 def RunModAgent():
-    agent_name = "TestingWillem"
+    agent_name = "TestingMod"
     
-    # TrainModVehicle(agent_name, False)
+    TrainModVehicle(agent_name, False)
     # TrainModVehicle(agent_name, True)
 
     vehicle = ModVehicleTrain(agent_name, True)
@@ -220,8 +218,8 @@ def RunRefGenAgent():
 
 if __name__ == "__main__":
 
-    # RunModAgent()
-    RunOptimalAgent()
+    RunModAgent()
+    # RunOptimalAgent()
     # RunRefGenAgent()
 
 
