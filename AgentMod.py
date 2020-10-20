@@ -104,7 +104,7 @@ class BaseModAgent:
         plt.figure(3)
         plt.clf()
         plt.title('Rewards')
-        plt.ylim([-1.5, 10])
+        plt.ylim([-1.5, 4])
         plt.plot(self.reward_history, 'x', markersize=12)
         plt.plot(self.critic_history)
 
@@ -177,11 +177,11 @@ class ModVehicleTrain(BaseModAgent):
         return [v_ref, d_ref]
 
     def update_reward(self, reward, action):
-        beta = 0.1
+        beta = 0.2
         if reward == -1:
             new_reward = -1
         else:
-            new_reward = 0.05 - abs(action[0]) * beta
+            new_reward = 0.08 - abs(action[0]) * beta
 
         self.reward_history.append(new_reward)
 

@@ -227,7 +227,8 @@ class TD3(object):
         if load:
             try:
                 self.load()
-            except:
+            except Exception as e:
+                print(f"Exception: {e}")
                 print(f"Unable to load model")
                 pass
         else:

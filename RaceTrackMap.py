@@ -126,10 +126,13 @@ class MapBase:
         plt.plot(rx, ry, linewidth=1)
 
         if self.wpts is not None:
+            xs, ys = [], []
             for pt in self.wpts:
                 x, y = self.convert_position(pt)
                 # plt.plot(x, y, '+', markersize=14)
-                plt.plot(x, y, '--')
+                xs.append(x)
+                ys.append(y)
+            plt.plot(xs, ys, '--', linewidth=2)
 
         if self.obs_map is None:
             plt.imshow(self.scan_map)
@@ -540,13 +543,13 @@ class MapConverter(MapBase):
 
 def test_map_converter():
     names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
-    name = names[1]
-    myConv = MapConverter(name)
-    myConv.run_conversion()
+    name = names[5]
+    # myConv = MapConverter(name)
+    # myConv.run_conversion()
 
-    t = TrackMap(name)
+    t = SimMap(name)
     t.get_min_curve_path()
-    t.plot_race_line(t.path, True)
+    t.render_map(wait=True)
 
 
 if __name__ == "__main__":

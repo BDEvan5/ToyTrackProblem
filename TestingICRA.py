@@ -74,20 +74,22 @@ def test_vehicles(vehicle_list, laps=100):
 
 
 """Training Functions"""            
-def train_mod(agent_name):
+def train_mod(agent_name, recreate=True):
     path = 'Vehicles/' + agent_name + '/'
-    if os.path.exists(path):
-        try:
-            os.rmdir(path)
-        except:
-            shutil.rmtree(path)
-    os.mkdir(path)
+
+    if recreate:
+        if os.path.exists(path):
+            try:
+                os.rmdir(path)
+            except:
+                shutil.rmtree(path)
+        os.mkdir(path)
 
     buffer = ReplayBufferTD3()
 
     env_map = SimMap(name)
     env = TrackSim(env_map)
-    vehicle = ModVehicleTrain(agent_name, False, 200, 20) # restart every time
+    vehicle = ModVehicleTrain(agent_name, recreate, 200, 10) # restart every time
 
     print_n = 50
     rewards, lengths, plot_n = [], [], 0
@@ -106,21 +108,21 @@ def train_mod(agent_name):
         # env.render(False, vehicle.scan_sim)
         vehicle.agent.train(buffer, 2)
 
-        if n % print_n == 0 and n > 0:
-            rewards.append(score)
-            mean = np.mean(rewards)
-            print(f"#{n} --> Score: {score:.2f} --> Mean: {mean:.2f} ")
-            score = 0
-
-            lib.plot(rewards, figure_n=2)
-            vehicle.agent.save(directory=path)
         
         if done:
+            rewards.append(score)
             lengths.append(env.steps)
-            if plot_n % 10 == 0:
+            if plot_n % 10 == 0 or True:
                 vehicle.show_vehicle_history()
                 env.render(scan_sim=vehicle.scan_sim, wait=False)
+                
+                mean = np.mean(rewards)
+                print(f"#{n} --> Score: {score:.2f} --> Mean: {mean:.2f} ")
 
+                lib.plot(rewards, figure_n=2)
+                vehicle.agent.save(directory=path)
+
+            score = 0
             plot_n += 1
             env_map.reset_map()
             vehicle.reset_lap()
@@ -149,7 +151,7 @@ def train_mod(agent_name):
 def main_train():
     mod_name = "ModICRA_build"
 
-    train_mod(mod_name)
+    train_mod(mod_name, False)
 
 
 
