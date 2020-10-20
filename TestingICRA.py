@@ -29,7 +29,7 @@ def RunVehicleLap(vehicle, env, show=False):
 
     if show:
         # vehicle.show_vehicle_history()
-        env.render_snapshot(wpts=wpts, wait=False)
+        env.render(wait=False)
         # env.render_snapshot(wpts=wpts, wait=True)
 
     return r, env.steps
@@ -165,13 +165,13 @@ def main_train():
 def main_test():
     vehicle_list = []
 
-    vehicle_name = "TestingWillem"
-    mod_vehicle = ModVehicleTest(vehicle_name, directory=path)
+    vehicle_name = "ModICRA_build"
+    mod_vehicle = ModVehicleTest(vehicle_name)
     vehicle_list.append(mod_vehicle)
     
-    vehicle_name = "ModICRA_R20"
-    mod_vehicle = ModVehicleTest(vehicle_name, directory=path)
-    vehicle_list.append(mod_vehicle)
+    # vehicle_name = "ModICRA_R20"
+    # mod_vehicle = ModVehicleTest(vehicle_name)
+    # vehicle_list.append(mod_vehicle)
 
     # opt_vehicle = OptimalAgent()
     # vehicle_list.append(opt_vehicle)
@@ -182,5 +182,5 @@ def main_test():
 if __name__ == "__main__":
 
 
-    main_train()
-    # main_test()
+    # main_train()
+    main_test()

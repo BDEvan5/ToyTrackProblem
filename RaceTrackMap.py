@@ -152,7 +152,7 @@ class SimMap(MapBase):
     def get_min_curve_path(self):
         path_name = 'Maps/' + self.name + "_path.npy"
         try:
-            raise Exception
+            # raise Exception
             path = np.load(path_name)
             print(f"Path loaded from file: min curve")
         except:

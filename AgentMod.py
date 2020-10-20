@@ -34,7 +34,6 @@ class BaseModAgent:
         self.cur_nn_act = None
         self.prev_nn_act = 0
 
-        self.agent = None      
         self.scan_sim = ScanSimulator(n_beams, np.pi)
         self.n_beams = n_beams
 
@@ -203,17 +202,22 @@ class ModVehicleTrain(BaseModAgent):
 
 
 class ModVehicleTest(BaseModAgent):
-    def __init__(self, name, directory, n_beams):
+    def __init__(self, name):
+        path = 'Vehicles/' + name + ''
+        state_space = 4 
+        self.agent = TD3(state_space, 1, 1, name)
+        self.agent.load(directory=path)
+
+        print(f"NN: {self.agent.actor.type}")
+
+        nn_size = self.agent.actor.l1.in_features
+        n_beams = nn_size - 4
         BaseModAgent.__init__(self, name, n_beams)
 
         self.current_v_ref = None
         self.current_phi_ref = None
 
-        self.mem_save = True
 
-        state_space = 4 + self.n_beams
-        self.agent = TD3(state_space, 1, 1, name)
-        self.agent.load(directory=directory)
 
     def act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)

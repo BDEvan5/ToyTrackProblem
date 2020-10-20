@@ -208,17 +208,18 @@ class TD3(object):
 
     def save(self, directory="./saves"):
         filename = self.name
-        torch.save(self.actor.state_dict(), '%s/%s_actor.pth' % (directory, filename))
-        torch.save(self.critic.state_dict(), '%s/%s_critic.pth' % (directory, filename))
-        torch.save(self.actor_target.state_dict(), '%s/%s_actor_target.pth' % (directory, filename))
-        torch.save(self.critic_target.state_dict(), '%s/%s_critic_target.pth' % (directory, filename))
+
+        torch.save(self.actor, '%s/%s_actor.pth' % (directory, filename))
+        torch.save(self.critic, '%s/%s_critic.pth' % (directory, filename))
+        torch.save(self.actor_target, '%s/%s_actor_target.pth' % (directory, filename))
+        torch.save(self.critic_target, '%s/%s_critic_target.pth' % (directory, filename))
 
     def load(self, directory="./saves"):
         filename = self.name
-        self.actor.load_state_dict(torch.load('%s/%s_actor.pth' % (directory, filename)))
-        self.critic.load_state_dict(torch.load('%s/%s_critic.pth' % (directory, filename)))
-        self.actor_target.load_state_dict(torch.load('%s/%s_actor_target.pth' % (directory, filename)))
-        self.critic_target.load_state_dict(torch.load('%s/%s_critic_target.pth' % (directory, filename)))
+        self.actor = torch.load('%s/%s_actor.pth' % (directory, filename))
+        self.critic = torch.load('%s/%s_critic.pth' % (directory, filename))
+        self.actor_target = torch.load('%s/%s_actor_target.pth' % (directory, filename))
+        self.critic_target = torch.load('%s/%s_critic_target.pth' % (directory, filename))
 
         print("Agent Loaded")
 
