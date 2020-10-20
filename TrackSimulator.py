@@ -207,7 +207,7 @@ class TrackSim:
             # self.done = True
             self.reward = -1
             self.done_reason = f"Friction limit reached: {horizontal_force} > {self.car.max_friction_force}"
-        if self.steps > 2000:
+        if self.steps > 500:
             self.done = True
             self.done_reason = f"Max steps"
         # start_y = self.env_map.start[1]

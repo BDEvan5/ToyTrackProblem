@@ -90,7 +90,7 @@ def train_mod(agent_name):
 
     env = TrackSim(env_map)
 
-    print_n = 500
+    print_n = 50
     plot_n = 0
     rewards, lengths = [], []
     completes, crash_laps = 0, 0
@@ -99,7 +99,7 @@ def train_mod(agent_name):
     done, state, score = False, env.reset(None), 0.0
     wpts = vehicle.init_agent(env_map)
     env_map.reset_map()
-    for n in range(50000):
+    for n in range(500):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
@@ -145,8 +145,14 @@ def train_mod(agent_name):
 
 
     plt.figure(2)
-    plt.savefig(path + f"Training Results: {vehicle.name}")
+    plt.savefig(path + f"TrainingPlot_{vehicle.name}")
 
+    data = []
+    for i in range(len(rewards)):
+        data.append([i*print_n, rewards[i]])
+    with open(path + f"TrainingData_{vehicle.name}.csv", 'w') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        csvwriter.writerows(data)
 
     return rewards
 
@@ -182,5 +188,5 @@ def main_test():
 if __name__ == "__main__":
 
 
-    # main_train()
-    main_test()
+    main_train()
+    # main_test()
