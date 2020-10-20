@@ -86,20 +86,16 @@ def train_mod(agent_name):
     buffer = ReplayBufferTD3()
 
     env_map = SimMap(name)
+    env = TrackSim(env_map)
     vehicle = ModVehicleTrain(agent_name, False, 200, 20) # restart every time
 
-    env = TrackSim(env_map)
-
     print_n = 50
-    plot_n = 0
-    rewards, lengths = [], []
-    completes, crash_laps = 0, 0
-    complete_his, crash_his = [], []
+    rewards, lengths, plot_n = [], [], 0
 
     done, state, score = False, env.reset(None), 0.0
-    wpts = vehicle.init_agent(env_map)
+    vehicle.init_agent(env_map)
     env_map.reset_map()
-    for n in range(500):
+    for n in range(50000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
@@ -117,7 +113,6 @@ def train_mod(agent_name):
             score = 0
 
             lib.plot(rewards, figure_n=2)
-
             vehicle.agent.save(directory=path)
         
         if done:
@@ -126,20 +121,10 @@ def train_mod(agent_name):
                 vehicle.show_vehicle_history()
                 env.render(scan_sim=vehicle.scan_sim, wait=False)
 
-                crash_his.append(crash_laps)
-                complete_his.append(completes)
-                crash_laps = 0
-                completes = 0
-
             plot_n += 1
             env_map.reset_map()
             vehicle.reset_lap()
             state = env.reset()
-
-            if r == -1:
-                crash_laps += 1
-            else:
-                completes += 1
 
     vehicle.agent.save(directory=path)
 

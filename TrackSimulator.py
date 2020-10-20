@@ -101,7 +101,7 @@ class ScanSimulator:
 
 class TrackSim:
     def __init__(self, env_map):
-        self.timestep = 0.01
+        self.timestep = 0.02
 
         self.env_map = env_map
 
@@ -217,7 +217,7 @@ class TrackSim:
         #         self.done_reason = f"Lap complete"
 
         car = [self.car.x, self.car.y]
-        if lib.get_distance(car, self.env_map.start) < 0.5 and self.steps > 15:
+        if lib.get_distance(car, self.env_map.start) < 2 and self.steps > 100:
             self.done = True
             self.reward = 1
             self.done_reason = f"Lap complete"
