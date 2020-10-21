@@ -69,8 +69,8 @@ class ScanSimulator:
         self.dth = self.fov / (self.number_of_beams -1)
         self.scan_output = np.zeros(number_of_beams)
 
-        self.step_size = 0.1
-        self.n_searches = 50
+        self.step_size = 0.2
+        self.n_searches = 20
 
         self.race_map = None
         self.x_bound = [1, 99]

@@ -138,7 +138,7 @@ def testVehicle(vehicle, show=False, obs=True):
             a = vehicle.act(state)
             s_p, r, done, _ = env.step(a)
             state = s_p
-            # env.render(False, wpts)
+            # env.render(False, vehicle.scan_sim)
         print(f"Lap time updates: {env.steps}")
         if show:
             # vehicle.show_vehicle_history()

@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 
 import LibFunctions as lib
 from TrajectoryPlanner import MinCurvatureTrajectory, generate_velocities
-
+from TrackSimulator import ScanSimulator
 
 
 class OptimalAgent:
@@ -22,8 +22,11 @@ class OptimalAgent:
         self.current_v_ref = None
         self.current_phi_ref = None
 
+        # self.scan_sim = ScanSimulator(20)
+
     def init_agent(self, env_map):
         self.env_map = env_map
+        # self.scan_sim.set_check_fcn(self.env_map.check_scan_location)
         self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
  
         self.wpts = self.env_map.get_min_curve_path()
@@ -40,6 +43,8 @@ class OptimalAgent:
         return self.wpts
 
     def act(self, obs):
+        scan = self.scan_sim.get_scan(obs[0], obs[1], obs[2])
+
         v_ref, d_ref = self.get_target_references(obs)
 
         # possibly clip if needed, but shouldn't change much.
