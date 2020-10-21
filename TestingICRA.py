@@ -35,7 +35,7 @@ def RunVehicleLap(vehicle, env, show=False):
     return r, env.steps
 
 
-def test_vehicles(vehicle_list, laps=100):
+def test_vehicles(vehicle_list, laps, eval_name, add_obs):
     N = len(vehicle_list)
 
     env_map = SimMap(name)
@@ -45,9 +45,11 @@ def test_vehicles(vehicle_list, laps=100):
     crashes = np.zeros((N))
     lap_times = np.zeros((laps, N))
     endings = np.zeros((laps, N)) #store env reward
+    lap_times = [[] for i in range(N)]
 
     for i in range(laps):
-        env_map.reset_map()
+        if add_obs:
+            env_map.reset_map()
         for j in range(N):
             vehicle = vehicle_list[j]
 
@@ -59,7 +61,22 @@ def test_vehicles(vehicle_list, laps=100):
                 crashes[j] += 1
             else:
                 completes[j] += 1
-                lap_times[i, j] = steps
+                lap_times[j].append(steps)
+
+    test_name = 'Vehicles/' + eval_name + '.txt'
+    with open(test_name, 'w') as file_obj:
+        file_obj.write(f"\nTesting Complete \n")
+        file_obj.write(f"Map name: {name} \n")
+        file_obj.write(f"-----------------------------------------------------\n")
+        file_obj.write(f"-----------------------------------------------------\n")
+        for i in range(N):
+            file_obj.write(f"Vehicle: {vehicle_list[i].name}\n")
+            file_obj.write(f"Crashes: {crashes[i]} --> Completes {completes[i]}\n")
+            percent = (completes[i] / (completes[i] + crashes[i]) * 100)
+            file_obj.write(f"% Finished = {percent:.2f}\n")
+            file_obj.write(f"Avg lap times: {np.mean(lap_times[i])}\n")
+            file_obj.write(f"-----------------------------------------------------\n")
+
 
     print(f"\nTesting Complete ")
     print(f"-----------------------------------------------------")
@@ -76,6 +93,7 @@ def test_vehicles(vehicle_list, laps=100):
 """Training Functions"""            
 def train_mod(agent_name, recreate=True):
     path = 'Vehicles/' + agent_name + '/'
+    csv_path = path + f"TrainingData_{agent_name}.csv"
 
     if recreate:
         if os.path.exists(path):
@@ -89,15 +107,14 @@ def train_mod(agent_name, recreate=True):
 
     env_map = SimMap(name)
     env = TrackSim(env_map)
-    vehicle = ModVehicleTrain(agent_name, recreate, 200, 10) # restart every time
+    vehicle = ModVehicleTrain(agent_name, not recreate, 300, 10) # restart every time
 
-    print_n = 50
     rewards, lengths, plot_n = [], [], 0
 
     done, state, score = False, env.reset(None), 0.0
     vehicle.init_agent(env_map)
     env_map.reset_map()
-    for n in range(50000):
+    for n in range(100000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
@@ -112,15 +129,16 @@ def train_mod(agent_name, recreate=True):
         if done:
             rewards.append(score)
             lengths.append(env.steps)
-            if plot_n % 10 == 0 or True:
-                vehicle.show_vehicle_history()
-                env.render(scan_sim=vehicle.scan_sim, wait=False)
+            if plot_n % 10 == 0:
+                # vehicle.show_vehicle_history()
+                # env.render(scan_sim=vehicle.scan_sim, wait=False)
                 
                 mean = np.mean(rewards)
                 print(f"#{n} --> Score: {score:.2f} --> Mean: {mean:.2f} ")
 
                 lib.plot(rewards, figure_n=2)
                 vehicle.agent.save(directory=path)
+                save_csv_data(rewards, csv_path)
 
             score = 0
             plot_n += 1
@@ -134,23 +152,25 @@ def train_mod(agent_name, recreate=True):
     plt.figure(2)
     plt.savefig(path + f"TrainingPlot_{vehicle.name}")
 
-    data = []
-    for i in range(len(rewards)):
-        data.append([i*print_n, rewards[i]])
-    with open(path + f"TrainingData_{vehicle.name}.csv", 'w') as csvfile:
-        csvwriter = csv.writer(csvfile)
-        csvwriter.writerows(data)
+    save_csv_data(rewards, csv_path)
 
     return rewards
 
 
-
+def save_csv_data(rewards, path):
+    data = []
+    for i in range(len(rewards)):
+        data.append([i, rewards[i]])
+    with open(path, 'w') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        csvwriter.writerows(data)
 
 
 """Main functions"""
 def main_train():
-    mod_name = "ModICRA_build"
+    mod_name = "ModICRA_build3"
 
+    # train_mod(mod_name, True)
     train_mod(mod_name, False)
 
 
@@ -158,22 +178,24 @@ def main_train():
 def main_test():
     vehicle_list = []
 
-    vehicle_name = "ModICRA_build"
+    vehicle_name = "ModICRA_build3"
     mod_vehicle = ModVehicleTest(vehicle_name)
     vehicle_list.append(mod_vehicle)
     
-    # vehicle_name = "ModICRA_R20"
+    # vehicle_name = "ModICRA_build"
     # mod_vehicle = ModVehicleTest(vehicle_name)
     # vehicle_list.append(mod_vehicle)
 
     # opt_vehicle = OptimalAgent()
     # vehicle_list.append(opt_vehicle)
 
-    test_vehicles(vehicle_list, 100)
+    # test_vehicles(vehicle_list, 10, "EvalFour")
+    test_vehicles(vehicle_list, 100, "EvalFive", True)
+    # test_vehicles(vehicle_list, 5, "EvalTwo")
 
 
 if __name__ == "__main__":
 
 
-    main_train()
-    # main_test()
+    # main_train()
+    main_test()

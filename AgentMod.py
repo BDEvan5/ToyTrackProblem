@@ -177,11 +177,11 @@ class ModVehicleTrain(BaseModAgent):
         return [v_ref, d_ref]
 
     def update_reward(self, reward, action):
-        beta = 0.2
+        beta = 0.1
         if reward == -1:
             new_reward = -1
         else:
-            new_reward = 0.08 - abs(action[0]) * beta
+            new_reward = 0.1 - abs(action[0]) * beta
 
         self.reward_history.append(new_reward)
 
