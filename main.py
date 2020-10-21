@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
+import sys, os, shutil
 
-import torch
+import timeit
 
 from TrackSimulator import TrackSim
 from RaceTrackMap import  SimMap
@@ -11,7 +11,6 @@ import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
-from AgentRefGen import RefGenVehicleTrain, RefGenVehicleTest
 
 names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
 name = names[5]
@@ -38,15 +37,24 @@ def RunOptimalAgent():
 
     print(f"Score: {score}")
     # env.show_history()
-    env.render(wait=True, wpts=wpts)
+    env.render(wait=False)
 
 
 """Training functions: PURE MOD"""
 def TrainModVehicle(agent_name, load=True):
     buffer = ReplayBufferTD3()
+    path = 'Vehicles/' + agent_name 
+
+    if os.path.exists(path):
+        try:
+            os.rmdir(path)
+        except:
+            shutil.rmtree(path)
+    os.mkdir(path)
+
 
     env_map = SimMap(name)
-    vehicle = ModVehicleTrain(agent_name, load)
+    vehicle = ModVehicleTrain(agent_name, load, 200, 10)
 
     env = TrackSim(env_map)
 
@@ -81,14 +89,14 @@ def TrainModVehicle(agent_name, load=True):
             
             lib.plot(rewards, figure_n=2)
 
-            vehicle.agent.save()
+            vehicle.agent.save(directory=path)
         
         if done:
             rewards.append(score)
             score = 0
             lengths.append(env.steps)
             vehicle.show_vehicle_history()
-            env.render(wpts=wpts, wait=False)
+            env.render(wait=False)
             if plot_n % 10 == 0:
 
                 crash_his.append(crash_laps)
@@ -107,54 +115,13 @@ def TrainModVehicle(agent_name, load=True):
                 completes += 1
 
 
-    vehicle.agent.save()
+    vehicle.agent.save(directory=path)
 
     return rewards
 
-
-"""Training for Ref Gen agent"""
-def TrainRefGenVehicle(agent_name, load):
-    print(f"Training Full Vehicle performance")
-    env_map = TrackMap('TrackMap1000')
-    buffer = ReplayBufferTD3()
-
-    env = TrackSim(env_map)
-    vehicle = RefGenVehicleTrain(agent_name, load)
-
-    # env_map.reset_map()
-    wpts = vehicle.init_agent(env_map)
-    done, state, score = False, env.reset(None), 0.0
-    total_rewards = []
-    for i in range(100000):
-        action = vehicle.act(state)
-        s_p, r, done, _ = env.step(action)
-        state = s_p
-
-        n_r = vehicle.add_memory_entry(buffer, r, s_p, done)
-        l = vehicle.agent.train(buffer, 2)
-        # score += n_r
-        score += l
-        # env.render(False, wpts)
-
-        if done:
-            print(f"#{i}: Ep done in {env.steps} steps --> NewReward: {score} ")
-            vehicle.show_history()
-            env.render_snapshot(wait=False)
-            env.reset()
-            total_rewards.append(score)
-
-            plt.figure(5)
-            plt.clf()
-            plt.title('Total rewards')
-            plt.plot(total_rewards)
-            score = 0
-            vehicle.reset_lap()
-            vehicle.agent.save()
-
-
 """General test function"""
 def testVehicle(vehicle, show=False, obs=True):
-    env_map = TrackMap('TrackMap1000')
+    env_map = SimMap(name)
     env = TrackSim(env_map)
 
     crashes = 0
@@ -171,11 +138,11 @@ def testVehicle(vehicle, show=False, obs=True):
             a = vehicle.act(state)
             s_p, r, done, _ = env.step(a)
             state = s_p
-            # env.render(False, wpts)
+            # env.render(False, vehicle.scan_sim)
         print(f"Lap time updates: {env.steps}")
         if show:
             # vehicle.show_vehicle_history()
-            env.render_snapshot(wpts=wpts, wait=False)
+            env.render(wait=False)
 
         if r == -1:
             state = env.reset(None)
@@ -198,27 +165,34 @@ def testVehicle(vehicle, show=False, obs=True):
 def RunModAgent():
     agent_name = "TestingMod"
     
-    TrainModVehicle(agent_name, False)
+    # TrainModVehicle(agent_name, False)
     # TrainModVehicle(agent_name, True)
 
-    vehicle = ModVehicleTrain(agent_name, True)
-    testVehicle(vehicle, obs=True, show=True)
+    vehicle = ModVehicleTest(agent_name)
+    # testVehicle(vehicle, obs=True, show=True)
+    testVehicle(vehicle, obs=False, show=True)
 
-def RunRefGenAgent():
-    agent_name = "TestingFull"
+def testOptimal():
+    agent = OptimalAgent()
 
-    TrainRefGenVehicle(agent_name, False)
-    # TrainRefGenVehicle(agent_name, True)
+    testVehicle(agent, obs=False, show=True)
 
-    # vehicle = RefGenVehicleTest(agent_name, True)
-    # testVehicle(vehicle, True)
+
+def timing():
+    # t = timeit.timeit(stmt=RunModAgent, number=1)
+    # print(f"Time: {t}")
+    
+    t = timeit.timeit(stmt=testOptimal, number=1)
+    print(f"Time: {t}")
 
 
 if __name__ == "__main__":
 
-    RunModAgent()
+    # RunModAgent()
     # RunOptimalAgent()
-    # RunRefGenAgent()
+
+    timing()
+
 
 
 
