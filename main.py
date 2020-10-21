@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import sys, os
+import sys, os, shutil
 
-import torch
+import timeit
 
 from TrackSimulator import TrackSim
 from RaceTrackMap import  SimMap
@@ -37,7 +37,7 @@ def RunOptimalAgent():
 
     print(f"Score: {score}")
     # env.show_history()
-    env.render(wait=True, wpts=wpts)
+    env.render(wait=False)
 
 
 """Training functions: PURE MOD"""
@@ -121,7 +121,7 @@ def TrainModVehicle(agent_name, load=True):
 
 """General test function"""
 def testVehicle(vehicle, show=False, obs=True):
-    env_map = TrackMap('TrackMap1000')
+    env_map = SimMap(name)
     env = TrackSim(env_map)
 
     crashes = 0
@@ -142,7 +142,7 @@ def testVehicle(vehicle, show=False, obs=True):
         print(f"Lap time updates: {env.steps}")
         if show:
             # vehicle.show_vehicle_history()
-            env.render_snapshot(wpts=wpts, wait=False)
+            env.render(wait=False)
 
         if r == -1:
             state = env.reset(None)
@@ -165,17 +165,35 @@ def testVehicle(vehicle, show=False, obs=True):
 def RunModAgent():
     agent_name = "TestingMod"
     
-    TrainModVehicle(agent_name, False)
+    # TrainModVehicle(agent_name, False)
     # TrainModVehicle(agent_name, True)
 
     vehicle = ModVehicleTest(agent_name)
-    testVehicle(vehicle, obs=True, show=True)
+    # testVehicle(vehicle, obs=True, show=True)
+    testVehicle(vehicle, obs=False, show=True)
+
+def testOptimal():
+    agent = OptimalAgent()
+
+    testVehicle(agent, obs=False, show=True)
+
+
+def timing():
+    # t = timeit.timeit(stmt=RunModAgent, number=1)
+    # print(f"Time: {t}")
+    
+    t = timeit.timeit(stmt=testOptimal, number=1)
+    print(f"Time: {t}")
 
 
 if __name__ == "__main__":
 
-    RunModAgent()
+    # RunModAgent()
     # RunOptimalAgent()
+
+    timing()
+
+
 
 
 
