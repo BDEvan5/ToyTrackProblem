@@ -174,7 +174,8 @@ class SimMap(MapBase):
     def random_obs(self, n=10):
         self.obs_map = np.zeros_like(self.obs_map)
 
-        obs_size = [0.3, 0.3]
+        obs_size = [self.width/600, self.height/600]
+        # obs_size = [0.3, 0.3]
         # obs_size = [1, 1]
         x, y = self.convert_int_position(obs_size)
         obs_size = [x, y]

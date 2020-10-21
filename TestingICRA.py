@@ -13,7 +13,7 @@ from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
 
 names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
-name = names[3]
+name = names[5]
 myMap = 'TrackMap1000'
 
 """Testing Function"""
@@ -35,7 +35,7 @@ def RunVehicleLap(vehicle, env, show=False):
     return r, env.steps
 
 
-def test_vehicles(vehicle_list, laps, eval_name):
+def test_vehicles(vehicle_list, laps, eval_name, add_obs):
     N = len(vehicle_list)
 
     env_map = SimMap(name)
@@ -48,7 +48,8 @@ def test_vehicles(vehicle_list, laps, eval_name):
     lap_times = [[] for i in range(N)]
 
     for i in range(laps):
-        env_map.reset_map()
+        if add_obs:
+            env_map.reset_map()
         for j in range(N):
             vehicle = vehicle_list[j]
 
@@ -65,6 +66,7 @@ def test_vehicles(vehicle_list, laps, eval_name):
     test_name = 'Vehicles/' + eval_name + '.txt'
     with open(test_name, 'w') as file_obj:
         file_obj.write(f"\nTesting Complete \n")
+        file_obj.write(f"Map name: {name} \n")
         file_obj.write(f"-----------------------------------------------------\n")
         file_obj.write(f"-----------------------------------------------------\n")
         for i in range(N):
@@ -166,7 +168,7 @@ def save_csv_data(rewards, path):
 
 """Main functions"""
 def main_train():
-    mod_name = "ModICRA_build2"
+    mod_name = "ModICRA_build3"
 
     # train_mod(mod_name, True)
     train_mod(mod_name, False)
@@ -176,7 +178,7 @@ def main_train():
 def main_test():
     vehicle_list = []
 
-    vehicle_name = "ModICRA_build2"
+    vehicle_name = "ModICRA_build3"
     mod_vehicle = ModVehicleTest(vehicle_name)
     vehicle_list.append(mod_vehicle)
     
@@ -187,7 +189,8 @@ def main_test():
     # opt_vehicle = OptimalAgent()
     # vehicle_list.append(opt_vehicle)
 
-    test_vehicles(vehicle_list, 100, "EvalThree")
+    # test_vehicles(vehicle_list, 10, "EvalFour")
+    test_vehicles(vehicle_list, 100, "EvalFive", True)
     # test_vehicles(vehicle_list, 5, "EvalTwo")
 
 
