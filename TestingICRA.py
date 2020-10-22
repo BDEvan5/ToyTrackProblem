@@ -13,7 +13,7 @@ from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
 
 names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
-name = names[5]
+name = names[0]
 myMap = 'TrackMap1000'
 
 """Testing Function"""
@@ -30,7 +30,7 @@ def RunVehicleLap(vehicle, env, show=False):
     if show:
         # vehicle.show_vehicle_history()
         env.render(wait=False)
-        # env.render_snapshot(wpts=wpts, wait=True)
+        # env.render(wait=True)
 
     return r, env.steps
 
@@ -168,10 +168,38 @@ def save_csv_data(rewards, path):
 
 """Main functions"""
 def main_train():
-    mod_name = "ModICRA_build"
+    mod_name = "ModICRA_build2"
 
-    # train_mod(mod_name, True)
+    train_mod(mod_name, True)
     # train_mod(mod_name, False)
+
+def get_moving_avg():
+    vehicle_name = "ModICRA_build"
+    path = 'Vehicles/' + vehicle_name + f"/TrainingData_{vehicle_name}.csv"
+    smoothpath = 'Vehicles/' + vehicle_name + f"/TrainingData.csv"
+    rewards = []
+    with open(path, 'r') as csvfile:
+        csvFile = csv.reader(csvfile, quoting=csv.QUOTE_NONNUMERIC)  
+        
+        for lines in csvFile:  
+            rewards.append(lines)
+    rewards = np.array(rewards)[:, 1]
+
+    smooth_rewards = lib.get_moving_average(50, rewards)
+
+    new_rewards = []
+    l = 10
+    N = int(len(smooth_rewards) / l)
+    for i in range(N):
+        avg = np.mean(smooth_rewards[i*l:(i+1)*l])
+        new_rewards.append(avg)
+    smooth_rewards = np.array(new_rewards)
+
+    save_csv_data(smooth_rewards, smoothpath)
+
+    # lib.plot_no_avg(rewards, figure_n=1)
+    lib.plot_no_avg(smooth_rewards, figure_n=2)
+    plt.show()
 
 
 
@@ -181,7 +209,7 @@ def main_test():
     vehicle_name = "ModICRA_build"
     mod_vehicle = ModVehicleTest(vehicle_name)
     vehicle_list.append(mod_vehicle)
-    test_vehicles(vehicle_list, 100, "EvalICRA1", True)
+    test_vehicles(vehicle_list, 100, "EvalICRA3", True)
     
     # vehicle_name = "ModICRA_build"
     # mod_vehicle = ModVehicleTest(vehicle_name)
@@ -191,7 +219,7 @@ def main_test():
     vehicle_list.append(opt_vehicle)
 
     # test_vehicles(vehicle_list, 10, "EvalFour")
-    test_vehicles(vehicle_list, 10, "EvalICRA2", False)
+    test_vehicles(vehicle_list, 10, "EvalICRA4", False)
     # test_vehicles(vehicle_list, 5, "EvalTwo")
 
 
@@ -200,3 +228,6 @@ if __name__ == "__main__":
 
     # main_train()
     main_test()
+
+
+    # get_moving_avg()

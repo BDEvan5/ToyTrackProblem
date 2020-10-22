@@ -1,10 +1,10 @@
 
 Testing Complete 
-Map name: mtl 
+Map name: columbia 
 -----------------------------------------------------
 -----------------------------------------------------
 Vehicle: ModICRA_build
-Crashes: 23.0 --> Completes 77.0
-% Finished = 77.00
-Avg lap times: 137.46753246753246
+Crashes: 21.0 --> Completes 79.0
+% Finished = 79.00
+Avg lap times: 80.44303797468355
 -----------------------------------------------------

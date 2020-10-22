@@ -130,8 +130,8 @@ class BaseModAgent:
             max_friction_force = 3.74 * 9.81 * 0.523 *0.5
             d_plan = max(abs(d_ref), abs(obs[4]), abs(d_new))
             theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
-            v_ref = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
-            v_ref_mod = min(v_ref, self.max_v)
+            v_ref_new = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
+            v_ref_mod = min(v_ref_new, self.max_v)
         else:
             v_ref_mod = v_ref
 
@@ -162,7 +162,7 @@ class ModVehicleTrain(BaseModAgent):
         v_ref, d_ref = self.get_target_references(obs)
 
         nn_obs = self.transform_obs(obs)
-        nn_action = self.agent.act(nn_obs)
+        nn_action = self.agent.act(nn_obs, noise=0)
         self.cur_nn_act = nn_action
 
         self.d_ref_history.append(d_ref)

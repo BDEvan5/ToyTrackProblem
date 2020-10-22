@@ -167,10 +167,10 @@ def get_moving_average(period, values):
     moving_avg = np.zeros_like(values)
 
     for i, avg in enumerate(moving_avg):
-        if i > period:
-            moving_avg[i] = np.mean(values[i-period:i])
+        # if i > period:
+        moving_avg[i] = np.mean(values[max(i-period, 0):i])
         # else already zero
-    return moving_avg
+    return moving_avg[1:]
 
 def plot_multi(value_array, title="Results", figure_n=2, ylim=[-1, 1]):
     plt.figure(figure_n)

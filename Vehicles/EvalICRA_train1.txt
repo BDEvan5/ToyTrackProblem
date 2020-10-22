@@ -1,10 +1,10 @@
 
 Testing Complete 
-Map name: mtl 
+Map name: race_track 
 -----------------------------------------------------
 -----------------------------------------------------
 Vehicle: ModICRA_build
-Crashes: 23.0 --> Completes 77.0
-% Finished = 77.00
-Avg lap times: 137.46753246753246
+Crashes: 7.0 --> Completes 93.0
+% Finished = 93.00
+Avg lap times: 231.247311827957
 -----------------------------------------------------
