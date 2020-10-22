@@ -114,7 +114,7 @@ def train_mod(agent_name, recreate=True):
     done, state, score = False, env.reset(None), 0.0
     vehicle.init_agent(env_map)
     env_map.reset_map()
-    for n in range(100000):
+    for n in range(200000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
@@ -168,29 +168,30 @@ def save_csv_data(rewards, path):
 
 """Main functions"""
 def main_train():
-    mod_name = "ModICRA_build3"
+    mod_name = "ModICRA_build"
 
     # train_mod(mod_name, True)
-    train_mod(mod_name, False)
+    # train_mod(mod_name, False)
 
 
 
 def main_test():
     vehicle_list = []
 
-    vehicle_name = "ModICRA_build3"
+    vehicle_name = "ModICRA_build"
     mod_vehicle = ModVehicleTest(vehicle_name)
     vehicle_list.append(mod_vehicle)
+    test_vehicles(vehicle_list, 100, "EvalICRA1", True)
     
     # vehicle_name = "ModICRA_build"
     # mod_vehicle = ModVehicleTest(vehicle_name)
     # vehicle_list.append(mod_vehicle)
 
-    # opt_vehicle = OptimalAgent()
-    # vehicle_list.append(opt_vehicle)
+    opt_vehicle = OptimalAgent()
+    vehicle_list.append(opt_vehicle)
 
     # test_vehicles(vehicle_list, 10, "EvalFour")
-    test_vehicles(vehicle_list, 100, "EvalFive", True)
+    test_vehicles(vehicle_list, 10, "EvalICRA2", False)
     # test_vehicles(vehicle_list, 5, "EvalTwo")
 
 
