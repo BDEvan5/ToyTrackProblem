@@ -43,7 +43,7 @@ class OptimalAgent:
         return self.wpts
 
     def act(self, obs):
-        scan = self.scan_sim.get_scan(obs[0], obs[1], obs[2])
+        # scan = self.scan_sim.get_scan(obs[0], obs[1], obs[2])
 
         v_ref, d_ref = self.get_target_references(obs)
 

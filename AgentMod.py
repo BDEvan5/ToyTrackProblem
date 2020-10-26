@@ -130,8 +130,8 @@ class BaseModAgent:
             max_friction_force = 3.74 * 9.81 * 0.523 *0.5
             d_plan = max(abs(d_ref), abs(obs[4]), abs(d_new))
             theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
-            v_ref = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
-            v_ref_mod = min(v_ref, self.max_v)
+            v_ref_new = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
+            v_ref_mod = min(v_ref_new, self.max_v)
         else:
             v_ref_mod = v_ref
 
@@ -177,11 +177,12 @@ class ModVehicleTrain(BaseModAgent):
         return [v_ref, d_ref]
 
     def update_reward(self, reward, action):
-        beta = 0.1
+        beta = 0.5
         if reward == -1:
             new_reward = -1
         else:
             new_reward = 0.1 - abs(action[0]) * beta
+            # new_reward =  - abs(action[0]) * beta
 
         self.reward_history.append(new_reward)
 
