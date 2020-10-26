@@ -196,6 +196,52 @@ class SimMap(MapBase):
         self.random_obs(10)
 
 
+class ForestMap(MapBase):
+    def __init__(self, map_name="forrest"):
+        MapBase.__init__(self, map_name)
+
+        self.obs_map = np.zeros_like(self.scan_map)
+
+    def get_ref_path(self, n_pts=10):
+        
+        self.N = n_pts
+        dx = (self.end[0] - self.start[0])/(n_pts-1)
+        dy = (self.end[1] - self.start[1])/(n_pts-1)
+
+        path = []
+        for i in range(n_pts):
+            pt = lib.add_locations(self.start, [dx, dy], i)
+            path.append(pt)
+
+        self.wpts = np.array(path)
+        return self.wpts
+
+
+    def random_obs(self, n=10):
+        self.obs_map = np.zeros_like(self.obs_map)
+
+        o_scale = 600
+        obs_size = [self.width/o_scale, self.height/o_scale]
+
+        x, y = self.convert_int_position(obs_size)
+        obs_size = [x, y]
+    
+        rands = np.random.randint(1, self.N-1, n)
+        obs_locs = []
+        for i in range(n):
+            pt = self.track_pts[rands[i]][:, None]
+            obs_locs.append(pt[:, 0])
+
+        for obs in obs_locs:
+            for i in range(0, obs_size[0]):
+                for j in range(0, obs_size[1]):
+                    x, y = self.convert_int_position([obs[0], obs[1]])
+                    self.obs_map[y+j, x+i] = 1
+
+    def reset_map(self):
+        self.random_obs(10)
+
+
 class MapConverter(MapBase):
     def __init__(self, map_name):
         MapBase.__init__(self, map_name)
