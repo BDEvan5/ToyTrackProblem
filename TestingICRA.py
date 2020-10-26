@@ -13,7 +13,7 @@ from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
 
 names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
-name = names[0]
+name = names[5]
 myMap = 'TrackMap1000'
 
 """Testing Function"""
@@ -33,7 +33,6 @@ def RunVehicleLap(vehicle, env, show=False):
         # env.render(wait=True)
 
     return r, env.steps
-
 
 def test_vehicles(vehicle_list, laps, eval_name, add_obs):
     N = len(vehicle_list)
@@ -89,6 +88,19 @@ def test_vehicles(vehicle_list, laps, eval_name, add_obs):
         print(f"Avg lap times: {np.mean(lap_times[i])}")
         print(f"-----------------------------------------------------")
 
+def test_mod(vehicle_name):
+    vehicle_list = []
+
+    mod_vehicle = ModVehicleTest(vehicle_name)
+    vehicle_list.append(mod_vehicle)
+
+    test_vehicles(vehicle_list, 100, vehicle_name + "/Eval_Obs" , True)
+
+    opt_vehicle = OptimalAgent()
+    vehicle_list.append(opt_vehicle)
+
+    test_vehicles(vehicle_list, 10, vehicle_name + "/Eval_NoObs", False)
+
 
 """Training Functions"""            
 def train_mod(agent_name, recreate=True):
@@ -114,7 +126,7 @@ def train_mod(agent_name, recreate=True):
     done, state, score = False, env.reset(None), 0.0
     vehicle.init_agent(env_map)
     env_map.reset_map()
-    for n in range(200000):
+    for n in range(50000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
@@ -157,6 +169,7 @@ def train_mod(agent_name, recreate=True):
     return rewards
 
 
+"""Helpers"""
 def save_csv_data(rewards, path):
     data = []
     for i in range(len(rewards)):
@@ -165,16 +178,7 @@ def save_csv_data(rewards, path):
         csvwriter = csv.writer(csvfile)
         csvwriter.writerows(data)
 
-
-"""Main functions"""
-def main_train():
-    mod_name = "ModICRA_build2"
-
-    train_mod(mod_name, True)
-    # train_mod(mod_name, False)
-
-def get_moving_avg():
-    vehicle_name = "ModICRA_build"
+def get_moving_avg(vehicle_name, show=False):
     path = 'Vehicles/' + vehicle_name + f"/TrainingData_{vehicle_name}.csv"
     smoothpath = 'Vehicles/' + vehicle_name + f"/TrainingData.csv"
     rewards = []
@@ -197,37 +201,27 @@ def get_moving_avg():
 
     save_csv_data(smooth_rewards, smoothpath)
 
-    # lib.plot_no_avg(rewards, figure_n=1)
-    lib.plot_no_avg(smooth_rewards, figure_n=2)
-    plt.show()
+    if show:
+        lib.plot_no_avg(rewards, figure_n=1)
+        lib.plot_no_avg(smooth_rewards, figure_n=2)
+        plt.show()
 
 
 
-def main_test():
-    vehicle_list = []
 
-    vehicle_name = "ModICRA_build"
-    mod_vehicle = ModVehicleTest(vehicle_name)
-    vehicle_list.append(mod_vehicle)
-    test_vehicles(vehicle_list, 100, "EvalICRA3", True)
-    
-    # vehicle_name = "ModICRA_build"
-    # mod_vehicle = ModVehicleTest(vehicle_name)
-    # vehicle_list.append(mod_vehicle)
+"""Main functions"""
 
-    opt_vehicle = OptimalAgent()
-    vehicle_list.append(opt_vehicle)
+def main():
+    vehicle_name = "ModICRA_build_Punishment"
 
-    # test_vehicles(vehicle_list, 10, "EvalFour")
-    test_vehicles(vehicle_list, 10, "EvalICRA4", False)
-    # test_vehicles(vehicle_list, 5, "EvalTwo")
+    train_mod(vehicle_name, True)
+    # train_mod(vehicle_name, False)
 
+    test_mod(vehicle_name)
 
 if __name__ == "__main__":
 
 
-    # main_train()
-    main_test()
-
+    main()
 
     # get_moving_avg()

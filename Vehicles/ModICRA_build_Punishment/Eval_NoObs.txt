@@ -1,0 +1,15 @@
+
+Testing Complete 
+Map name: race_track 
+-----------------------------------------------------
+-----------------------------------------------------
+Vehicle: ModICRA_build_Punishment
+Crashes: 0.0 --> Completes 10.0
+% Finished = 100.00
+Avg lap times: 173.0
+-----------------------------------------------------
+Vehicle: Optimal Agent: Following target references
+Crashes: 0.0 --> Completes 10.0
+% Finished = 100.00
+Avg lap times: 180.0
+-----------------------------------------------------

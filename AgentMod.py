@@ -162,7 +162,7 @@ class ModVehicleTrain(BaseModAgent):
         v_ref, d_ref = self.get_target_references(obs)
 
         nn_obs = self.transform_obs(obs)
-        nn_action = self.agent.act(nn_obs, noise=0)
+        nn_action = self.agent.act(nn_obs)
         self.cur_nn_act = nn_action
 
         self.d_ref_history.append(d_ref)
@@ -177,11 +177,12 @@ class ModVehicleTrain(BaseModAgent):
         return [v_ref, d_ref]
 
     def update_reward(self, reward, action):
-        beta = 0.1
+        beta = 0.5
         if reward == -1:
             new_reward = -1
         else:
             new_reward = 0.1 - abs(action[0]) * beta
+            # new_reward =  - abs(action[0]) * beta
 
         self.reward_history.append(new_reward)
 
