@@ -242,10 +242,45 @@ class ForestMap(MapBase):
         self.random_obs(10)
 
 
+class ForestGenerator(MapBase):
+    def __init__(self, map_name='forest'):
+        self.name = map_name
+
+        self.f_map = np.zeros((100, 600))
+        self.track = None
+
+        self.gen_path()
+
+    def gen_path(self, N=60):
+        tx = 2.5 # centre line
+        txs = np.ones(N) * tx 
+        txs = txs[:, None]
+        tys = np.linspace(1, 29, N)
+        tys = tys[:, None]
+
+        widths = np.ones((N, 2))
+
+        nvecs = np.array([np.ones(N), np.zeros(N)]).T
+
+        self.track = np.concatenate([txs, tys, nvecs, widths], axis=-1)
+
+
+    def save_map(self):
+        np.save('Maps/forest.npy', self.f_map)  
+
+        filename = 'Maps/' + self.name + '.csv'
+        with open(filename, 'w') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            csvwriter.writerows(self.track)
+
+        print(f"Track Saved in File: {filename}")
+        
+
+
 class MapConverter(MapBase):
     def __init__(self, map_name):
         MapBase.__init__(self, map_name)
-        self.name = map_name
+        # self.name = map_name
         self.yaml_file = None
 
         self.dt = None
@@ -599,5 +634,11 @@ def test_map_converter():
     t.render_map(wait=True)
 
 
+def forest_gen():
+    f = ForestGenerator()
+    f.save_map()
+
 if __name__ == "__main__":
-    test_map_converter()
+    # test_map_converter()
+
+    forest_gen()

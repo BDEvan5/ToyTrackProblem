@@ -123,6 +123,7 @@ class BaseModAgent:
         return nn_obs
 
     def modify_references(self, nn_action, v_ref, d_ref, obs):
+        # d_max = 0.4 #- use this instead
         d_phi = 0.5 * nn_action[0] # rad
         d_new = d_ref + d_phi
 

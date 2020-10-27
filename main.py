@@ -15,6 +15,7 @@ from AgentMod import ModVehicleTest, ModVehicleTrain
 names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
 name = names[5]
 myMap = 'TrackMap1000'
+forest_name = 'forest'
 
 def RunOptimalAgent():
     env_map = SimMap(name)
