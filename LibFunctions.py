@@ -93,7 +93,12 @@ def get_rands(a=100, b=0):
 
 def get_rand_ints(a=100, b=0):
     r = [int(np.random.random() * a + b), int(np.random.random() * a + b)]
-    return r
+    return np.array(r)
+
+def get_rand_coords(xa, xb, ya, yb):
+    r = [np.random.random() * xa + xb, np.random.random() * ya + yb]
+    return np.array(r)
+    
 
 def limit_theta(theta):
     if theta > np.pi:
