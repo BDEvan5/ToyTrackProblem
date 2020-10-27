@@ -205,6 +205,7 @@ class ForestMap(MapBase):
         MapBase.__init__(self, map_name)
 
         self.obs_map = np.zeros_like(self.scan_map)
+        self.end = [3, 23]
 
     def get_min_curve_path(self):
         # self.wpts = self.track_pts
@@ -225,12 +226,13 @@ class ForestMap(MapBase):
         self.obs_map = np.zeros_like(self.obs_map)
 
         obs_size = [2.5, 1]
+        xlim = (6 - obs_size[0]) / 2
 
         x, y = self.convert_int_position(obs_size)
         obs_size = [x, y]
 
         tys = np.linspace(4, 20, n)
-        txs = np.random.normal(3, 1, size=n)
+        txs = np.random.normal(xlim, 1, size=n)
         txs = np.clip(txs, 0, 4)
         obs_locs = np.array([txs, tys]).T
 
@@ -267,6 +269,8 @@ class ForestMap(MapBase):
             plt.imshow(self.obs_map + self.scan_map)
 
         # plt.gca().set_aspect('equal', 'datalim')
+        x, y = self.convert_position(self.end)
+        plt.plot(x, y, '*', markersize=14)
 
         plt.pause(0.0001)
         if wait:
@@ -295,7 +299,6 @@ class ForestGenerator(MapBase):
         nvecs = np.array([np.ones(N), np.zeros(N)]).T
 
         self.track = np.concatenate([txs, tys, nvecs, widths], axis=-1)
-
 
     def save_map(self):
         np.save('Maps/forest.npy', self.f_map)  

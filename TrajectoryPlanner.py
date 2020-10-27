@@ -132,8 +132,6 @@ def find_true_widths(track, check_scan_location):
             nws.append(j*sf)
         else:
             print(f"Obs in way of pt: {i}")
-            # nws.append(onws[i])
-            # pws.append(opws[i])
 
             for j in np.linspace(0, onws[i], 10):
                 p_pt = lib.add_locations(pt, nvec, j)
@@ -156,7 +154,6 @@ def find_true_widths(track, check_scan_location):
 
 
 def ObsAvoidTraj(track, check_scan_location):
-
     track = find_true_widths(track, check_scan_location)
 
     w_min = - track[:, 4] * 0.9
@@ -210,7 +207,7 @@ def ObsAvoidTraj(track, check_scan_location):
 
     nlp = {\
     'x': ca.vertcat(n, th),
-    'f': ca.sumsqr(sub_cmplx1(th[1:], th[:-1])), 
+    'f': ca.sumsqr(sub_cmplx1(th[1:], th[:-1])) * 5 + ca.sumsqr(track_length(n)), 
     # 'f': ca.sumsqr(track_length(n)), 
     'g': ca.vertcat(
                 # dynamic constraints

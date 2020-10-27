@@ -27,6 +27,7 @@ def RunOptimalAgent():
     env_map.reset_map()
     done, state, score = False, env.reset(None), 0.0
     wpts = agent.init_agent(env_map)
+    env.render(wait=True)
     # env.render(True, wpts)
     while not done:
         action = agent.act(state)
