@@ -5,7 +5,7 @@ import yaml
 import csv
 
 import LibFunctions as lib
-from TrajectoryPlanner import MinCurvatureTrajectory
+from TrajectoryPlanner import MinCurvatureTrajectory, ObsAvoidTraj
 
 
 class MapBase:
@@ -90,16 +90,18 @@ class MapBase:
         return np.array(xs), np.array(ys)
         
     def convert_int_position(self, pt):
-        x = int(round(np.clip(pt[0] / self.resolution, 0, self.width-1)))
-        y = int(round(np.clip(pt[1] / self.resolution, 0, self.height-1)))
+        x = int(round(np.clip(pt[0] / self.resolution, 0, self.width-2)))
+        y = int(round(np.clip(pt[1] / self.resolution, 0, self.height-2)))
 
         return x, y
 
     def check_scan_location(self, x_in):
         if x_in[0] < 0 or x_in[1] < 0:
             return True
-
         x, y = self.convert_int_position(x_in)
+        if x > self.width or y > self.height:
+            return True
+
         if self.scan_map[y, x]:
             return True
         if self.obs_map[y, x]:
@@ -144,6 +146,8 @@ class MapBase:
         plt.pause(0.0001)
         if wait:
             plt.show()
+
+
 
 
 class SimMap(MapBase):
@@ -196,10 +200,122 @@ class SimMap(MapBase):
         self.random_obs(10)
 
 
+class ForestMap(MapBase):
+    def __init__(self, map_name="forest"):
+        MapBase.__init__(self, map_name)
+
+        self.obs_map = np.zeros_like(self.scan_map)
+        self.end = [3, 23]
+
+    def get_min_curve_path(self):
+        # self.wpts = self.track_pts
+
+        track = self.track
+        # n_set = MinCurvatureTrajectory(track, self.check_scan_location)
+        n_set = ObsAvoidTraj(track, self.check_scan_location)
+        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+        self.wpts = track[:, 0:2] + deviation
+
+        return self.wpts
+
+    def get_obs_free_path(self):
+        pass
+        # set up the optimisation to get this
+        
+    def random_obs(self, n=10):
+        self.obs_map = np.zeros_like(self.obs_map)
+
+        obs_size = [2.5, 1]
+        xlim = (6 - obs_size[0]) / 2
+
+        x, y = self.convert_int_position(obs_size)
+        obs_size = [x, y]
+
+        tys = np.linspace(4, 20, n)
+        txs = np.random.normal(xlim, 1, size=n)
+        txs = np.clip(txs, 0, 4)
+        obs_locs = np.array([txs, tys]).T
+
+        for obs in obs_locs:
+            for i in range(0, obs_size[0]):
+                for j in range(0, obs_size[1]):
+                    x, y = self.convert_int_position([obs[0], obs[1]])
+                    x = np.clip(x+i, 0, self.width-1)
+                    y = np.clip(y+j, 0, self.height-1)
+                    self.obs_map[y, x] = 1
+
+    def reset_map(self):
+        self.random_obs(6)
+
+    def render_map(self, figure_n=1, wait=False):
+        f = plt.figure(figure_n)
+        plt.clf()
+
+        plt.xlim([0, self.width])
+        plt.ylim([self.height, 0])
+
+        if self.wpts is not None:
+            xs, ys = [], []
+            for pt in self.wpts:
+                x, y = self.convert_position(pt)
+                # plt.plot(x, y, '+', markersize=14)
+                xs.append(x)
+                ys.append(y)
+            plt.plot(xs, ys, '--', linewidth=2)
+
+        if self.obs_map is None:
+            plt.imshow(self.scan_map)
+        else:
+            plt.imshow(self.obs_map + self.scan_map)
+
+        # plt.gca().set_aspect('equal', 'datalim')
+        x, y = self.convert_position(self.end)
+        plt.plot(x, y, '*', markersize=14)
+
+        plt.pause(0.0001)
+        if wait:
+            plt.show()
+
+
+
+class ForestGenerator(MapBase):
+    def __init__(self, map_name='forest'):
+        self.name = map_name
+
+        self.f_map = np.zeros((120, 500)).T # same as other maps
+        self.track = None
+
+        self.gen_path()
+
+    def gen_path(self, N=60):
+        tx = 3 # centre line
+        txs = np.ones(N) * tx 
+        txs = txs[:, None]
+        tys = np.linspace(1, 29, N)
+        tys = tys[:, None]
+
+        widths = np.ones((N, 2)) * 2.5
+
+        nvecs = np.array([np.ones(N), np.zeros(N)]).T
+
+        self.track = np.concatenate([txs, tys, nvecs, widths], axis=-1)
+
+    def save_map(self):
+        np.save('Maps/forest.npy', self.f_map)  
+
+        filename = 'Maps/' + self.name + '.csv'
+        with open(filename, 'w') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            csvwriter.writerows(self.track)
+
+        print(f"Track Saved in File: {filename}")
+        
+
+
 class MapConverter(MapBase):
     def __init__(self, map_name):
         MapBase.__init__(self, map_name)
-        self.name = map_name
+        # self.name = map_name
         self.yaml_file = None
 
         self.dt = None
@@ -553,5 +669,11 @@ def test_map_converter():
     t.render_map(wait=True)
 
 
+def forest_gen():
+    f = ForestGenerator()
+    f.save_map()
+
 if __name__ == "__main__":
-    test_map_converter()
+    # test_map_converter()
+
+    forest_gen()

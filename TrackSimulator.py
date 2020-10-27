@@ -134,7 +134,8 @@ class TrackSim:
             self.steer_history.append(steer_dot)
             self.velocity_history.append(self.car.velocity)
          
-        self.check_done_reward_track_train()
+        # self.check_done_reward_track_train()
+        self.check_done_forest()
 
         obs = self.car.get_car_state()
         done = self.done
@@ -167,8 +168,8 @@ class TrackSim:
         self.car.prev_loc = [self.car.x, self.car.y]
         self.car.velocity = 0
         self.car.steering = 0
-        # self.car.theta = 0
-        self.car.theta = np.pi/2
+        self.car.theta = 0
+        # self.car.theta = np.pi/2
 
         return self.car.get_car_state()
 
@@ -216,6 +217,29 @@ class TrackSim:
             self.done = True
             self.reward = 1
             self.done_reason = f"Lap complete"
+
+    def check_done_forest(self):
+        self.reward = 0 # normal
+        if self.env_map.check_scan_location([self.car.x, self.car.y]):
+            self.done = True
+            self.reward = -1
+            self.done_reason = f"Crash obstacle: [{self.car.x:.2f}, {self.car.y:.2f}]"
+        horizontal_force = self.car.mass * self.car.th_dot * self.car.velocity
+        self.y_forces.append(horizontal_force)
+        if horizontal_force > self.car.max_friction_force:
+            # self.done = True
+            self.reward = -1
+            self.done_reason = f"Friction limit reached: {horizontal_force} > {self.car.max_friction_force}"
+        if self.steps > 500:
+            self.done = True
+            self.done_reason = f"Max steps"
+
+        car = [self.car.x, self.car.y]
+        if lib.get_distance(car, self.env_map.end) < 2 and self.steps > 25:
+            self.done = True
+            self.reward = 1
+            self.done_reason = f"Lap complete"
+
 
     def render(self, wait=False, scan_sim=None):
         self.env_map.render_map(4)

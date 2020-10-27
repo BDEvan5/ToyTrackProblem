@@ -5,7 +5,7 @@ import sys, os, shutil
 import timeit
 
 from TrackSimulator import TrackSim
-from RaceTrackMap import  SimMap
+from RaceTrackMap import  SimMap, ForestMap
 from ModelsRL import ReplayBufferDQN, ReplayBufferTD3
 import LibFunctions as lib
 
@@ -15,15 +15,19 @@ from AgentMod import ModVehicleTest, ModVehicleTrain
 names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
 name = names[5]
 myMap = 'TrackMap1000'
+forest_name = 'forest'
 
 def RunOptimalAgent():
-    env_map = SimMap(name)
+    # env_map = SimMap(name)
+    env_map = ForestMap(forest_name)
 
     env = TrackSim(env_map)
     agent = OptimalAgent()
 
+    env_map.reset_map()
     done, state, score = False, env.reset(None), 0.0
     wpts = agent.init_agent(env_map)
+    env.render(wait=True)
     # env.render(True, wpts)
     while not done:
         action = agent.act(state)
@@ -37,7 +41,7 @@ def RunOptimalAgent():
 
     print(f"Score: {score}")
     # env.show_history()
-    env.render(wait=False)
+    env.render(wait=True)
 
 
 """Training functions: PURE MOD"""
@@ -121,7 +125,8 @@ def TrainModVehicle(agent_name, load=True):
 
 """General test function"""
 def testVehicle(vehicle, show=False, obs=True):
-    env_map = SimMap(name)
+    # env_map = SimMap(name)
+    env_map = ForestMap(forest_name)
     env = TrackSim(env_map)
 
     crashes = 0
@@ -143,6 +148,7 @@ def testVehicle(vehicle, show=False, obs=True):
         if show:
             # vehicle.show_vehicle_history()
             env.render(wait=False)
+            # env.render(wait=True)
 
         if r == -1:
             state = env.reset(None)
@@ -169,8 +175,9 @@ def RunModAgent():
     # TrainModVehicle(agent_name, True)
 
     vehicle = ModVehicleTest(agent_name)
-    # testVehicle(vehicle, obs=True, show=True)
-    testVehicle(vehicle, obs=False, show=True)
+    testVehicle(vehicle, obs=True, show=True)
+    # testVehicle(vehicle, obs=False, show=True)
+
 
 def testOptimal():
     agent = OptimalAgent()
@@ -189,9 +196,9 @@ def timing():
 if __name__ == "__main__":
 
     # RunModAgent()
-    # RunOptimalAgent()
+    RunOptimalAgent()
 
-    timing()
+    # timing()
 
 
 
