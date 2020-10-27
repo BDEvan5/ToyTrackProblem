@@ -5,7 +5,7 @@ import sys, os, shutil
 import timeit
 
 from TrackSimulator import TrackSim
-from RaceTrackMap import  SimMap
+from RaceTrackMap import  SimMap, ForestMap
 from ModelsRL import ReplayBufferDQN, ReplayBufferTD3
 import LibFunctions as lib
 
@@ -122,7 +122,8 @@ def TrainModVehicle(agent_name, load=True):
 
 """General test function"""
 def testVehicle(vehicle, show=False, obs=True):
-    env_map = SimMap(name)
+    # env_map = SimMap(name)
+    env_map = ForestMap(forest_name)
     env = TrackSim(env_map)
 
     crashes = 0
@@ -143,7 +144,8 @@ def testVehicle(vehicle, show=False, obs=True):
         print(f"Lap time updates: {env.steps}")
         if show:
             # vehicle.show_vehicle_history()
-            env.render(wait=False)
+            # env.render(wait=False)
+            env.render(wait=True)
 
         if r == -1:
             state = env.reset(None)
@@ -173,6 +175,7 @@ def RunModAgent():
     # testVehicle(vehicle, obs=True, show=True)
     testVehicle(vehicle, obs=False, show=True)
 
+
 def testOptimal():
     agent = OptimalAgent()
 
@@ -189,10 +192,10 @@ def timing():
 
 if __name__ == "__main__":
 
-    # RunModAgent()
+    RunModAgent()
     # RunOptimalAgent()
 
-    timing()
+    # timing()
 
 
 

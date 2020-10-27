@@ -146,6 +146,8 @@ class MapBase:
             plt.show()
 
 
+
+
 class SimMap(MapBase):
     def __init__(self, map_name):
         MapBase.__init__(self, map_name)
@@ -197,24 +199,20 @@ class SimMap(MapBase):
 
 
 class ForestMap(MapBase):
-    def __init__(self, map_name="forrest"):
+    def __init__(self, map_name="forest"):
         MapBase.__init__(self, map_name)
 
         self.obs_map = np.zeros_like(self.scan_map)
 
-    def get_ref_path(self, n_pts=10):
-        
-        self.N = n_pts
-        dx = (self.end[0] - self.start[0])/(n_pts-1)
-        dy = (self.end[1] - self.start[1])/(n_pts-1)
+    def get_min_curve_path(self):
+        self.wpts = self.track_pts
 
-        path = []
-        for i in range(n_pts):
-            pt = lib.add_locations(self.start, [dx, dy], i)
-            path.append(pt)
-
-        self.wpts = np.array(path)
         return self.wpts
+
+    def get_obs_free_path(self):
+        pass
+        # set up the optimisation to get this
+        
 
 
     def random_obs(self, n=10):
@@ -242,23 +240,62 @@ class ForestMap(MapBase):
         self.random_obs(10)
 
 
+    def render_map(self, figure_n, wait=False):
+        f = plt.figure(figure_n)
+        plt.clf()
+
+        plt.xlim([0, self.width])
+        plt.ylim([self.height, 0])
+
+        track = self.track
+        c_line = track[:, 0:2]
+        l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
+        r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
+
+        cx, cy = self.convert_positions(c_line)
+        plt.plot(cx, cy, linewidth=2)
+        lx, ly = self.convert_positions(l_line)
+        plt.plot(lx, ly, linewidth=1)
+        rx, ry = self.convert_positions(r_line)
+        plt.plot(rx, ry, linewidth=1)
+
+        if self.wpts is not None:
+            xs, ys = [], []
+            for pt in self.wpts:
+                x, y = self.convert_position(pt)
+                # plt.plot(x, y, '+', markersize=14)
+                xs.append(x)
+                ys.append(y)
+            plt.plot(xs, ys, '--', linewidth=2)
+
+        if self.obs_map is None:
+            plt.imshow(self.scan_map)
+        else:
+            plt.imshow(self.obs_map + self.scan_map)
+
+        plt.gca().set_aspect('equal', 'datalim')
+
+        plt.pause(0.0001)
+        if wait:
+            plt.show()
+
 class ForestGenerator(MapBase):
     def __init__(self, map_name='forest'):
         self.name = map_name
 
-        self.f_map = np.zeros((100, 600))
+        self.f_map = np.zeros((120, 500)).T # same as other maps
         self.track = None
 
         self.gen_path()
 
     def gen_path(self, N=60):
-        tx = 2.5 # centre line
+        tx = 3 # centre line
         txs = np.ones(N) * tx 
         txs = txs[:, None]
         tys = np.linspace(1, 29, N)
         tys = tys[:, None]
 
-        widths = np.ones((N, 2))
+        widths = np.ones((N, 2)) * 1.5
 
         nvecs = np.array([np.ones(N), np.zeros(N)]).T
 

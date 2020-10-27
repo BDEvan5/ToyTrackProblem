@@ -167,8 +167,8 @@ class TrackSim:
         self.car.prev_loc = [self.car.x, self.car.y]
         self.car.velocity = 0
         self.car.steering = 0
-        # self.car.theta = 0
-        self.car.theta = np.pi/2
+        self.car.theta = 0
+        # self.car.theta = np.pi/2
 
         return self.car.get_car_state()
 
