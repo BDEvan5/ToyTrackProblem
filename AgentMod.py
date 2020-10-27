@@ -42,7 +42,8 @@ class BaseModAgent:
         
         self.scan_sim.set_check_fcn(self.env_map.check_scan_location)
 
-        self.wpts = self.env_map.get_min_curve_path()
+        # self.wpts = self.env_map.get_min_curve_path()
+        self.wpts = self.env_map.get_reference_path()
 
         r_line = self.wpts
         ths = [lib.get_bearing(r_line[i], r_line[i+1]) for i in range(len(r_line)-1)]
@@ -123,9 +124,10 @@ class BaseModAgent:
         return nn_obs
 
     def modify_references(self, nn_action, v_ref, d_ref, obs):
-        # d_max = 0.4 #- use this instead
-        d_phi = 0.5 * nn_action[0] # rad
+        d_max = 0.4 #- use this instead
+        d_phi = d_max * nn_action[0] # rad
         d_new = d_ref + d_phi
+        d_new = np.clip(d_new, -d_max, d_max)
 
         if abs(d_new) > abs(d_ref):
             max_friction_force = 3.74 * 9.81 * 0.523 *0.5
@@ -178,11 +180,11 @@ class ModVehicleTrain(BaseModAgent):
         return [v_ref, d_ref]
 
     def update_reward(self, reward, action):
-        beta = 0.5
+        beta = 0.2
         if reward == -1:
             new_reward = -1
         else:
-            new_reward = 0.1 - abs(action[0]) * beta
+            new_reward = 0.2 - abs(action[0]) * beta
             # new_reward =  - abs(action[0]) * beta
 
         self.reward_history.append(new_reward)

@@ -5,7 +5,7 @@ import os
 import shutil
 
 from TrackSimulator import TrackSim
-from RaceTrackMap import SimMap
+from RaceTrackMap import SimMap, ForestMap
 from ModelsRL import ReplayBufferTD3
 import LibFunctions as lib
 
@@ -15,6 +15,7 @@ from AgentMod import ModVehicleTest, ModVehicleTrain
 names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
 name = names[5]
 myMap = 'TrackMap1000'
+forest_name = 'forest'
 
 """Testing Function"""
 def RunVehicleLap(vehicle, env, show=False):
@@ -37,7 +38,8 @@ def RunVehicleLap(vehicle, env, show=False):
 def test_vehicles(vehicle_list, laps, eval_name, add_obs):
     N = len(vehicle_list)
 
-    env_map = SimMap(name)
+    # env_map = SimMap(name)
+    env_map = ForestMap(forest_name)
     env = TrackSim(env_map)
 
     completes = np.zeros((N))
@@ -94,6 +96,9 @@ def test_mod(vehicle_name):
     mod_vehicle = ModVehicleTest(vehicle_name)
     vehicle_list.append(mod_vehicle)
 
+    opt_vehicle = OptimalAgent()
+    vehicle_list.append(opt_vehicle)
+    
     test_vehicles(vehicle_list, 100, vehicle_name + "/Eval_Obs" , True)
 
     opt_vehicle = OptimalAgent()
@@ -108,6 +113,7 @@ def train_mod(agent_name, recreate=True):
     csv_path = path + f"TrainingData_{agent_name}.csv"
 
     if recreate:
+        print(f"Recreating path")
         if os.path.exists(path):
             try:
                 os.rmdir(path)
@@ -117,7 +123,8 @@ def train_mod(agent_name, recreate=True):
 
     buffer = ReplayBufferTD3()
 
-    env_map = SimMap(name)
+    # env_map = SimMap(name)
+    env_map = ForestMap(forest_name)
     env = TrackSim(env_map)
     vehicle = ModVehicleTrain(agent_name, not recreate, 300, 10) # restart every time
 
@@ -126,7 +133,7 @@ def train_mod(agent_name, recreate=True):
     done, state, score = False, env.reset(None), 0.0
     vehicle.init_agent(env_map)
     env_map.reset_map()
-    for n in range(50000):
+    for n in range(10000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
@@ -137,13 +144,12 @@ def train_mod(agent_name, recreate=True):
         # env.render(False, vehicle.scan_sim)
         vehicle.agent.train(buffer, 2)
 
-        
         if done:
             rewards.append(score)
             lengths.append(env.steps)
-            if plot_n % 10 == 0:
-                # vehicle.show_vehicle_history()
-                # env.render(scan_sim=vehicle.scan_sim, wait=False)
+            if plot_n % 5 == 0:
+                vehicle.show_vehicle_history()
+                env.render(scan_sim=vehicle.scan_sim, wait=False)
                 
                 mean = np.mean(rewards)
                 print(f"#{n} --> Score: {score:.2f} --> Mean: {mean:.2f} ")
@@ -212,9 +218,9 @@ def get_moving_avg(vehicle_name, show=False):
 """Main functions"""
 
 def main():
-    vehicle_name = "ModICRA_build_Punishment"
+    vehicle_name = "ModICRA_forest"
 
-    train_mod(vehicle_name, True)
+    # train_mod(vehicle_name, True)
     # train_mod(vehicle_name, False)
 
     test_mod(vehicle_name)

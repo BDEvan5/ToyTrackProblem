@@ -29,7 +29,7 @@ class OptimalAgent:
         # self.scan_sim.set_check_fcn(self.env_map.check_scan_location)
         self.path_name = "DataRecords/" + self.env_map.name + "_path.npy" # move to setup call
  
-        self.wpts = self.env_map.get_min_curve_path()
+        self.wpts = self.env_map.get_optimal_path()
 
         r_line = self.wpts
         ths = [lib.get_bearing(r_line[i], r_line[i+1]) for i in range(len(r_line)-1)]

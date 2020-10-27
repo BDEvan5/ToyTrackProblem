@@ -207,16 +207,19 @@ class ForestMap(MapBase):
         self.obs_map = np.zeros_like(self.scan_map)
         self.end = [3, 23]
 
-    def get_min_curve_path(self):
-        # self.wpts = self.track_pts
-
+    def get_optimal_path(self):
         track = self.track
-        # n_set = MinCurvatureTrajectory(track, self.check_scan_location)
         n_set = ObsAvoidTraj(track, self.check_scan_location)
         deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
         self.wpts = track[:, 0:2] + deviation
 
         return self.wpts
+
+    def get_reference_path(self):
+        self.wpts = self.track_pts
+
+        return self.wpts
+
 
     def get_obs_free_path(self):
         pass
@@ -225,7 +228,7 @@ class ForestMap(MapBase):
     def random_obs(self, n=10):
         self.obs_map = np.zeros_like(self.obs_map)
 
-        obs_size = [2.5, 1]
+        obs_size = [1.5, 1]
         xlim = (6 - obs_size[0]) / 2
 
         x, y = self.convert_int_position(obs_size)

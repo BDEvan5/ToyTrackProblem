@@ -230,12 +230,16 @@ class TrackSim:
             # self.done = True
             self.reward = -1
             self.done_reason = f"Friction limit reached: {horizontal_force} > {self.car.max_friction_force}"
-        if self.steps > 500:
+        if self.steps > 100:
             self.done = True
             self.done_reason = f"Max steps"
+        if abs(self.car.theta) > 0.95*np.pi:
+            self.done = True
+            self.done_reason = f"Vehicle turned around"
+            self.reward = -1
 
         car = [self.car.x, self.car.y]
-        if lib.get_distance(car, self.env_map.end) < 2 and self.steps > 25:
+        if lib.get_distance(car, self.env_map.end) < 2 and self.steps > 10:
             self.done = True
             self.reward = 1
             self.done_reason = f"Lap complete"
