@@ -18,11 +18,13 @@ myMap = 'TrackMap1000'
 forest_name = 'forest'
 
 def RunOptimalAgent():
-    env_map = SimMap(name)
+    # env_map = SimMap(name)
+    env_map = ForestMap(forest_name)
 
     env = TrackSim(env_map)
     agent = OptimalAgent()
 
+    env_map.reset_map()
     done, state, score = False, env.reset(None), 0.0
     wpts = agent.init_agent(env_map)
     # env.render(True, wpts)
@@ -38,7 +40,7 @@ def RunOptimalAgent():
 
     print(f"Score: {score}")
     # env.show_history()
-    env.render(wait=False)
+    env.render(wait=True)
 
 
 """Training functions: PURE MOD"""
@@ -192,8 +194,8 @@ def timing():
 
 if __name__ == "__main__":
 
-    RunModAgent()
-    # RunOptimalAgent()
+    # RunModAgent()
+    RunOptimalAgent()
 
     # timing()
 

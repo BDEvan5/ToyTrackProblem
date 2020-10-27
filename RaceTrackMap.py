@@ -5,7 +5,7 @@ import yaml
 import csv
 
 import LibFunctions as lib
-from TrajectoryPlanner import MinCurvatureTrajectory
+from TrajectoryPlanner import MinCurvatureTrajectory, ObsAvoidTraj
 
 
 class MapBase:
@@ -98,8 +98,10 @@ class MapBase:
     def check_scan_location(self, x_in):
         if x_in[0] < 0 or x_in[1] < 0:
             return True
-
         x, y = self.convert_int_position(x_in)
+        if x > self.width or y > self.height:
+            return True
+
         if self.scan_map[y, x]:
             return True
         if self.obs_map[y, x]:
@@ -205,7 +207,13 @@ class ForestMap(MapBase):
         self.obs_map = np.zeros_like(self.scan_map)
 
     def get_min_curve_path(self):
-        self.wpts = self.track_pts
+        # self.wpts = self.track_pts
+
+        track = self.track
+        # n_set = MinCurvatureTrajectory(track, self.check_scan_location)
+        n_set = ObsAvoidTraj(track, self.check_scan_location)
+        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+        self.wpts = track[:, 0:2] + deviation
 
         return self.wpts
 
@@ -216,13 +224,14 @@ class ForestMap(MapBase):
     def random_obs(self, n=10):
         self.obs_map = np.zeros_like(self.obs_map)
 
-        obs_size = [1, 1]
+        obs_size = [2.5, 1]
 
         x, y = self.convert_int_position(obs_size)
         obs_size = [x, y]
 
         tys = np.linspace(4, 20, n)
-        txs = np.random.random(n) * 4 + 1
+        txs = np.random.normal(3, 1, size=n)
+        txs = np.clip(txs, 0, 4)
         obs_locs = np.array([txs, tys]).T
 
         for obs in obs_locs:
@@ -233,10 +242,8 @@ class ForestMap(MapBase):
                     y = np.clip(y+j, 0, self.height-1)
                     self.obs_map[y, x] = 1
 
-
     def reset_map(self):
-        self.random_obs(8)
-
+        self.random_obs(6)
 
     def render_map(self, figure_n=1, wait=False):
         f = plt.figure(figure_n)
@@ -259,7 +266,7 @@ class ForestMap(MapBase):
         else:
             plt.imshow(self.obs_map + self.scan_map)
 
-        plt.gca().set_aspect('equal', 'datalim')
+        # plt.gca().set_aspect('equal', 'datalim')
 
         plt.pause(0.0001)
         if wait:
@@ -283,7 +290,7 @@ class ForestGenerator(MapBase):
         tys = np.linspace(1, 29, N)
         tys = tys[:, None]
 
-        widths = np.ones((N, 2)) * 1.5
+        widths = np.ones((N, 2)) * 2.5
 
         nvecs = np.array([np.ones(N), np.zeros(N)]).T
 
