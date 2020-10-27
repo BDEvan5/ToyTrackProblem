@@ -96,7 +96,7 @@ def get_rand_ints(a=100, b=0):
     return np.array(r)
 
 def get_rand_coords(xa, xb, ya, yb):
-    r = [int(np.random.random() * xa + xb), int(np.random.random() * ya + yb)]
+    r = [np.random.random() * xa + xb, np.random.random() * ya + yb]
     return np.array(r)
     
 

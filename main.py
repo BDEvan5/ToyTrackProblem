@@ -144,8 +144,8 @@ def testVehicle(vehicle, show=False, obs=True):
         print(f"Lap time updates: {env.steps}")
         if show:
             # vehicle.show_vehicle_history()
-            # env.render(wait=False)
-            env.render(wait=True)
+            env.render(wait=False)
+            # env.render(wait=True)
 
         if r == -1:
             state = env.reset(None)

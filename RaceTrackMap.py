@@ -220,17 +220,10 @@ class ForestMap(MapBase):
 
         x, y = self.convert_int_position(obs_size)
         obs_size = [x, y]
-    
-        # rands = np.random.randint(1, self.N-1, n)
-        obs_locs = []
-        # for i in range(n):
-        #     pt = self.track_pts[rands[i]][:, None]
-        #     obs_locs.append(pt[:, 0])
 
-        for i in range(n):
-            # pt = lib.get_rand_coords(80, 20, 400, 50)
-            pt = lib.get_rand_coords(6, 0, 20, 2)
-            obs_locs.append(pt)
+        tys = np.linspace(4, 20, n)
+        txs = np.random.random(n) * 4 + 1
+        obs_locs = np.array([txs, tys]).T
 
         for obs in obs_locs:
             for i in range(0, obs_size[0]):
@@ -242,7 +235,7 @@ class ForestMap(MapBase):
 
 
     def reset_map(self):
-        self.random_obs(10)
+        self.random_obs(8)
 
 
     def render_map(self, figure_n=1, wait=False):
@@ -251,18 +244,6 @@ class ForestMap(MapBase):
 
         plt.xlim([0, self.width])
         plt.ylim([self.height, 0])
-
-        track = self.track
-        c_line = track[:, 0:2]
-        l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
-        r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
-
-        cx, cy = self.convert_positions(c_line)
-        plt.plot(cx, cy, linewidth=2)
-        lx, ly = self.convert_positions(l_line)
-        plt.plot(lx, ly, linewidth=1)
-        rx, ry = self.convert_positions(r_line)
-        plt.plot(rx, ry, linewidth=1)
 
         if self.wpts is not None:
             xs, ys = [], []
