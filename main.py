@@ -172,8 +172,8 @@ def RunModAgent():
     # TrainModVehicle(agent_name, True)
 
     vehicle = ModVehicleTest(agent_name)
-    # testVehicle(vehicle, obs=True, show=True)
-    testVehicle(vehicle, obs=False, show=True)
+    testVehicle(vehicle, obs=True, show=True)
+    # testVehicle(vehicle, obs=False, show=True)
 
 
 def testOptimal():

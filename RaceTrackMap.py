@@ -90,8 +90,8 @@ class MapBase:
         return np.array(xs), np.array(ys)
         
     def convert_int_position(self, pt):
-        x = int(round(np.clip(pt[0] / self.resolution, 0, self.width-1)))
-        y = int(round(np.clip(pt[1] / self.resolution, 0, self.height-1)))
+        x = int(round(np.clip(pt[0] / self.resolution, 0, self.width-2)))
+        y = int(round(np.clip(pt[1] / self.resolution, 0, self.height-2)))
 
         return x, y
 
@@ -213,34 +213,39 @@ class ForestMap(MapBase):
         pass
         # set up the optimisation to get this
         
-
-
     def random_obs(self, n=10):
         self.obs_map = np.zeros_like(self.obs_map)
 
-        o_scale = 600
-        obs_size = [self.width/o_scale, self.height/o_scale]
+        obs_size = [1, 1]
 
         x, y = self.convert_int_position(obs_size)
         obs_size = [x, y]
     
-        rands = np.random.randint(1, self.N-1, n)
+        # rands = np.random.randint(1, self.N-1, n)
         obs_locs = []
+        # for i in range(n):
+        #     pt = self.track_pts[rands[i]][:, None]
+        #     obs_locs.append(pt[:, 0])
+
         for i in range(n):
-            pt = self.track_pts[rands[i]][:, None]
-            obs_locs.append(pt[:, 0])
+            # pt = lib.get_rand_coords(80, 20, 400, 50)
+            pt = lib.get_rand_coords(6, 0, 20, 2)
+            obs_locs.append(pt)
 
         for obs in obs_locs:
             for i in range(0, obs_size[0]):
                 for j in range(0, obs_size[1]):
                     x, y = self.convert_int_position([obs[0], obs[1]])
-                    self.obs_map[y+j, x+i] = 1
+                    x = np.clip(x+i, 0, self.width-1)
+                    y = np.clip(y+j, 0, self.height-1)
+                    self.obs_map[y, x] = 1
+
 
     def reset_map(self):
         self.random_obs(10)
 
 
-    def render_map(self, figure_n, wait=False):
+    def render_map(self, figure_n=1, wait=False):
         f = plt.figure(figure_n)
         plt.clf()
 
@@ -278,6 +283,8 @@ class ForestMap(MapBase):
         plt.pause(0.0001)
         if wait:
             plt.show()
+
+
 
 class ForestGenerator(MapBase):
     def __init__(self, map_name='forest'):
