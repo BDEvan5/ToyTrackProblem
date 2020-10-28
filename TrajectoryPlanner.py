@@ -152,9 +152,61 @@ def find_true_widths(track, check_scan_location):
     return new_track
 
 
+def find_true_widths_race(track, check_scan_location):
+    nvecs = track[:, 2:4]
+    tx = track[:, 0]
+    ty = track[:, 1]
+    onws = track[:, 4]
+    opws = track[:, 5]
+
+    stp_sze = 0.1
+    # sf = 0.5 # safety factor
+    sf = 1 # safety factor
+    N = len(track)
+    nws, pws = [], []
+
+    prblms = []
+    for i in range(N):
+        pt = [tx[i], ty[i]]
+        nvec = nvecs[i]
+
+        if not check_scan_location(pt):
+            prblms.append(i)
+
+
+    for i in range(N):
+        pt = [tx[i], ty[i]]
+        nvec = nvecs[i]
+
+        if not check_scan_location(pt):
+            pws.append(opws[i])
+            nws.append(onws[i])
+        else:
+            print(f"Obs in way of pt: {i}")
+
+            for j in np.linspace(0, onws[i], 10):
+                p_pt = lib.add_locations(pt, nvec, j)
+                n_pt = lib.sub_locations(pt, nvec, j)
+                if not check_scan_location(p_pt):
+                    nws.append(-j*(1+sf))
+                    pws.append(opws[i])
+                    break
+                elif not check_scan_location(n_pt):
+                    pws.append(-j*(1+sf))
+                    nws.append(onws[i])
+                    break 
+
+    nws, pws = np.array(nws), np.array(pws)
+
+    new_track = np.concatenate([track[:, 0:4], nws[:, None], pws[:, None]], axis=-1)
+
+    return new_track
+
+
 
 def ObsAvoidTraj(track, check_scan_location):
-    track = find_true_widths(track, check_scan_location)
+    # track = find_true_widths(track, check_scan_location)
+    track = find_true_widths_race(track, check_scan_location)
 
     w_min = - track[:, 4] * 0.9
     w_max = track[:, 5] * 0.9

@@ -22,6 +22,7 @@ def RunVehicleLap(vehicle, env, show=False):
     vehicle.reset_lap()
     wpts = vehicle.init_agent(env.env_map)
     done, state, score = False, env.reset(None), 0.0
+    # env.render(wait=True)
     while not done:
         a = vehicle.act(state)
         s_p, r, done, _ = env.step(a)
@@ -93,18 +94,19 @@ def test_vehicles(vehicle_list, laps, eval_name, add_obs):
 def test_mod(vehicle_name):
     vehicle_list = []
 
-    mod_vehicle = ModVehicleTest(vehicle_name)
-    vehicle_list.append(mod_vehicle)
+    # mod_vehicle = ModVehicleTest(vehicle_name)
+    # vehicle_list.append(mod_vehicle)
 
     opt_vehicle = OptimalAgent()
     vehicle_list.append(opt_vehicle)
     
-    test_vehicles(vehicle_list, 100, vehicle_name + "/Eval_Obs" , True)
+    # test_vehicles(vehicle_list, 100, vehicle_name + "/Eval_Obs" , True)
+    test_vehicles(vehicle_list, 10, vehicle_name + "/Eval_Obs2" , True)
 
     # opt_vehicle = OptimalAgent()
     # vehicle_list.append(opt_vehicle)
 
-    test_vehicles(vehicle_list, 10, vehicle_name + "/Eval_NoObs", False)
+    # test_vehicles(vehicle_list, 10, vehicle_name + "/Eval_NoObs", False)
 
 
 """Training Functions"""            
