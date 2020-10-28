@@ -30,16 +30,16 @@ def RunVehicleLap(vehicle, env, show=False):
 
     if show:
         # vehicle.show_vehicle_history()
-        # env.render(wait=False)
-        env.render(wait=True)
+        env.render(wait=False)
+        # env.render(wait=True)
 
     return r, env.steps
 
 def test_vehicles(vehicle_list, laps, eval_name, add_obs):
     N = len(vehicle_list)
 
-    # env_map = SimMap(name)
-    env_map = ForestMap(forest_name)
+    env_map = SimMap(name)
+    # env_map = ForestMap(forest_name)
     env = TrackSim(env_map)
 
     completes = np.zeros((N))
@@ -218,7 +218,8 @@ def get_moving_avg(vehicle_name, show=False):
 """Main functions"""
 
 def main():
-    vehicle_name = "ModICRA_forest2"
+    # vehicle_name = "ModICRA_forest2"
+    vehicle_name = "ModICRA_build"
 
     # train_mod(vehicle_name, True)
     # train_mod(vehicle_name, False)

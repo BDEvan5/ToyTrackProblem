@@ -134,8 +134,8 @@ class TrackSim:
             self.steer_history.append(steer_dot)
             self.velocity_history.append(self.car.velocity)
          
-        # self.check_done_reward_track_train()
-        self.check_done_forest()
+        self.check_done_reward_track_train()
+        # self.check_done_forest()
 
         obs = self.car.get_car_state()
         done = self.done
@@ -168,8 +168,8 @@ class TrackSim:
         self.car.prev_loc = [self.car.x, self.car.y]
         self.car.velocity = 0
         self.car.steering = 0
-        self.car.theta = 0
-        # self.car.theta = np.pi/2
+        # self.car.theta = 0
+        self.car.theta = np.pi/2
 
         return self.car.get_car_state()
 
