@@ -29,9 +29,9 @@ def RunVehicleLap(vehicle, env, show=False):
         # env.render(False, wpts)
 
     if show:
-        # vehicle.show_vehicle_history()
-        env.render(wait=False)
-        # env.render(wait=True)
+        vehicle.show_vehicle_history()
+        # env.render(wait=False)
+        env.render(wait=True)
 
     return r, env.steps
 
@@ -101,8 +101,8 @@ def test_mod(vehicle_name):
     
     test_vehicles(vehicle_list, 100, vehicle_name + "/Eval_Obs" , True)
 
-    opt_vehicle = OptimalAgent()
-    vehicle_list.append(opt_vehicle)
+    # opt_vehicle = OptimalAgent()
+    # vehicle_list.append(opt_vehicle)
 
     test_vehicles(vehicle_list, 10, vehicle_name + "/Eval_NoObs", False)
 
@@ -133,7 +133,7 @@ def train_mod(agent_name, recreate=True):
     done, state, score = False, env.reset(None), 0.0
     vehicle.init_agent(env_map)
     env_map.reset_map()
-    for n in range(10000):
+    for n in range(200000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
@@ -218,7 +218,7 @@ def get_moving_avg(vehicle_name, show=False):
 """Main functions"""
 
 def main():
-    vehicle_name = "ModICRA_forest"
+    vehicle_name = "ModICRA_forest2"
 
     # train_mod(vehicle_name, True)
     # train_mod(vehicle_name, False)

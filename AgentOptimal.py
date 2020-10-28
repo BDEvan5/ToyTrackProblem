@@ -113,5 +113,6 @@ class OptimalAgent:
         # for testing
         pass    
 
-
+    def show_vehicle_history(self):
+        pass
 

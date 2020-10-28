@@ -220,8 +220,8 @@ def ObsAvoidTraj(track, check_scan_location):
     
     }
 
-    S = ca.nlpsol('S', 'ipopt', nlp, {'ipopt':{'print_level':5}})
-    # S = ca.nlpsol('S', 'ipopt', nlp, {'ipopt':{'print_level':0}})
+    # S = ca.nlpsol('S', 'ipopt', nlp, {'ipopt':{'print_level':5}})
+    S = ca.nlpsol('S', 'ipopt', nlp, {'ipopt':{'print_level':0}})
 
     ones = np.ones(N)
     n0 = ones*0
