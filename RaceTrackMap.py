@@ -155,6 +155,7 @@ class SimMap(MapBase):
         MapBase.__init__(self, map_name)
 
         self.obs_map = np.zeros_like(self.scan_map)
+        self.end = self.start
 
     def get_min_curve_path(self):
         path_name = 'Maps/' + self.name + "_path.npy"
@@ -174,6 +175,34 @@ class SimMap(MapBase):
         self.wpts = path
 
         return path
+
+    def get_optimal_path(self):
+        track = self.track
+        n_set = ObsAvoidTraj(track, self.check_scan_location)
+        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+        self.wpts = track[:, 0:2] + deviation
+
+        return self.wpts
+
+    def get_reference_path(self):
+        path_name = 'Maps/' + self.name + "_ref_path.npy"
+        try:
+            # raise Exception
+            path = np.load(path_name)
+            print(f"Path loaded from file: min curve")
+        except:
+            track = self.track
+            n_set = MinCurvatureTrajectory(track, self.obs_map)
+            deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+            path = track[:, 0:2] + deviation
+
+            np.save(path_name, path)
+            print(f"Path saved: min curve")
+
+        self.wpts = path
+
+        return self.wpts
+
 
     def random_obs(self, n=10):
         self.obs_map = np.zeros_like(self.obs_map)

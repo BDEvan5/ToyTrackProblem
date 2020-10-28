@@ -29,7 +29,7 @@ def RunVehicleLap(vehicle, env, show=False):
         # env.render(False, wpts)
 
     if show:
-        vehicle.show_vehicle_history()
+        # vehicle.show_vehicle_history()
         # env.render(wait=False)
         env.render(wait=True)
 
@@ -133,7 +133,7 @@ def train_mod(agent_name, recreate=True):
     done, state, score = False, env.reset(None), 0.0
     vehicle.init_agent(env_map)
     env_map.reset_map()
-    for n in range(200000):
+    for n in range(50000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
@@ -147,8 +147,8 @@ def train_mod(agent_name, recreate=True):
         if done:
             rewards.append(score)
             lengths.append(env.steps)
-            if plot_n % 5 == 0:
-                vehicle.show_vehicle_history()
+            if plot_n % 10 == 0:
+                # vehicle.show_vehicle_history()
                 env.render(scan_sim=vehicle.scan_sim, wait=False)
                 
                 mean = np.mean(rewards)

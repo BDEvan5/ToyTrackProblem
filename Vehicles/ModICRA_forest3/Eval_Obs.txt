@@ -1,0 +1,15 @@
+
+Testing Complete 
+Map name: race_track 
+-----------------------------------------------------
+-----------------------------------------------------
+Vehicle: ModICRA_forest3
+Crashes: 83.0 --> Completes 17.0
+% Finished = 17.00
+Avg lap times: 40.470588235294116
+-----------------------------------------------------
+Vehicle: Optimal Agent: Following target references
+Crashes: 7.0 --> Completes 93.0
+% Finished = 93.00
+Avg lap times: 28.892473118279568
+-----------------------------------------------------
