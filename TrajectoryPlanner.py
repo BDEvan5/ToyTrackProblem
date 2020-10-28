@@ -161,24 +161,15 @@ def find_true_widths_race(track, check_scan_location):
 
     stp_sze = 0.1
     # sf = 0.5 # safety factor
-    sf = 1 # safety factor
+    sf = 0.8 # safety factor
     N = len(track)
     nws, pws = [], []
-
-    prblms = []
+    f_d = 40
     for i in range(N):
         pt = [tx[i], ty[i]]
         nvec = nvecs[i]
 
-        if not check_scan_location(pt):
-            prblms.append(i)
-
-
-    for i in range(N):
-        pt = [tx[i], ty[i]]
-        nvec = nvecs[i]
-
-        if not check_scan_location(pt):
+        if check_scan_location(pt) > f_d:
             pws.append(opws[i])
             nws.append(onws[i])
         else:
@@ -187,11 +178,11 @@ def find_true_widths_race(track, check_scan_location):
             for j in np.linspace(0, onws[i], 10):
                 p_pt = lib.add_locations(pt, nvec, j)
                 n_pt = lib.sub_locations(pt, nvec, j)
-                if not check_scan_location(p_pt):
+                if check_scan_location(p_pt) > f_d:
                     nws.append(-j*(1+sf))
                     pws.append(opws[i])
                     break
-                elif not check_scan_location(n_pt):
+                elif check_scan_location(n_pt) > f_d:
                     pws.append(-j*(1+sf))
                     nws.append(onws[i])
                     break 
@@ -207,6 +198,16 @@ def find_true_widths_race(track, check_scan_location):
 def ObsAvoidTraj(track, check_scan_location):
     # track = find_true_widths(track, check_scan_location)
     track = find_true_widths_race(track, check_scan_location)
+
+    c_line = track[:, 0:2]
+    l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
+    r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
+
+    plt.figure(2)
+    plt.plot(c_line[:, 0], c_line[:, 1])
+    plt.plot(r_line[:, 0], r_line[:, 1])
+    plt.plot(l_line[:, 0], l_line[:, 1])
+    # plt.show()
 
     w_min = - track[:, 4] * 0.9
     w_max = track[:, 5] * 0.9

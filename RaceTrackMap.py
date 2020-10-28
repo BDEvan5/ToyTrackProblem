@@ -156,6 +156,7 @@ class SimMap(MapBase):
 
         self.obs_map = np.zeros_like(self.scan_map)
         self.end = self.start
+        self.eld = None
 
     def get_min_curve_path(self):
         path_name = 'Maps/' + self.name + "_path.npy"
@@ -176,9 +177,25 @@ class SimMap(MapBase):
 
         return path
 
+    def set_euclidian(self):
+        m = np.ones_like(self.obs_map) - self.obs_map
+        self.eld = ndimage.distance_transform_edt(m)
+
+        # plt.figure(1)
+        # plt.imshow(self.eld)
+        # plt.show()
+
+    def check_eld_location(self, x_in):
+        if self.check_scan_location(x_in):
+            return 0
+        else:
+            return self.eld[int(x_in[0]), int(x_in[1])]
+
+
     def get_optimal_path(self):
         track = self.track
-        n_set = ObsAvoidTraj(track, self.check_scan_location)
+        self.set_euclidian()
+        n_set = ObsAvoidTraj(track, self.check_eld_location)
         deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
         self.wpts = track[:, 0:2] + deviation
 
