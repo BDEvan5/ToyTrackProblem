@@ -131,9 +131,13 @@ class TrackSim:
             acceleration, steer_dot = self.control_system(v_ref, d_ref)
             self.car.update_kinematic_state(acceleration, steer_dot, self.timestep)
 
-            self.steer_history.append(steer_dot)
-            self.velocity_history.append(self.car.velocity)
-         
+        #     self.steer_history.append(steer_dot)
+        #     self.velocity_history.append(self.car.velocity)
+        self.steer_history.append(self.car.steering)
+        self.velocity_history.append(self.car.velocity)
+
+
+        
         self.check_done_reward_track_train()
         # self.check_done_forest()
 
@@ -183,10 +187,10 @@ class TrackSim:
         plt.plot(self.velocity_history)
         plt.pause(0.001)
         self.velocity_history.clear()
-        plt.figure(1)
-        plt.title("Forces history")
-        plt.plot(self.y_forces)
-        plt.pause(0.001)
+        # plt.figure(1)
+        # plt.title("Forces history")
+        # plt.plot(self.y_forces)
+        # plt.pause(0.001)
         self.y_forces.clear()
 
     def reset_lap(self):

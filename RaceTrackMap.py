@@ -5,7 +5,7 @@ import yaml
 import csv
 
 import LibFunctions as lib
-from TrajectoryPlanner import MinCurvatureTrajectory, ObsAvoidTraj
+from TrajectoryPlanner import MinCurvatureTrajectory, ObsAvoidTraj, ShortestTraj
 
 
 class MapBase:
@@ -191,12 +191,26 @@ class SimMap(MapBase):
         else:
             return self.eld[int(x_in[0]), int(x_in[1])]
 
-
     def get_optimal_path(self):
+
+        # self.set_euclidian()
+        # n_set = ObsAvoidTraj(track, self.check_eld_location)
+
+        self.render_map(figure_n=1, wait=False)
+        self.set_true_widths()
         track = self.track
-        self.set_euclidian()
-        n_set = ObsAvoidTraj(track, self.check_eld_location)
+        n_set = ShortestTraj(track, self.check_scan_location)
+
+        track = self.track
         deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+        self.track[:, 0:2] += deviation
+        self.set_true_widths()
+        self.render_map(figure_n=1, wait=False)
+        
+        track = self.track
+        n_set = ObsAvoidTraj(self.track, self.check_scan_location)
+        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+
         self.wpts = track[:, 0:2] + deviation
 
         return self.wpts
@@ -244,6 +258,41 @@ class SimMap(MapBase):
 
     def reset_map(self):
         self.random_obs(10)
+
+    def set_true_widths(self):
+        nvecs = self.track[:, 2:4]
+        tx = self.track[:, 0]
+        ty = self.track[:, 1]
+
+        stp_sze = 0.1
+        sf = 0.95 # safety factor
+        nws, pws = [], []
+        for i in range(self.N):
+            pt = [tx[i], ty[i]]
+            nvec = nvecs[i]
+
+            j = stp_sze
+            s_pt = lib.add_locations(pt, nvec, j)
+            while not self.check_scan_location(s_pt):
+                j += stp_sze
+                s_pt = lib.add_locations(pt, nvec, j)
+            pws.append(j*sf)
+
+            j = stp_sze
+            s_pt = lib.sub_locations(pt, nvec, j)
+            while not self.check_scan_location(s_pt):
+                j += stp_sze
+                s_pt = lib.sub_locations(pt, nvec, j)
+            nws.append(j*sf)
+
+        nws, pws = np.array(nws), np.array(pws)
+
+        self.track[:, 4] = nws
+        self.track[:, 5] = pws
+
+        # new_track = np.concatenate([self.track[0:4], nws[:, None], pws[:, None]], axis=-1)
+
+        # self.track = new_track
 
 
 class ForestMap(MapBase):
@@ -722,7 +771,18 @@ def forest_gen():
     f = ForestGenerator()
     f.save_map()
 
+def test_sim_map_obs():
+    name = 'race_track'
+    env_map = SimMap(name)
+    env_map.reset_map()
+
+    wpts = env_map.get_optimal_path()
+    env_map.render_map(wait=True)
+
+
+
 if __name__ == "__main__":
     # test_map_converter()
 
-    forest_gen()
+    # forest_gen()
+    test_sim_map_obs()

@@ -97,17 +97,18 @@ class BaseModAgent:
         plt.title("Mod History")
         plt.ylim([-1.1, 1.1])
         plt.plot(self.mod_history)
+        np.save('Vehicles/mod_hist', self.mod_history)
         # plt.plot(self.d_ref_history)
         plt.legend(['NN'])
 
         plt.pause(0.001)
 
-        plt.figure(3)
-        plt.clf()
-        plt.title('Rewards')
-        plt.ylim([-1.5, 4])
-        plt.plot(self.reward_history, 'x', markersize=12)
-        plt.plot(self.critic_history)
+        # plt.figure(3)
+        # plt.clf()
+        # plt.title('Rewards')
+        # plt.ylim([-1.5, 4])
+        # plt.plot(self.reward_history, 'x', markersize=12)
+        # plt.plot(self.critic_history)
 
     def transform_obs(self, obs):
         v_ref, d_ref = self.get_target_references(obs)

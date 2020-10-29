@@ -31,6 +31,7 @@ def RunVehicleLap(vehicle, env, show=False):
 
     if show:
         # vehicle.show_vehicle_history()
+        # env.show_history()
         # env.render(wait=False)
         env.render(wait=True)
 
@@ -103,8 +104,6 @@ def test_mod(vehicle_name):
     # test_vehicles(vehicle_list, 100, vehicle_name + "/Eval_Obs" , True)
     test_vehicles(vehicle_list, 10, vehicle_name + "/Eval_Obs2" , True)
 
-    # opt_vehicle = OptimalAgent()
-    # vehicle_list.append(opt_vehicle)
 
     # test_vehicles(vehicle_list, 10, vehicle_name + "/Eval_NoObs", False)
 
@@ -232,5 +231,7 @@ if __name__ == "__main__":
 
 
     main()
+    # d = np.load('Vehicles/mod_hist.npy')
+    # save_csv_data(d, 'Vehicles/mod_hist.csv')
 
     # get_moving_avg()
