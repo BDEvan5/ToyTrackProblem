@@ -158,6 +158,15 @@ class SimMap(MapBase):
         self.end = self.start
         self.eld = None
 
+        self.set_true_widths()
+        track = self.track
+        n_set = ShortestTraj(track, self.check_scan_location)
+
+        track = self.track
+        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+        self.track[:, 0:2] += deviation
+        self.set_true_widths()
+
     def get_min_curve_path(self):
         path_name = 'Maps/' + self.name + "_path.npy"
         try:
@@ -196,15 +205,8 @@ class SimMap(MapBase):
         # self.set_euclidian()
         # n_set = ObsAvoidTraj(track, self.check_eld_location)
 
-        self.render_map(figure_n=1, wait=False)
-        self.set_true_widths()
-        track = self.track
-        n_set = ShortestTraj(track, self.check_scan_location)
-
-        track = self.track
-        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
-        self.track[:, 0:2] += deviation
-        self.set_true_widths()
+        # self.render_map(figure_n=1, wait=False)
+        
         self.render_map(figure_n=1, wait=False)
         
         track = self.track
@@ -256,8 +258,11 @@ class SimMap(MapBase):
                     x, y = self.convert_int_position([obs[0], obs[1]])
                     self.obs_map[y+j, x+i] = 1
 
+        return obs_locs
+
     def reset_map(self):
-        self.random_obs(10)
+        o =  self.random_obs(10)
+        return o
 
     def set_true_widths(self):
         nvecs = self.track[:, 2:4]
@@ -315,7 +320,6 @@ class ForestMap(MapBase):
 
         return self.wpts
 
-
     def get_obs_free_path(self):
         pass
         # set up the optimisation to get this
@@ -342,8 +346,11 @@ class ForestMap(MapBase):
                     y = np.clip(y+j, 0, self.height-1)
                     self.obs_map[y, x] = 1
 
+        return obs_locs
+
     def reset_map(self):
-        self.random_obs(6)
+        o = self.random_obs(6)
+        return o
 
     def render_map(self, figure_n=1, wait=False):
         f = plt.figure(figure_n)
@@ -359,7 +366,7 @@ class ForestMap(MapBase):
                 # plt.plot(x, y, '+', markersize=14)
                 xs.append(x)
                 ys.append(y)
-            plt.plot(xs, ys, '--', linewidth=2)
+            plt.plot(xs, ys, '--', color='g', linewidth=2)
 
         if self.obs_map is None:
             plt.imshow(self.scan_map)

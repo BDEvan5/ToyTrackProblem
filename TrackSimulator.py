@@ -99,9 +99,52 @@ class ScanSimulator:
         self._check_location = check_fcn
 
 
+class SimHistory:
+    def __init__(self):
+        self.positions = []
+        self.steering = []
+        self.velocities = []
+        self.obs_locations = []
+
+        self.ctr = 0
+
+    def save_history(self):
+        pos = np.array(self.positions)
+        vel = np.array(self.velocities)
+        steer = np.array(self.steering)
+        obs = np.array(self.obs_locations)
+
+        d = np.concatenate([pos, vel[:, None], steer[:, None]], axis=-1)
+
+        d_name = 'Vehicles/TrainData/' + f'data{self.ctr}'
+        o_name = 'Vehicles/TrainData/' + f"obs{self.ctr}"
+        np.save(d_name, d)
+        np.save(o_name, obs)
+
+    def reset_history(self):
+        self.positions = []
+        self.steering = []
+        self.velocities = []
+        self.obs_locations = []
+
+        self.ctr += 1
+
+    def show_history(self):
+        plt.figure(3)
+        plt.title("Steer history")
+        plt.plot(self.steering)
+        plt.pause(0.001)
+
+        plt.figure(2)
+        plt.title("Velocity history")
+        plt.plot(self.velocities)
+        plt.pause(0.001)
+
+
 class TrackSim:
     def __init__(self, env_map):
         self.timestep = 0.02
+        self.eps = 0
 
         self.env_map = env_map
 
@@ -113,8 +156,7 @@ class TrackSim:
         self.action_memory = []
         self.steps = 0
 
-        self.steer_history = []
-        self.velocity_history = []
+        self.history = SimHistory()
         self.done_reason = ""
         self.y_forces = []
 
@@ -131,15 +173,12 @@ class TrackSim:
             acceleration, steer_dot = self.control_system(v_ref, d_ref)
             self.car.update_kinematic_state(acceleration, steer_dot, self.timestep)
 
-        #     self.steer_history.append(steer_dot)
-        #     self.velocity_history.append(self.car.velocity)
-        self.steer_history.append(self.car.steering)
-        self.velocity_history.append(self.car.velocity)
-
-
+        self.history.velocities.append(self.car.velocity)
+        self.history.steering.append(self.car.steering)
+        self.history.positions.append([self.car.x, self.car.y])
         
-        self.check_done_reward_track_train()
-        # self.check_done_forest()
+        # self.check_done_reward_track_train()
+        self.check_done_forest()
 
         obs = self.car.get_car_state()
         done = self.done
@@ -172,26 +211,13 @@ class TrackSim:
         self.car.prev_loc = [self.car.x, self.car.y]
         self.car.velocity = 0
         self.car.steering = 0
-        # self.car.theta = 0
-        self.car.theta = np.pi/2
+        self.car.theta = 0
+        # self.car.theta = np.pi/2
+        self.eps += 1
+
+        self.history.reset_history()
 
         return self.car.get_car_state()
-
-    def show_history(self):
-        plt.figure(3)
-        plt.title("Steer history")
-        plt.plot(self.steer_history)
-        plt.pause(0.001)
-        plt.figure(2)
-        plt.title("Velocity history")
-        plt.plot(self.velocity_history)
-        plt.pause(0.001)
-        self.velocity_history.clear()
-        # plt.figure(1)
-        # plt.title("Forces history")
-        # plt.plot(self.y_forces)
-        # plt.pause(0.001)
-        self.y_forces.clear()
 
     def reset_lap(self):
         self.steps = 0
@@ -248,8 +274,7 @@ class TrackSim:
             self.reward = 1
             self.done_reason = f"Lap complete"
 
-
-    def render(self, wait=False, scan_sim=None):
+    def render(self, wait=False, scan_sim=None, save=False):
         self.env_map.render_map(4)
         fig = plt.figure(4)
 
@@ -265,38 +290,45 @@ class TrackSim:
                 y = [cy, ry]
                 plt.plot(x, y)
 
+        xs, ys = [], []
         for pos in self.action_memory:
             x, y = self.env_map.convert_position(pos)
-            plt.plot(x, y, 'x', markersize=6)
+            xs.append(x)
+            ys.append(y)
+            # plt.plot(x, y, 'x', markersize=6)
+        plt.plot(xs, ys, 'r', linewidth=3)
 
         text_x = self.env_map.scan_map.shape[1] + 10
         text_y = self.env_map.scan_map.shape[0] / 10
 
-        s = f"Reward: [{self.reward:.1f}]" 
-        plt.text(text_x, text_y * 1, s)
-        s = f"Action: [{self.action[0]:.2f}, {self.action[1]:.2f}]"
-        plt.text(text_x, text_y * 2, s) 
-        s = f"Done: {self.done}"
-        plt.text(text_x, text_y * 3, s) 
-        s = f"Pos: [{self.car.x:.2f}, {self.car.y:.2f}]"
-        plt.text(text_x, text_y * 4, s)
-        s = f"Vel: [{self.car.velocity:.2f}]"
-        plt.text(text_x, text_y * 5, s)
-        s = f"Theta: [{(self.car.theta * 180 / np.pi):.2f}]"
-        plt.text(text_x, text_y * 6, s) 
-        s = f"Delta x100: [{(self.car.steering*100):.2f}]"
-        plt.text(text_x, text_y * 7, s) 
-        s = f"Done reason: {self.done_reason}"
-        plt.text(text_x, text_y * 8, s) 
+        # s = f"Reward: [{self.reward:.1f}]" 
+        # plt.text(text_x, text_y * 1, s)
+        # s = f"Action: [{self.action[0]:.2f}, {self.action[1]:.2f}]"
+        # plt.text(text_x, text_y * 2, s) 
+        # s = f"Done: {self.done}"
+        # plt.text(text_x, text_y * 3, s) 
+        # s = f"Pos: [{self.car.x:.2f}, {self.car.y:.2f}]"
+        # plt.text(text_x, text_y * 4, s)
+        # s = f"Vel: [{self.car.velocity:.2f}]"
+        # plt.text(text_x, text_y * 5, s)
+        # s = f"Theta: [{(self.car.theta * 180 / np.pi):.2f}]"
+        # plt.text(text_x, text_y * 6, s) 
+        # s = f"Delta x100: [{(self.car.steering*100):.2f}]"
+        # plt.text(text_x, text_y * 7, s) 
+        # s = f"Done reason: {self.done_reason}"
+        # plt.text(text_x, text_y * 8, s) 
         
 
-        s = f"Steps: {self.steps}"
-        plt.text(text_x, text_y * 9, s)
+        # s = f"Steps: {self.steps}"
+        # plt.text(text_x, text_y * 9, s)
 
 
         plt.pause(0.0001)
         if wait:
             plt.show()
+
+        if save and self.eps % 2 == 0:
+            plt.savefig(f'TrainingFigs/t{self.eps}.png')
 
     def min_render(self, wait=False):
         fig = plt.figure(4)

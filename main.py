@@ -57,7 +57,8 @@ def TrainModVehicle(agent_name, load=True):
     os.mkdir(path)
 
 
-    env_map = SimMap(name)
+    # env_map = SimMap(name)
+    env_map = ForestMap(forest_name)
     vehicle = ModVehicleTrain(agent_name, load, 200, 10)
 
     env = TrackSim(env_map)
@@ -69,10 +70,10 @@ def TrainModVehicle(agent_name, load=True):
     complete_his, crash_his = [], []
 
     done, state, score, crashes = False, env.reset(None), 0.0, 0.0
-    env_map.reset_map()
+    o = env_map.reset_map()
 
     wpts = vehicle.init_agent(env_map)
-    for n in range(200000):
+    for n in range(10000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
@@ -99,8 +100,8 @@ def TrainModVehicle(agent_name, load=True):
             rewards.append(score)
             score = 0
             lengths.append(env.steps)
-            vehicle.show_vehicle_history()
-            env.render(wait=False)
+            # vehicle.show_vehicle_history()
+            env.render(wait=False, save=True)
             if plot_n % 10 == 0:
 
                 crash_his.append(crash_laps)
@@ -109,8 +110,11 @@ def TrainModVehicle(agent_name, load=True):
                 completes = 0
 
             plot_n += 1
-            env_map.reset_map()
+            env.history.obs_locations = o
+            # env.history.save_history()
+            o = env_map.reset_map()
             vehicle.reset_lap()
+            
             state = env.reset()
 
             if r == -1:
@@ -171,11 +175,11 @@ def testVehicle(vehicle, show=False, obs=True):
 def RunModAgent():
     agent_name = "TestingMod"
     
-    # TrainModVehicle(agent_name, False)
+    TrainModVehicle(agent_name, False)
     # TrainModVehicle(agent_name, True)
 
-    vehicle = ModVehicleTest(agent_name)
-    testVehicle(vehicle, obs=True, show=True)
+    # vehicle = ModVehicleTest(agent_name)
+    # testVehicle(vehicle, obs=True, show=True)
     # testVehicle(vehicle, obs=False, show=True)
 
 
@@ -195,8 +199,8 @@ def timing():
 
 if __name__ == "__main__":
 
-    # RunModAgent()
-    RunOptimalAgent()
+    RunModAgent()
+    # RunOptimalAgent()
 
     # timing()
 
