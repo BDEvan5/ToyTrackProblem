@@ -4,7 +4,7 @@ import sys, os, shutil
 
 import timeit
 
-from TrackSimulator import TrackSim
+from TrackSimulator import TrackSim, ForestSim
 from RaceTrackMap import  SimMap, ForestMap
 from ModelsRL import ReplayBufferDQN, ReplayBufferTD3
 import LibFunctions as lib
@@ -19,14 +19,16 @@ forest_name = 'forest'
 
 
 def RunOptimalAgent():
-    env_map = SimMap(name)
-    # env_map = ForestMap(forest_name)
+    # env_map = SimMap(name)
+    # env = TrackSim(env_map)
 
-    env = TrackSim(env_map)
+    env_map = ForestMap(forest_name)
+    env = ForestSim(env_map)
+
     agent = OptimalAgent()
 
     env_map.reset_map()
-    done, state, score = False, env.reset(None), 0.0
+    done, state, score = False, env.reset(), 0.0
     wpts = agent.init_agent(env_map)
     env.render(wait=True)
     # env.render(True, wpts)

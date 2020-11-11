@@ -141,7 +141,10 @@ class SimHistory:
         plt.pause(0.001)
 
 
-class TrackSim:
+class BaseSim:
+    """
+    Base simulator class
+    """
     def __init__(self, env_map):
         self.timestep = 0.02
         self.eps = 0
@@ -160,7 +163,7 @@ class TrackSim:
         self.done_reason = ""
         self.y_forces = []
 
-    def step(self, action):
+    def base_step(self, action):
         self.steps += 1
 
         v_ref = action[0]
@@ -177,16 +180,7 @@ class TrackSim:
         self.history.steering.append(self.car.steering)
         self.history.positions.append([self.car.x, self.car.y])
         
-        # self.check_done_reward_track_train()
-        self.check_done_forest()
-
-        obs = self.car.get_car_state()
-        done = self.done
-        reward = self.reward
-
         self.action_memory.append([self.car.x, self.car.y])
-
-        return obs, reward, done, None
 
     def control_system(self, v_ref, d_ref):
 
@@ -201,18 +195,11 @@ class TrackSim:
 
         return a, d_dot
 
-    def reset(self, poses=None, random_start=False):
+    def base_reset(self):
         self.done = False
         self.action_memory = []
         self.steps = 0
         
-        self.car.x = self.env_map.start[0]
-        self.car.y = self.env_map.start[1]
-        self.car.prev_loc = [self.car.x, self.car.y]
-        self.car.velocity = 0
-        self.car.steering = 0
-        self.car.theta = 0
-        # self.car.theta = np.pi/2
         self.eps += 1
 
         self.history.reset_history()
@@ -387,7 +374,68 @@ class TrackSim:
         plt.pause(0.0001)
         if wait:
             plt.show()
-            
+  
+
+class TrackSim(BaseSim):
+    """
+    Simulator for Race Tracks
+    """
+    def __init__(self, env_map):
+        BaseSim.__init__(self, env_map)
+
+    def step(self, action):
+        self.base_step(action)
+
+        self.check_done_reward_track_train()
+
+        obs = self.car.get_car_state()
+        done = self.done
+        reward = self.reward
+
+        return obs, reward, done, None
+
+    def reset(self):
+        self.car.x = self.env_map.start[0]
+        self.car.y = self.env_map.start[1]
+        self.car.prev_loc = [self.car.x, self.car.y]
+        self.car.velocity = 0
+        self.car.steering = 0
+        self.car.theta = np.pi/2
+
+        return self.base_reset()
+
+
+class ForestSim(BaseSim):
+    """
+    Simulator for Race Tracks
+    """
+    def __init__(self, env_map):
+        BaseSim.__init__(self, env_map)
+
+    def step(self, action):
+        self.base_step(action)
+
+        self.check_done_forest()
+
+        obs = self.car.get_car_state()
+        done = self.done
+        reward = self.reward
+
+        return obs, reward, done, None
+
+    def reset(self):
+        self.car.x = self.env_map.start[0]
+        self.car.y = self.env_map.start[1]
+        self.car.prev_loc = [self.car.x, self.car.y]
+        self.car.velocity = 0
+        self.car.steering = 0
+        self.car.theta = 0
+
+        return self.base_reset()
+
+
+
+          
 
 def CorridorCS(obs):
     ranges = obs[5:]
