@@ -353,7 +353,7 @@ class ForestMap(MapBase):
             plt.show()
 
 
-
+# Testing functions
 def test_sim_map_obs():
     name = 'race_track'
     env_map = SimMap(name)
