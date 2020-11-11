@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 
 import LibFunctions as lib
 from TrajectoryPlanner import MinCurvatureTrajectory
-from TrackSimulator import ScanSimulator
+from Simulator import ScanSimulator
 
 
 class OptimalAgent:

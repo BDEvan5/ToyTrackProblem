@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 from ModelsRL import TD3
 
 import LibFunctions as lib
-from TrackSimulator import ScanSimulator
+from Simulator import ScanSimulator
 
 
 
@@ -221,8 +221,6 @@ class ModVehicleTest(BaseModAgent):
 
         self.current_v_ref = None
         self.current_phi_ref = None
-
-
 
     def act(self, obs):
         v_ref, d_ref = self.get_target_references(obs)

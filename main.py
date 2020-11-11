@@ -4,8 +4,8 @@ import sys, os, shutil
 
 import timeit
 
-from TrackSimulator import TrackSim, ForestSim
-from RaceTrackMap import  SimMap, ForestMap
+from Simulator import TrackSim, ForestSim
+from SimMaps import  SimMap, ForestMap
 from ModelsRL import ReplayBufferDQN, ReplayBufferTD3
 import LibFunctions as lib
 
