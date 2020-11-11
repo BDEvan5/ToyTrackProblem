@@ -59,12 +59,13 @@ def TrainModVehicle(agent_name, load=True):
             shutil.rmtree(path)
     os.mkdir(path)
 
-
     # env_map = SimMap(name)
-    env_map = ForestMap(forest_name)
-    vehicle = ModVehicleTrain(agent_name, load, 200, 10)
+    # env = TrackSim(env_map)
 
-    env = TrackSim(env_map)
+    env_map = ForestMap(forest_name)
+    env = ForestSim(env_map)
+
+    vehicle = ModVehicleTrain(agent_name, load, 200, 10)
 
     print_n = 500
     plot_n = 0
@@ -72,7 +73,7 @@ def TrainModVehicle(agent_name, load=True):
     completes, crash_laps = 0, 0
     complete_his, crash_his = [], []
 
-    done, state, score, crashes = False, env.reset(None), 0.0, 0.0
+    done, state, score, crashes = False, env.reset(), 0.0, 0.0
     o = env_map.reset_map()
 
     wpts = vehicle.init_agent(env_map)
@@ -133,15 +134,17 @@ def TrainModVehicle(agent_name, load=True):
 """General test function"""
 def testVehicle(vehicle, show=False, obs=True):
     # env_map = SimMap(name)
+    # env = TrackSim(env_map)
+
     env_map = ForestMap(forest_name)
-    env = TrackSim(env_map)
+    env = ForestSim(env_map)
 
     crashes = 0
     completes = 0
     lap_times = []
 
     wpts = vehicle.init_agent(env_map)
-    done, state, score = False, env.reset(None), 0.0
+    done, state, score = False, env.reset(), 0.0
     for i in range(10): # 10 laps
         print(f"Running lap: {i}")
         if obs:
