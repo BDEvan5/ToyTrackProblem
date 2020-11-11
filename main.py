@@ -17,9 +17,10 @@ name = names[5]
 myMap = 'TrackMap1000'
 forest_name = 'forest'
 
+
 def RunOptimalAgent():
-    # env_map = SimMap(name)
-    env_map = ForestMap(forest_name)
+    env_map = SimMap(name)
+    # env_map = ForestMap(forest_name)
 
     env = TrackSim(env_map)
     agent = OptimalAgent()
@@ -199,8 +200,8 @@ def timing():
 
 if __name__ == "__main__":
 
-    RunModAgent()
-    # RunOptimalAgent()
+    # RunModAgent()
+    RunOptimalAgent()
 
     # timing()
 

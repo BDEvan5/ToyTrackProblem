@@ -301,26 +301,26 @@ class TrackSim:
         text_x = self.env_map.scan_map.shape[1] + 10
         text_y = self.env_map.scan_map.shape[0] / 10
 
-        # s = f"Reward: [{self.reward:.1f}]" 
-        # plt.text(text_x, text_y * 1, s)
-        # s = f"Action: [{self.action[0]:.2f}, {self.action[1]:.2f}]"
-        # plt.text(text_x, text_y * 2, s) 
-        # s = f"Done: {self.done}"
-        # plt.text(text_x, text_y * 3, s) 
-        # s = f"Pos: [{self.car.x:.2f}, {self.car.y:.2f}]"
-        # plt.text(text_x, text_y * 4, s)
-        # s = f"Vel: [{self.car.velocity:.2f}]"
-        # plt.text(text_x, text_y * 5, s)
-        # s = f"Theta: [{(self.car.theta * 180 / np.pi):.2f}]"
-        # plt.text(text_x, text_y * 6, s) 
-        # s = f"Delta x100: [{(self.car.steering*100):.2f}]"
-        # plt.text(text_x, text_y * 7, s) 
-        # s = f"Done reason: {self.done_reason}"
-        # plt.text(text_x, text_y * 8, s) 
+        s = f"Reward: [{self.reward:.1f}]" 
+        plt.text(text_x, text_y * 1, s)
+        s = f"Action: [{self.action[0]:.2f}, {self.action[1]:.2f}]"
+        plt.text(text_x, text_y * 2, s) 
+        s = f"Done: {self.done}"
+        plt.text(text_x, text_y * 3, s) 
+        s = f"Pos: [{self.car.x:.2f}, {self.car.y:.2f}]"
+        plt.text(text_x, text_y * 4, s)
+        s = f"Vel: [{self.car.velocity:.2f}]"
+        plt.text(text_x, text_y * 5, s)
+        s = f"Theta: [{(self.car.theta * 180 / np.pi):.2f}]"
+        plt.text(text_x, text_y * 6, s) 
+        s = f"Delta x100: [{(self.car.steering*100):.2f}]"
+        plt.text(text_x, text_y * 7, s) 
+        s = f"Done reason: {self.done_reason}"
+        plt.text(text_x, text_y * 8, s) 
         
 
-        # s = f"Steps: {self.steps}"
-        # plt.text(text_x, text_y * 9, s)
+        s = f"Steps: {self.steps}"
+        plt.text(text_x, text_y * 9, s)
 
 
         plt.pause(0.0001)

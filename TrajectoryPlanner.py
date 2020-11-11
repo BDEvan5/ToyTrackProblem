@@ -4,15 +4,12 @@ from matplotlib import pyplot as plt
 
 import LibFunctions as lib 
 
-def MinCurvatureTrajectory(track, obs_map=None):
-    # track[:, 0:2] = track[:, 0:2] * 10
-    w_min = - track[:, 4] * 0.9
-    w_max = track[:, 5] * 0.9
-    nvecs = track[:, 2:4]
+def MinCurvatureTrajectory(pts, nvecs, ws):
+    w_min = - ws[:, 0] * 0.9
+    w_max = ws[:, 1] * 0.9
     th_ns = [lib.get_bearing([0, 0], nvecs[i, 0:2]) for i in range(len(nvecs))]
 
-    n_max = 3
-    N = len(track)
+    N = len(pts)
 
     n_f_a = ca.MX.sym('n_f', N)
     n_f = ca.MX.sym('n_f', N-1)
@@ -27,10 +24,10 @@ def MinCurvatureTrajectory(track, obs_map=None):
     th1_f1 = ca.MX.sym('y1_f', N-2)
     th2_f1 = ca.MX.sym('y1_f', N-2)
 
-    o_x_s = ca.Function('o_x', [n_f], [track[:-1, 0] + nvecs[:-1, 0] * n_f])
-    o_y_s = ca.Function('o_y', [n_f], [track[:-1, 1] + nvecs[:-1, 1] * n_f])
-    o_x_e = ca.Function('o_x', [n_f], [track[1:, 0] + nvecs[1:, 0] * n_f])
-    o_y_e = ca.Function('o_y', [n_f], [track[1:, 1] + nvecs[1:, 1] * n_f])
+    o_x_s = ca.Function('o_x', [n_f], [pts[:-1, 0] + nvecs[:-1, 0] * n_f])
+    o_y_s = ca.Function('o_y', [n_f], [pts[:-1, 1] + nvecs[:-1, 1] * n_f])
+    o_x_e = ca.Function('o_x', [n_f], [pts[1:, 0] + nvecs[1:, 0] * n_f])
+    o_y_e = ca.Function('o_y', [n_f], [pts[1:, 1] + nvecs[1:, 1] * n_f])
 
     dis = ca.Function('dis', [x0_f, x1_f, y0_f, y1_f], [ca.sqrt((x1_f-x0_f)**2 + (y1_f-y0_f)**2)])
 
@@ -78,15 +75,13 @@ def MinCurvatureTrajectory(track, obs_map=None):
 
     th0 = []
     for i in range(N-1):
-        th_00 = lib.get_bearing(track[i, 0:2], track[i+1, 0:2])
+        th_00 = lib.get_bearing(pts[i, 0:2], pts[i+1, 0:2])
         th0.append(th_00)
 
     th0 = np.array(th0)
 
     x0 = ca.vertcat(n0, th0)
 
-    # lbx = [-n_max] * N + [-np.pi]*(N-1) 
-    # ubx = [n_max] * N + [np.pi]*(N-1) 
     lbx = list(w_min) + [-np.pi]*(N-1) 
     ubx = list(w_max) + [np.pi]*(N-1) 
 
@@ -95,22 +90,20 @@ def MinCurvatureTrajectory(track, obs_map=None):
     x_opt = r['x']
 
     n_set = np.array(x_opt[:N])
-    thetas = np.array(x_opt[1*N:2*(N-1)])
-
-    # lib.plot_race_line(np.array(track), n_set, wait=True)
+    # thetas = np.array(x_opt[1*N:2*(N-1)])
 
     return n_set
 
-def find_true_widths(track, check_scan_location):
-    nvecs = track[:, 2:4]
-    tx = track[:, 0]
-    ty = track[:, 1]
-    onws = track[:, 4]
-    opws = track[:, 5]
+
+def find_true_widths(pts, nvecs, ws, check_scan_location):
+    tx = pts[:, 0]
+    ty = pts[:, 1]
+    onws = ws[:, 0]
+    opws = ws[:, 1]
 
     stp_sze = 0.1
     sf = 0.5 # safety factor
-    N = len(track)
+    N = len(pts)
     nws, pws = [], []
     for i in range(N):
         pt = [tx[i], ty[i]]
@@ -146,13 +139,12 @@ def find_true_widths(track, check_scan_location):
                     break 
 
     nws, pws = np.array(nws), np.array(pws)
+    ws = np.concatenate([nws[:, None], pws[:, None]], axis=-1)
 
-    new_track = np.concatenate([track[:, 0:4], nws[:, None], pws[:, None]], axis=-1)
-
-    return new_track
+    return ws
 
 
-def find_true_widths_race(track, check_scan_location):
+def find_true_widths_race(pts, nvecs, ws, check_scan_location):
     nvecs = track[:, 2:4]
     tx = track[:, 0]
     ty = track[:, 1]
@@ -195,26 +187,17 @@ def find_true_widths_race(track, check_scan_location):
 
 
 
-def ObsAvoidTraj(track, check_scan_location):
-    track = find_true_widths(track, check_scan_location)
-    # track = find_true_widths_race(track, check_scan_location)
+def ObsAvoidTraj(pts, nvecs, ws, check_scan_location):
+    tx = pts[:, 0]
+    ty = pts[:, 1]
+    ws = find_true_widths(pts, nvecs, ws, check_scan_location)
 
-    # c_line = track[:, 0:2]
-    # l_line = c_line - np.array([track[:, 2] * track[:, 4], track[:, 3] * track[:, 4]]).T
-    # r_line = c_line + np.array([track[:, 2] * track[:, 5], track[:, 3] * track[:, 5]]).T
+    w_min = - ws[:, 0] * 0.9
+    w_max = ws[:, 1] * 0.9
 
-    # plt.figure(2)
-    # plt.plot(c_line[:, 0], c_line[:, 1])
-    # plt.plot(r_line[:, 0], r_line[:, 1])
-    # plt.plot(l_line[:, 0], l_line[:, 1])
-    # plt.show()
-
-    w_min = - track[:, 4] #* 0.9
-    w_max = track[:, 5] #* 0.9
-    nvecs = track[:, 2:4]
     th_ns = [lib.get_bearing([0, 0], nvecs[i, 0:2]) for i in range(len(nvecs))]
 
-    N = len(track)
+    N = len(pts)
 
     n_f_a = ca.MX.sym('n_f', N)
     n_f = ca.MX.sym('n_f', N-1)
@@ -229,10 +212,10 @@ def ObsAvoidTraj(track, check_scan_location):
     th1_f1 = ca.MX.sym('y1_f', N-2)
     th2_f1 = ca.MX.sym('y1_f', N-2)
 
-    o_x_s = ca.Function('o_x', [n_f], [track[:-1, 0] + nvecs[:-1, 0] * n_f])
-    o_y_s = ca.Function('o_y', [n_f], [track[:-1, 1] + nvecs[:-1, 1] * n_f])
-    o_x_e = ca.Function('o_x', [n_f], [track[1:, 0] + nvecs[1:, 0] * n_f])
-    o_y_e = ca.Function('o_y', [n_f], [track[1:, 1] + nvecs[1:, 1] * n_f])
+    o_x_s = ca.Function('o_x', [n_f], [pts[:-1, 0] + nvecs[:-1, 0] * n_f])
+    o_y_s = ca.Function('o_y', [n_f], [pts[:-1, 1] + nvecs[:-1, 1] * n_f])
+    o_x_e = ca.Function('o_x', [n_f], [pts[1:, 0] + nvecs[1:, 0] * n_f])
+    o_y_e = ca.Function('o_y', [n_f], [pts[1:, 1] + nvecs[1:, 1] * n_f])
 
     dis = ca.Function('dis', [x0_f, x1_f, y0_f, y1_f], [ca.sqrt((x1_f-x0_f)**2 + (y1_f-y0_f)**2)])
 
@@ -281,7 +264,7 @@ def ObsAvoidTraj(track, check_scan_location):
 
     th0 = []
     for i in range(N-1):
-        th_00 = lib.get_bearing(track[i, 0:2], track[i+1, 0:2])
+        th_00 = lib.get_bearing(pts[i, 0:2], pts[i+1, 0:2])
         th0.append(th_00)
 
     th0 = np.array(th0)
@@ -304,15 +287,14 @@ def ObsAvoidTraj(track, check_scan_location):
 
     return n_set
 
-def ShortestTraj(track, check_scan_location):
-    track = find_true_widths(track, check_scan_location)
+def ShortestTraj(pts, nvecs, ws, check_scan_location):
+    ws = find_true_widths(pts, nvecs, ws, check_scan_location)
 
-    w_min = - track[:, 4] #* 0.9
-    w_max = track[:, 5] #* 0.9
-    nvecs = track[:, 2:4]
+    w_min = - ws[:, 0] * 0.9
+    w_max = ws[:, 1] * 0.9
     th_ns = [lib.get_bearing([0, 0], nvecs[i, 0:2]) for i in range(len(nvecs))]
 
-    N = len(track)
+    N = len(pts)
 
     n_f_a = ca.MX.sym('n_f', N)
     n_f = ca.MX.sym('n_f', N-1)
@@ -327,10 +309,10 @@ def ShortestTraj(track, check_scan_location):
     th1_f1 = ca.MX.sym('y1_f', N-2)
     th2_f1 = ca.MX.sym('y1_f', N-2)
 
-    o_x_s = ca.Function('o_x', [n_f], [track[:-1, 0] + nvecs[:-1, 0] * n_f])
-    o_y_s = ca.Function('o_y', [n_f], [track[:-1, 1] + nvecs[:-1, 1] * n_f])
-    o_x_e = ca.Function('o_x', [n_f], [track[1:, 0] + nvecs[1:, 0] * n_f])
-    o_y_e = ca.Function('o_y', [n_f], [track[1:, 1] + nvecs[1:, 1] * n_f])
+    o_x_s = ca.Function('o_x', [n_f], [pts[:-1, 0] + nvecs[:-1, 0] * n_f])
+    o_y_s = ca.Function('o_y', [n_f], [pts[:-1, 1] + nvecs[:-1, 1] * n_f])
+    o_x_e = ca.Function('o_x', [n_f], [pts[1:, 0] + nvecs[1:, 0] * n_f])
+    o_y_e = ca.Function('o_y', [n_f], [pts[1:, 1] + nvecs[1:, 1] * n_f])
 
     dis = ca.Function('dis', [x0_f, x1_f, y0_f, y1_f], [ca.sqrt((x1_f-x0_f)**2 + (y1_f-y0_f)**2)])
 
@@ -378,15 +360,13 @@ def ShortestTraj(track, check_scan_location):
 
     th0 = []
     for i in range(N-1):
-        th_00 = lib.get_bearing(track[i, 0:2], track[i+1, 0:2])
+        th_00 = lib.get_bearing(pts[i, 0:2], pts[i+1, 0:2])
         th0.append(th_00)
 
     th0 = np.array(th0)
 
     x0 = ca.vertcat(n0, th0)
 
-    # lbx = [-n_max] * N + [-np.pi]*(N-1) 
-    # ubx = [n_max] * N + [np.pi]*(N-1) 
     lbx = list(w_min) + [-np.pi]*(N-1) 
     ubx = list(w_max) + [np.pi]*(N-1) 
 
@@ -397,7 +377,6 @@ def ShortestTraj(track, check_scan_location):
     n_set = np.array(x_opt[:N])
     thetas = np.array(x_opt[1*N:2*(N-1)])
 
-    # lib.plot_race_line(np.array(track), n_set, wait=True)
 
     return n_set
 
