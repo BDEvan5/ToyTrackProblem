@@ -119,6 +119,16 @@ class MapBase:
 
 
 class SimMap(MapBase):
+    """
+    This class is for using the race maps
+
+    Methods:
+    ------
+    get_optimal_path: 
+        Returns an optimal path around obstacles
+    get_reference_path
+        Returns a min curve reference to follow
+    """
     def __init__(self, map_name):
         MapBase.__init__(self, map_name)
 
@@ -261,6 +271,16 @@ class SimMap(MapBase):
 
 
 class ForestMap(MapBase):
+    """
+    This class is for using a forest map
+
+    Methods:
+    ------
+    get_optimal_path: 
+        Returns an min curve path around obstacles
+    get_reference_path
+        Returns a straight reference to follow
+    """
     def __init__(self, map_name="forest"):
         MapBase.__init__(self, map_name)
 
@@ -268,10 +288,9 @@ class ForestMap(MapBase):
         self.end = [3, 23]
 
     def get_optimal_path(self):
-        track = self.track
-        n_set = ObsAvoidTraj(track, self.check_scan_location)
-        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
-        self.wpts = track[:, 0:2] + deviation
+        n_set = ObsAvoidTraj(self.track_pts, self.nvecs, self.ws, self.check_scan_location)
+        deviation = np.array([self.nvecs[:, 0] * n_set[:, 0], self.nvecs[:, 1] * n_set[:, 0]]).T
+        self.wpts = self.track_pts + deviation
 
         return self.wpts
 
@@ -343,10 +362,17 @@ def test_sim_map_obs():
     wpts = env_map.get_optimal_path()
     env_map.render_map(wait=True)
 
+def test_forest_map_obs():
+    name = 'forest'
+    env_map = ForestMap(name)
+    env_map.reset_map()
+
+    wpts = env_map.get_optimal_path()
+    env_map.render_map(wait=True)
+
 
 
 if __name__ == "__main__":
-    # test_map_converter()
 
-    # forest_gen()
-    test_sim_map_obs()
+    # test_sim_map_obs()
+    test_forest_map_obs()
