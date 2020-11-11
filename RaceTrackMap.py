@@ -5,7 +5,7 @@ import yaml
 import csv
 
 import LibFunctions as lib
-from TrajectoryPlanner import MinCurvatureTrajectory, ObsAvoidTraj
+from TrajectoryPlanner import MinCurvatureTrajectory, ObsAvoidTraj, ShortestTraj
 
 
 class MapBase:
@@ -155,6 +155,17 @@ class SimMap(MapBase):
         MapBase.__init__(self, map_name)
 
         self.obs_map = np.zeros_like(self.scan_map)
+        self.end = self.start
+        self.eld = None
+
+        self.set_true_widths()
+        track = self.track
+        n_set = ShortestTraj(track, self.check_scan_location)
+
+        track = self.track
+        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+        self.track[:, 0:2] += deviation
+        self.set_true_widths()
 
     def get_min_curve_path(self):
         path_name = 'Maps/' + self.name + "_path.npy"
@@ -174,6 +185,57 @@ class SimMap(MapBase):
         self.wpts = path
 
         return path
+
+    def set_euclidian(self):
+        m = np.ones_like(self.obs_map) - self.obs_map
+        self.eld = ndimage.distance_transform_edt(m)
+
+        # plt.figure(1)
+        # plt.imshow(self.eld)
+        # plt.show()
+
+    def check_eld_location(self, x_in):
+        if self.check_scan_location(x_in):
+            return 0
+        else:
+            return self.eld[int(x_in[0]), int(x_in[1])]
+
+    def get_optimal_path(self):
+
+        # self.set_euclidian()
+        # n_set = ObsAvoidTraj(track, self.check_eld_location)
+
+        # self.render_map(figure_n=1, wait=False)
+        
+        self.render_map(figure_n=1, wait=False)
+        
+        track = self.track
+        n_set = ObsAvoidTraj(self.track, self.check_scan_location)
+        deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+
+        self.wpts = track[:, 0:2] + deviation
+
+        return self.wpts
+
+    def get_reference_path(self):
+        path_name = 'Maps/' + self.name + "_ref_path.npy"
+        try:
+            # raise Exception
+            path = np.load(path_name)
+            print(f"Path loaded from file: min curve")
+        except:
+            track = self.track
+            n_set = MinCurvatureTrajectory(track, self.obs_map)
+            deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
+            path = track[:, 0:2] + deviation
+
+            np.save(path_name, path)
+            print(f"Path saved: min curve")
+
+        self.wpts = path
+
+        return self.wpts
+
 
     def random_obs(self, n=10):
         self.obs_map = np.zeros_like(self.obs_map)
@@ -196,8 +258,46 @@ class SimMap(MapBase):
                     x, y = self.convert_int_position([obs[0], obs[1]])
                     self.obs_map[y+j, x+i] = 1
 
+        return obs_locs
+
     def reset_map(self):
-        self.random_obs(10)
+        o =  self.random_obs(10)
+        return o
+
+    def set_true_widths(self):
+        nvecs = self.track[:, 2:4]
+        tx = self.track[:, 0]
+        ty = self.track[:, 1]
+
+        stp_sze = 0.1
+        sf = 0.95 # safety factor
+        nws, pws = [], []
+        for i in range(self.N):
+            pt = [tx[i], ty[i]]
+            nvec = nvecs[i]
+
+            j = stp_sze
+            s_pt = lib.add_locations(pt, nvec, j)
+            while not self.check_scan_location(s_pt):
+                j += stp_sze
+                s_pt = lib.add_locations(pt, nvec, j)
+            pws.append(j*sf)
+
+            j = stp_sze
+            s_pt = lib.sub_locations(pt, nvec, j)
+            while not self.check_scan_location(s_pt):
+                j += stp_sze
+                s_pt = lib.sub_locations(pt, nvec, j)
+            nws.append(j*sf)
+
+        nws, pws = np.array(nws), np.array(pws)
+
+        self.track[:, 4] = nws
+        self.track[:, 5] = pws
+
+        # new_track = np.concatenate([self.track[0:4], nws[:, None], pws[:, None]], axis=-1)
+
+        # self.track = new_track
 
 
 class ForestMap(MapBase):
@@ -207,14 +307,16 @@ class ForestMap(MapBase):
         self.obs_map = np.zeros_like(self.scan_map)
         self.end = [3, 23]
 
-    def get_min_curve_path(self):
-        # self.wpts = self.track_pts
-
+    def get_optimal_path(self):
         track = self.track
-        # n_set = MinCurvatureTrajectory(track, self.check_scan_location)
         n_set = ObsAvoidTraj(track, self.check_scan_location)
         deviation = np.array([track[:, 2] * n_set[:, 0], track[:, 3] * n_set[:, 0]]).T
         self.wpts = track[:, 0:2] + deviation
+
+        return self.wpts
+
+    def get_reference_path(self):
+        self.wpts = self.track_pts
 
         return self.wpts
 
@@ -225,7 +327,7 @@ class ForestMap(MapBase):
     def random_obs(self, n=10):
         self.obs_map = np.zeros_like(self.obs_map)
 
-        obs_size = [2.5, 1]
+        obs_size = [1.5, 1]
         xlim = (6 - obs_size[0]) / 2
 
         x, y = self.convert_int_position(obs_size)
@@ -244,8 +346,11 @@ class ForestMap(MapBase):
                     y = np.clip(y+j, 0, self.height-1)
                     self.obs_map[y, x] = 1
 
+        return obs_locs
+
     def reset_map(self):
-        self.random_obs(6)
+        o = self.random_obs(6)
+        return o
 
     def render_map(self, figure_n=1, wait=False):
         f = plt.figure(figure_n)
@@ -261,7 +366,7 @@ class ForestMap(MapBase):
                 # plt.plot(x, y, '+', markersize=14)
                 xs.append(x)
                 ys.append(y)
-            plt.plot(xs, ys, '--', linewidth=2)
+            plt.plot(xs, ys, '--', color='g', linewidth=2)
 
         if self.obs_map is None:
             plt.imshow(self.scan_map)
@@ -673,7 +778,18 @@ def forest_gen():
     f = ForestGenerator()
     f.save_map()
 
+def test_sim_map_obs():
+    name = 'race_track'
+    env_map = SimMap(name)
+    env_map.reset_map()
+
+    wpts = env_map.get_optimal_path()
+    env_map.render_map(wait=True)
+
+
+
 if __name__ == "__main__":
     # test_map_converter()
 
-    forest_gen()
+    # forest_gen()
+    test_sim_map_obs()

@@ -1,0 +1,10 @@
+
+Testing Complete 
+Map name: race_track 
+-----------------------------------------------------
+-----------------------------------------------------
+Vehicle: Optimal Agent: Following target references
+Crashes: 9.0 --> Completes 1.0
+% Finished = 10.00
+Avg lap times: 179.0
+-----------------------------------------------------
