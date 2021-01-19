@@ -105,12 +105,11 @@ def TrainModVehicle(agent_name, load=True):
     vehicle = ModVehicleTrain(agent_name, load, 200, 10)
 
     t_his = TrainHistory(agent_name)
-
     print_n = 500
 
-    done, state, score, crashes = False, env.reset(), 0.0, 0.0
-
+    done, state = False, env.reset()
     wpts = vehicle.init_agent(env_map)
+
     for n in range(10000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)

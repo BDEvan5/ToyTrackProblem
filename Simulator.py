@@ -435,7 +435,7 @@ class ForestSim(BaseSim):
         self.car.steering = 0
         self.car.theta = 0
 
-        self.env_map.reset_dynamic_map(1)
+        self.env_map.reset_dynamic_map(4)
 
         return self.base_reset()
 

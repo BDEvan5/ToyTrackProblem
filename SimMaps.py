@@ -326,8 +326,16 @@ class ForestMap(MapBase):
 
     def reset_dynamic_map(self, n=1):
         self.obs_cars.clear()
-        obs_car = CarObs([2.5, 6], velocity=2)
-        self.obs_cars.append(obs_car)
+
+        xlim = (6 - 1) / 2
+        tys = np.linspace(4, 20, n)
+        txs = np.random.normal(xlim, 1, size=n)
+        txs = np.clip(txs, 0, 4)
+        obs_locs = np.array([txs, tys]).T
+
+        for i in range(n):
+            obs_car = CarObs(obs_locs[i], 2)
+            self.obs_cars.append(obs_car)
 
     def update_obs_cars(self, dt):
         for car in self.obs_cars:
