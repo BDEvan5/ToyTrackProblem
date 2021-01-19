@@ -155,6 +155,57 @@ class GenVehicleTrainDistance(BaseGenAgent):
         return new_reward
 
 
+class GenVehicleTrainSteering(BaseGenAgent):
+    def __init__(self, name, load, h_size, n_beams):
+        BaseGenAgent.__init__(self, name, n_beams)
+
+        self.prev_dist_target = 0
+
+        state_space = 3 + self.n_beams
+        self.agent = TD3(state_space, 1, 1, name)
+        self.agent.try_load(load, h_size)
+
+    def act(self, obs):
+        nn_obs = self.transform_obs(obs)
+        nn_action = self.agent.act(nn_obs)
+        self.cur_nn_act = nn_action
+
+        self.mod_history.append(self.cur_nn_act[0])
+        self.critic_history.append(self.agent.get_critic_value(nn_obs, nn_action))
+        self.state_action = [nn_obs, self.cur_nn_act]
+
+        v_ref, d_ref = self.generate_references(self.cur_nn_act, obs)
+
+        self.steps += 1
+
+        return [v_ref, d_ref]
+
+    def update_reward(self, reward, s_prime):
+        beta = 2
+        if reward == -1:
+            new_reward = -1
+            self.prev_dist_target = lib.get_distance(self.env_map.start, self.env_map.end)
+        else:
+            new_reward = 1 - abs(s_prime[4]) * beta
+
+        self.reward_history.append(new_reward)
+
+        return new_reward
+
+    def add_memory_entry(self, reward, done, s_prime, buffer):
+        new_reward = self.update_reward(reward, s_prime)
+        self.prev_nn_act = self.state_action[1][0]
+
+        nn_s_prime = self.transform_obs(s_prime)
+        # done_mask = 0.0 if done else 1.0
+
+        mem_entry = (self.state_action[0], self.state_action[1], nn_s_prime, new_reward, done)
+
+        buffer.add(mem_entry)
+
+        return new_reward
+
+
 class GenVehicleTest(BaseGenAgent):
     def __init__(self, name):
         path = 'Vehicles/' + name + ''
