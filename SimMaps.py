@@ -108,7 +108,7 @@ class MapBase:
         if x_in[0] < 0 or x_in[1] < 0:
             return True
         x, y = self.convert_int_position(x_in)
-        if x > self.width or y > self.height:
+        if x_in[0] > self.width * self.resolution or x_in[1] > self.height * self.resolution:
             return True
 
         if self.scan_map[y, x]:
@@ -286,6 +286,7 @@ class ForestMap(MapBase):
 
         self.obs_map = np.zeros_like(self.scan_map)
         self.end = [3, 23]
+        self.obs_cars = []
 
     def get_optimal_path(self):
         n_set = ObsAvoidTraj(self.track_pts, self.nvecs, self.ws, self.check_scan_location)
@@ -299,7 +300,7 @@ class ForestMap(MapBase):
 
         return self.wpts
 
-    def reset_map(self, n=6):
+    def reset_static_map(self, n=6):
         self.obs_map = np.zeros_like(self.obs_map)
 
         obs_size = [1.5, 1]
@@ -322,6 +323,39 @@ class ForestMap(MapBase):
                     self.obs_map[y, x] = 1
 
         return obs_locs
+
+    def reset_dynamic_map(self, n=1):
+        self.obs_cars.clear()
+
+        xlim = (6 - 1) / 2
+        tys = np.linspace(4, 20, n)
+        txs = np.random.normal(xlim, 1, size=n)
+        txs = np.clip(txs, 0, 4)
+        obs_locs = np.array([txs, tys]).T
+
+        for i in range(n):
+            obs_car = CarObs(obs_locs[i], 2)
+            self.obs_cars.append(obs_car)
+
+    def update_obs_cars(self, dt):
+        for car in self.obs_cars:
+            car.update_pos(dt)
+
+        self.obs_map = np.zeros_like(self.obs_map)
+
+        car_size = [1, 1.5]
+        x, y = self.convert_int_position(car_size)
+        obs_size = [x, y]
+
+        for car in self.obs_cars:
+            obs = car.pos
+            for i in range(0, obs_size[0]):
+                for j in range(0, obs_size[1]):
+                    x, y = self.convert_int_position([obs[0], obs[1]])
+                    x = np.clip(x+i, 0, self.width-1)
+                    y = np.clip(y+j, 0, self.height-1)
+                    self.obs_map[y, x] = 1
+
 
     def render_map(self, figure_n=1, wait=False):
         f = plt.figure(figure_n)
@@ -352,6 +386,15 @@ class ForestMap(MapBase):
         if wait:
             plt.show()
 
+
+class CarObs:
+    def __init__(self, start_pos, velocity) -> None:
+        self.vel = velocity
+        self.pos = np.array(start_pos, dtype=np.float)
+
+    def update_pos(self, dt):
+        self.pos[1] += self.vel * dt
+        
 
 # Testing functions
 def test_sim_map_obs():

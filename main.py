@@ -4,13 +4,14 @@ import sys, os, shutil
 
 import timeit
 
-from Simulator import TrackSim, ForestSim
-from SimMaps import  SimMap, ForestMap
+from Simulator import ForestSim
+from SimMaps import  ForestMap
 from ModelsRL import ReplayBufferDQN, ReplayBufferTD3
 import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
+from RefGen import GenVehicleTrainDistance, GenVehicleTrainSteering
 
 names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
 name = names[5]
@@ -46,18 +47,55 @@ def RunOptimalAgent():
     # env.show_history()
     env.render(wait=True)
 
+class TrainHistory():
+    def __init__(self, agent_name) -> None:
+        self.agent_name = agent_name
+
+        # training data
+        self.lengths = []
+        self.rewards = [] 
+        self.t_counter = 0 # total steps
+        
+        # espisode data
+        self.ep_counter = 0 # ep steps
+        self.ep_reward = 0
+
+        self.init_file_struct()
+
+    def init_file_struct(self):
+        path = 'Vehicles/' + self.agent_name 
+
+        if os.path.exists(path):
+            try:
+                os.rmdir(path)
+            except:
+                shutil.rmtree(path)
+        os.mkdir(path)
+
+    def add_step_data(self, new_r):
+        self.ep_reward += new_r
+        self.ep_counter += 1
+        self.t_counter += 1 
+
+    def lap_done(self):
+        self.lengths.append(self.ep_counter)
+        self.rewards.append(self.ep_reward)
+
+        self.ep_counter = 0
+        self.ep_reward = 0
+
+    def print_update(self):
+        mean = np.mean(self.rewards)
+        score = self.rewards[-1]
+        print(f"Run: {self.t_counter} --> Score: {score:.2f} --> Mean: {mean:.2f} --> ")
+        
+        lib.plot(self.rewards, figure_n=2)
+
 
 """Training functions: PURE MOD"""
 def TrainModVehicle(agent_name, load=True):
+    path = 'Vehicles/' + agent_name
     buffer = ReplayBufferTD3()
-    path = 'Vehicles/' + agent_name 
-
-    if os.path.exists(path):
-        try:
-            os.rmdir(path)
-        except:
-            shutil.rmtree(path)
-    os.mkdir(path)
 
     # env_map = SimMap(name)
     # env = TrackSim(env_map)
@@ -67,69 +105,40 @@ def TrainModVehicle(agent_name, load=True):
 
     vehicle = ModVehicleTrain(agent_name, load, 200, 10)
 
+    t_his = TrainHistory(agent_name)
     print_n = 500
-    plot_n = 0
-    rewards, reward_crashes, lengths = [], [], []
-    completes, crash_laps = 0, 0
-    complete_his, crash_his = [], []
 
-    done, state, score, crashes = False, env.reset(), 0.0, 0.0
-    o = env_map.reset_map()
-
+    done, state = False, env.reset()
     wpts = vehicle.init_agent(env_map)
+
     for n in range(10000):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
-        nr = vehicle.add_memory_entry(r, done, s_prime, buffer)
-        score += nr
-        crashes += r
+        new_r = vehicle.add_memory_entry(r, done, s_prime, buffer)
+        t_his.add_step_data(new_r)
+
         state = s_prime
+        vehicle.agent.train(buffer, 2)
         
         # env.render(False)
-        vehicle.agent.train(buffer, 2)
 
         if n % print_n == 0 and n > 0:
-            
-            reward_crashes.append(crashes)
-            mean = np.mean(rewards)
-            b = buffer.size()
-            print(f"Run: {n} --> Score: {score:.2f} --> Mean: {mean:.2f} --> ")
-            
-            lib.plot(rewards, figure_n=2)
-
+            t_his.print_update()
             vehicle.agent.save(directory=path)
         
         if done:
-            rewards.append(score)
-            score = 0
-            lengths.append(env.steps)
+            t_his.lap_done()
             # vehicle.show_vehicle_history()
-            env.render(wait=False, save=True)
-            if plot_n % 10 == 0:
+            env.render(wait=False, save=False)
 
-                crash_his.append(crash_laps)
-                complete_his.append(completes)
-                crash_laps = 0
-                completes = 0
-
-            plot_n += 1
-            env.history.obs_locations = o
-            # env.history.save_history()
-            o = env_map.reset_map()
             vehicle.reset_lap()
-            
             state = env.reset()
-
-            if r == -1:
-                crash_laps += 1
-            else:
-                completes += 1
 
 
     vehicle.agent.save(directory=path)
 
-    return rewards
+    return t_his.rewards
 
 """General test function"""
 def testVehicle(vehicle, show=False, obs=True):
@@ -145,7 +154,7 @@ def testVehicle(vehicle, show=False, obs=True):
 
     wpts = vehicle.init_agent(env_map)
     done, state, score = False, env.reset(), 0.0
-    for i in range(10): # 10 laps
+    for i in range(100): # 10 laps
         print(f"Running lap: {i}")
         if obs:
             env_map.reset_map()
@@ -161,11 +170,11 @@ def testVehicle(vehicle, show=False, obs=True):
             # env.render(wait=True)
 
         if r == -1:
-            state = env.reset(None)
             crashes += 1
         else:
             completes += 1
             lap_times.append(env.steps)
+        state = env.reset()
         
         env.reset_lap()
         vehicle.reset_lap()
@@ -174,6 +183,57 @@ def testVehicle(vehicle, show=False, obs=True):
     print(f"Crashes: {crashes}")
     print(f"Completes: {completes} --> {(completes / (completes + crashes) * 100):.2f} %")
     print(f"Lap times: {lap_times} --> Avg: {np.mean(lap_times)}")
+
+"""RefGen Train"""
+def TrainGenVehicle(agent_name, load):
+    path = 'Vehicles/' + agent_name
+    buffer = ReplayBufferTD3()
+
+    # env_map = SimMap(name)
+    # env = TrackSim(env_map)
+
+    env_map = ForestMap(forest_name)
+    env = ForestSim(env_map)
+
+    # vehicle = GenVehicleTrainDistance(agent_name, load, 200, 10)
+    vehicle = GenVehicleTrainSteering(agent_name, load, 200, 10)
+
+    t_his = TrainHistory(agent_name)
+    print_n = 500
+
+    done, state = False, env.reset()
+    wpts = vehicle.init_agent(env_map)
+
+    for n in range(10000):
+        a = vehicle.act(state)
+        s_prime, r, done, _ = env.step(a)
+
+        new_r = vehicle.add_memory_entry(r, done, s_prime, buffer)
+        t_his.add_step_data(new_r)
+
+        state = s_prime
+        vehicle.agent.train(buffer, 2)
+        
+        # env.render(False)
+
+        if n % print_n == 0 and n > 0:
+            t_his.print_update()
+            vehicle.agent.save(directory=path)
+        
+        if done:
+            t_his.lap_done()
+            # vehicle.show_vehicle_history()
+            env.render(wait=False, save=False)
+
+            vehicle.reset_lap()
+            state = env.reset()
+
+
+    vehicle.agent.save(directory=path)
+
+    return t_his.rewards
+
+
 
 
 
@@ -187,6 +247,11 @@ def RunModAgent():
     # vehicle = ModVehicleTest(agent_name)
     # testVehicle(vehicle, obs=True, show=True)
     # testVehicle(vehicle, obs=False, show=True)
+
+def RunGenAgent():
+    agent_name = "TestingGen"
+
+    TrainGenVehicle(agent_name, False)
 
 
 def testOptimal():
@@ -206,7 +271,8 @@ def timing():
 if __name__ == "__main__":
 
     # RunModAgent()
-    RunOptimalAgent()
+    RunGenAgent()
+    # RunOptimalAgent()
 
     # timing()
 
