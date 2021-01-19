@@ -197,6 +197,7 @@ class BaseSim:
 
     def base_reset(self):
         self.done = False
+        self.done_reason = "Null"
         self.action_memory = []
         self.steps = 0
         
@@ -402,6 +403,8 @@ class TrackSim(BaseSim):
         self.car.steering = 0
         self.car.theta = np.pi/2
 
+        #TODO: combine with reset lap that it can be called every lap and do the right thing
+
         return self.base_reset()
 
 
@@ -413,6 +416,7 @@ class ForestSim(BaseSim):
         BaseSim.__init__(self, env_map)
 
     def step(self, action):
+        self.env_map.update_obs_cars(self.timestep)
         self.base_step(action)
 
         self.check_done_forest()

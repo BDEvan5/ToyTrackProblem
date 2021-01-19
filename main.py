@@ -74,7 +74,8 @@ def TrainModVehicle(agent_name, load=True):
     complete_his, crash_his = [], []
 
     done, state, score, crashes = False, env.reset(), 0.0, 0.0
-    o = env_map.reset_map()
+    # o = env_map.reset_map()
+    env_map.reset_dynamic_map(1)
 
     wpts = vehicle.init_agent(env_map)
     for n in range(10000):
@@ -105,18 +106,18 @@ def TrainModVehicle(agent_name, load=True):
             score = 0
             lengths.append(env.steps)
             # vehicle.show_vehicle_history()
-            env.render(wait=False, save=True)
+            env.render(wait=False, save=False)
             if plot_n % 10 == 0:
-
                 crash_his.append(crash_laps)
                 complete_his.append(completes)
                 crash_laps = 0
                 completes = 0
 
             plot_n += 1
-            env.history.obs_locations = o
+            # env.history.obs_locations = o
             # env.history.save_history()
-            o = env_map.reset_map()
+            # o = env_map.reset_map()
+            env_map.reset_dynamic_map(1)
             vehicle.reset_lap()
             
             state = env.reset()
@@ -145,7 +146,7 @@ def testVehicle(vehicle, show=False, obs=True):
 
     wpts = vehicle.init_agent(env_map)
     done, state, score = False, env.reset(), 0.0
-    for i in range(10): # 10 laps
+    for i in range(100): # 10 laps
         print(f"Running lap: {i}")
         if obs:
             env_map.reset_map()
@@ -161,11 +162,11 @@ def testVehicle(vehicle, show=False, obs=True):
             # env.render(wait=True)
 
         if r == -1:
-            state = env.reset(None)
             crashes += 1
         else:
             completes += 1
             lap_times.append(env.steps)
+        state = env.reset()
         
         env.reset_lap()
         vehicle.reset_lap()
@@ -205,8 +206,8 @@ def timing():
 
 if __name__ == "__main__":
 
-    # RunModAgent()
-    RunOptimalAgent()
+    RunModAgent()
+    # RunOptimalAgent()
 
     # timing()
 

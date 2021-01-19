@@ -1,5 +1,4 @@
 import numpy as np 
-import random
 from matplotlib import pyplot as plt
 
 from ModelsRL import TD3
@@ -239,3 +238,5 @@ class ModVehicleTest(BaseModAgent):
         self.steps += 1
 
         return [v_ref, d_ref]
+
+
