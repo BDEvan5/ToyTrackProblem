@@ -28,6 +28,7 @@ class BaseGenAgent:
 
         self.max_v = 7.5
         self.max_d = 0.4
+        self.max_friction_force = 3.74 * 9.81 * 0.523 *0.5
 
         # agent stuff 
         self.state_action = None
@@ -45,51 +46,9 @@ class BaseGenAgent:
         # self.wpts = self.env_map.get_min_curve_path()
         self.wpts = self.env_map.get_reference_path()
 
-        r_line = self.wpts
-        ths = [lib.get_bearing(r_line[i], r_line[i+1]) for i in range(len(r_line)-1)]
-        alphas = [lib.sub_angles_complex(ths[i+1], ths[i]) for i in range(len(ths)-1)]
-        lds = [lib.get_distance(r_line[i], r_line[i+1]) for i in range(1, len(r_line)-1)]
-
-        self.deltas = np.arctan(2*0.33*np.sin(alphas)/lds)
-
-        self.pind = 1
+        self.prev_dist_target = lib.get_distance(self.env_map.start, self.env_map.end)
 
         return self.wpts
-         
-    def get_target_references(self, obs):
-        self._set_target(obs)
-
-        target = self.wpts[self.pind]
-        th_target = lib.get_bearing(obs[0:2], target)
-        alpha = lib.sub_angles_complex(th_target, obs[2])
-
-        # pure pursuit
-        ld = lib.get_distance(obs[0:2], target)
-        delta_ref = np.arctan(2*0.33*np.sin(alpha)/ld)
-
-        # ds = self.deltas[self.pind:self.pind+1]
-        ds = self.deltas[min(self.pind, len(self.deltas)-1)]
-        max_d = abs(ds)
-        # max_d = max(abs(ds))
-
-        max_friction_force = 3.74 * 9.81 * 0.523 *0.5
-        d_plan = max(abs(delta_ref), abs(obs[4]), max_d)
-        theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
-        v_ref = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
-        v_ref = min(v_ref, 8.5)
-        # v_ref = 3
-
-        return v_ref, delta_ref
-
-    def _set_target(self, obs):
-        dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-        shift_distance = 1
-        while dis_cur_target < shift_distance: # how close to say you were there
-            if self.pind < len(self.wpts)-2:
-                self.pind += 1
-                dis_cur_target = lib.get_distance(self.wpts[self.pind], obs[0:2])
-            else:
-                self.pind = 0
 
     def show_vehicle_history(self):
         plt.figure(1)
@@ -111,36 +70,28 @@ class BaseGenAgent:
         # plt.plot(self.critic_history)
 
     def transform_obs(self, obs):
-        v_ref, d_ref = self.get_target_references(obs)
-
         cur_v = [obs[3]/self.max_v]
         cur_d = [obs[4]/self.max_d]
-        vr_scale = [(v_ref)/self.max_v]
-        dr_scale = [d_ref/self.max_d]
+
+        th_target = lib.get_bearing(obs[0:2], self.env_map.end)
+        th_scale = [(th_target)*2/np.pi]
 
         scan = self.scan_sim.get_scan(obs[0], obs[1], obs[2])
 
-        nn_obs = np.concatenate([cur_v, cur_d, vr_scale, dr_scale, scan])
+        nn_obs = np.concatenate([cur_v, cur_d, th_scale, scan])
 
         return nn_obs
 
-    def modify_references(self, nn_action, v_ref, d_ref, obs):
-        d_max = 0.4 #- use this instead
-        d_phi = d_max * nn_action[0] # rad
-        d_new = d_ref + d_phi
-        d_new = np.clip(d_new, -d_max, d_max)
+    def generate_references(self, nn_action, obs):
+        d = nn_action[0] * self.max_d
+        d_ref = np.clip(d, - self.max_d, self.max_d)
 
-        if abs(d_new) > abs(d_ref):
-            max_friction_force = 3.74 * 9.81 * 0.523 *0.5
-            d_plan = max(abs(d_ref), abs(obs[4]), abs(d_new))
-            theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
-            v_ref_new = max_friction_force / (3.74 * max(theta_dot, 0.01)) 
-            v_ref_mod = min(v_ref_new, self.max_v)
-        else:
-            v_ref_mod = v_ref
+        d_plan = max(abs(d_ref), abs(obs[4]))
+        theta_dot = abs(obs[3] / 0.33 * np.tan(d_plan))
+        v_ref = self.max_friction_force / (3.74 * max(theta_dot, 0.01)) 
+        v_ref = min(v_ref, 8.5)
 
-
-        return v_ref_mod, d_new
+        return v_ref, d_ref
 
     def reset_lap(self):
         self.mod_history.clear()
@@ -151,49 +102,47 @@ class BaseGenAgent:
         self.pind = 1
 
 
-class GenVehicleTrain(BaseModAgent):
+class GenVehicleTrainDistance(BaseGenAgent):
     def __init__(self, name, load, h_size, n_beams):
-        BaseModAgent.__init__(self, name, n_beams)
+        BaseGenAgent.__init__(self, name, n_beams)
 
-        self.current_v_ref = None
-        self.current_phi_ref = None
+        self.prev_dist_target = 0
 
-        state_space = 4 + self.n_beams
+        state_space = 3 + self.n_beams
         self.agent = TD3(state_space, 1, 1, name)
         self.agent.try_load(load, h_size)
 
     def act(self, obs):
-        v_ref, d_ref = self.get_target_references(obs)
-
         nn_obs = self.transform_obs(obs)
         nn_action = self.agent.act(nn_obs)
         self.cur_nn_act = nn_action
 
-        self.d_ref_history.append(d_ref)
         self.mod_history.append(self.cur_nn_act[0])
         self.critic_history.append(self.agent.get_critic_value(nn_obs, nn_action))
         self.state_action = [nn_obs, self.cur_nn_act]
 
-        v_ref, d_ref = self.modify_references(self.cur_nn_act, v_ref, d_ref, obs)
+        v_ref, d_ref = self.generate_references(self.cur_nn_act, obs)
 
         self.steps += 1
 
         return [v_ref, d_ref]
 
-    def update_reward(self, reward, action):
-        beta = 0.2
+    def update_reward(self, reward, s_prime):
+        beta = 1
         if reward == -1:
             new_reward = -1
+            self.prev_dist_target = lib.get_distance(self.env_map.start, self.env_map.end)
         else:
-            new_reward = 0.2 - abs(action[0]) * beta
-            # new_reward =  - abs(action[0]) * beta
+            dist_target = lib.get_distance(s_prime[0:2], self.env_map.end)
+            new_reward = (self.prev_dist_target - dist_target) * beta
+            self.prev_dist_target = dist_target
 
         self.reward_history.append(new_reward)
 
         return new_reward
 
     def add_memory_entry(self, reward, done, s_prime, buffer):
-        new_reward = self.update_reward(reward, self.state_action[1])
+        new_reward = self.update_reward(reward, s_prime)
         self.prev_nn_act = self.state_action[1][0]
 
         nn_s_prime = self.transform_obs(s_prime)
@@ -206,7 +155,7 @@ class GenVehicleTrain(BaseModAgent):
         return new_reward
 
 
-class GenVehicleTest(BaseModAgent):
+class GenVehicleTest(BaseGenAgent):
     def __init__(self, name):
         path = 'Vehicles/' + name + ''
         state_space = 4 
@@ -217,7 +166,7 @@ class GenVehicleTest(BaseModAgent):
 
         nn_size = self.agent.actor.l1.in_features
         n_beams = nn_size - 4
-        BaseModAgent.__init__(self, name, n_beams)
+        BaseGenAgent.__init__(self, name, n_beams)
 
         self.current_v_ref = None
         self.current_phi_ref = None

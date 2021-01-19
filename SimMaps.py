@@ -108,7 +108,7 @@ class MapBase:
         if x_in[0] < 0 or x_in[1] < 0:
             return True
         x, y = self.convert_int_position(x_in)
-        if x > self.width or y > self.height:
+        if x_in[0] > self.width * self.resolution or x_in[1] > self.height * self.resolution:
             return True
 
         if self.scan_map[y, x]:

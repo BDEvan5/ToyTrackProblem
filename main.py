@@ -11,6 +11,7 @@ import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
+from RefGen import GenVehicleTrainDistance
 
 names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
 name = names[5]
@@ -183,6 +184,56 @@ def testVehicle(vehicle, show=False, obs=True):
     print(f"Completes: {completes} --> {(completes / (completes + crashes) * 100):.2f} %")
     print(f"Lap times: {lap_times} --> Avg: {np.mean(lap_times)}")
 
+"""RefGen Train"""
+def TrainGenVehicle(agent_name, load):
+    path = 'Vehicles/' + agent_name
+    buffer = ReplayBufferTD3()
+
+    # env_map = SimMap(name)
+    # env = TrackSim(env_map)
+
+    env_map = ForestMap(forest_name)
+    env = ForestSim(env_map)
+
+    vehicle = GenVehicleTrainDistance(agent_name, load, 200, 10)
+
+    t_his = TrainHistory(agent_name)
+    print_n = 500
+
+    done, state = False, env.reset()
+    wpts = vehicle.init_agent(env_map)
+
+    for n in range(10000):
+        a = vehicle.act(state)
+        s_prime, r, done, _ = env.step(a)
+
+        new_r = vehicle.add_memory_entry(r, done, s_prime, buffer)
+        t_his.add_step_data(new_r)
+
+        state = s_prime
+        vehicle.agent.train(buffer, 2)
+        
+        # env.render(False)
+
+        if n % print_n == 0 and n > 0:
+            t_his.print_update()
+            vehicle.agent.save(directory=path)
+        
+        if done:
+            t_his.lap_done()
+            # vehicle.show_vehicle_history()
+            env.render(wait=False, save=False)
+
+            vehicle.reset_lap()
+            state = env.reset()
+
+
+    vehicle.agent.save(directory=path)
+
+    return t_his.rewards
+
+
+
 
 
 """Total functions"""
@@ -195,6 +246,11 @@ def RunModAgent():
     # vehicle = ModVehicleTest(agent_name)
     # testVehicle(vehicle, obs=True, show=True)
     # testVehicle(vehicle, obs=False, show=True)
+
+def RunGenAgent():
+    agent_name = "TestingGen"
+
+    TrainGenVehicle(agent_name, False)
 
 
 def testOptimal():
@@ -213,7 +269,8 @@ def timing():
 
 if __name__ == "__main__":
 
-    RunModAgent()
+    # RunModAgent()
+    RunGenAgent()
     # RunOptimalAgent()
 
     # timing()

@@ -416,7 +416,7 @@ class ForestSim(BaseSim):
         BaseSim.__init__(self, env_map)
 
     def step(self, action):
-        self.env_map.update_obs_cars(self.timestep)
+        # self.env_map.update_obs_cars(self.timestep)
         self.base_step(action)
 
         self.check_done_forest()
@@ -436,6 +436,7 @@ class ForestSim(BaseSim):
         self.car.theta = 0
 
         self.env_map.reset_dynamic_map(4)
+        self.env_map.reset_static_map(5)
 
         return self.base_reset()
 
