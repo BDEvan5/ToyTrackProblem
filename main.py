@@ -11,7 +11,7 @@ import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
-from RefGen import GenVehicleTrainDistance, GenVehicleTrainSteering
+from RefGen import GenVehicleTrainDistance, GenVehicleTrainSteering, GenVehicleTrainVelocity
 
 names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
 name = names[5]
@@ -196,7 +196,9 @@ def TrainGenVehicle(agent_name, load):
     env = ForestSim(env_map)
 
     # vehicle = GenVehicleTrainDistance(agent_name, load, 200, 10)
-    vehicle = GenVehicleTrainSteering(agent_name, load, 200, 10)
+    # vehicle = GenVehicleTrainSteering(agent_name, load, 200, 10)
+    vehicle = GenVehicleTrainVelocity(agent_name, load, 200, 10)
+
 
     t_his = TrainHistory(agent_name)
     print_n = 500

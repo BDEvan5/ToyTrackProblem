@@ -51,11 +51,11 @@ class CarModel:
 
     def get_car_state(self):
         state = []
-        state.append(self.x)
+        state.append(self.x) #0
         state.append(self.y)
-        state.append(self.theta)
-        state.append(self.velocity)
-        state.append(self.steering)
+        state.append(self.theta) # 2
+        state.append(self.velocity) #3
+        state.append(self.steering)  #4
 
         return state
 

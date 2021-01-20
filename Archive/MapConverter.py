@@ -5,7 +5,7 @@ import yaml
 import csv
 
 import LibFunctions as lib
-from TrajectoryPlanner import MinCurvatureTrajectory, ObsAvoidTraj, ShortestTraj
+# from TrajectoryPlanner import MinCurvatureTrajectory, ObsAvoidTraj, ShortestTraj
 
 
 class MapBase:
@@ -211,8 +211,8 @@ class MapConverter(MapBase):
         # self.set_widths()
         self.make_binary()
         self.set_true_widths()
-        self.save_map()
-        self.render_map(wait=show_map)
+        # self.save_map()
+        self.render_map(wait=True)
 
     def load_map_pgm(self):
         self.read_yaml_file()
@@ -341,7 +341,7 @@ class MapConverter(MapBase):
         self.cline = np.array(self.cline)
         self.N = len(self.cline)
         print(f"Raceline found")
-        # self.plot_raceline_finding()
+        self.plot_raceline_finding(True)
 
     def find_nvecs(self):
         N = self.N
@@ -537,14 +537,14 @@ class MapConverter(MapBase):
 def test_map_converter():
     names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
     name = names[5]
-    # myConv = MapConverter(name)
-    # myConv.run_conversion()
+    myConv = MapConverter(name)
+    myConv.run_conversion()
 
-    t = SimMap(name)
-    t.get_min_curve_path()
-    t.render_map(wait=True)
+    # t = SimMap(name)
+    # t.get_min_curve_path()
+    # t.render_map(wait=True)
 
 
-def forest_gen():
-    f = ForestGenerator()
-    f.save_map()
+# def forest_gen():
+#     f = ForestGenerator()
+#     f.save_map()
