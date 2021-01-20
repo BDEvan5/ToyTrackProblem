@@ -1,0 +1,25 @@
+
+Testing Complete 
+Map name: race_track 
+-----------------------------------------------------
+-----------------------------------------------------
+Vehicle: GenDis
+Crashes: 10.0 --> Completes 0.0
+% Finished = 0.00
+Avg lap times: nan
+-----------------------------------------------------
+Vehicle: GenSteer
+Crashes: 9.0 --> Completes 1.0
+% Finished = 10.00
+Avg lap times: 23.0
+-----------------------------------------------------
+Vehicle: GenDisV
+Crashes: 10.0 --> Completes 0.0
+% Finished = 0.00
+Avg lap times: nan
+-----------------------------------------------------
+Vehicle: GenSteerV
+Crashes: 10.0 --> Completes 0.0
+% Finished = 0.00
+Avg lap times: nan
+-----------------------------------------------------
