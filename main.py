@@ -11,7 +11,7 @@ import LibFunctions as lib
 
 from AgentOptimal import OptimalAgent
 from AgentMod import ModVehicleTest, ModVehicleTrain
-from RefGen import GenVehicleTrainDistance, GenVehicleTrainSteering, GenVehicleTrainVelocity
+from RefGen import GenVehicleTest, GenVehicleTestV, GenVehicleTrainDistance, GenVehicleTrainSteering, GenVehicleTrainVelocity
 
 names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
 name = names[5]
@@ -140,6 +140,7 @@ def TrainModVehicle(agent_name, load=True):
 
     return t_his.rewards
 
+
 """General test function"""
 def testVehicle(vehicle, show=False, obs=True):
     # env_map = SimMap(name)
@@ -156,8 +157,8 @@ def testVehicle(vehicle, show=False, obs=True):
     done, state, score = False, env.reset(), 0.0
     for i in range(100): # 10 laps
         print(f"Running lap: {i}")
-        if obs:
-            env_map.reset_map()
+        # if obs:
+        #     env_map.reset_map()
         while not done:
             a = vehicle.act(state)
             s_p, r, done, _ = env.step(a)
@@ -176,7 +177,8 @@ def testVehicle(vehicle, show=False, obs=True):
             lap_times.append(env.steps)
         state = env.reset()
         
-        env.reset_lap()
+        # env.reset_lap()
+        env.reset()
         vehicle.reset_lap()
         done = False
 
@@ -247,13 +249,20 @@ def RunModAgent():
     # TrainModVehicle(agent_name, True)
 
     # vehicle = ModVehicleTest(agent_name)
+
     # testVehicle(vehicle, obs=True, show=True)
     # testVehicle(vehicle, obs=False, show=True)
 
 def RunGenAgent():
     agent_name = "TestingGen"
 
-    TrainGenVehicle(agent_name, False)
+    # TrainGenVehicle(agent_name, False)
+
+    # vehicle = GenVehicleTest(agent_name)
+    vehicle = GenVehicleTestV(agent_name)
+
+    testVehicle(vehicle, obs=True, show=True)
+    # testVehicle(vehicle, obs=False, show=True)
 
 
 def testOptimal():

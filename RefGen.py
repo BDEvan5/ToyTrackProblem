@@ -74,7 +74,8 @@ class BaseGenAgent:
         cur_d = [obs[4]/self.max_d]
 
         th_target = lib.get_bearing(obs[0:2], self.env_map.end)
-        th_scale = [(th_target)*2/np.pi]
+        alpha = lib.sub_angles_complex(th_target, obs[2])
+        th_scale = [(alpha)*2/np.pi]
 
         scan = self.scan_sim.get_scan(obs[0], obs[1], obs[2])
 
@@ -233,7 +234,6 @@ class GenVehicleTrainVelocity(BaseGenAgent):
 
     def generate_references(self, nn_action):
         d_ref = nn_action[0] * self.max_d
-
         v_ref = nn_action[1] * self.max_v
 
         return v_ref, d_ref
@@ -271,9 +271,6 @@ class GenVehicleTrainVelocity(BaseGenAgent):
 
 
 
-
-
-
 class GenVehicleTest(BaseGenAgent):
     def __init__(self, name):
         path = 'Vehicles/' + name + ''
@@ -291,19 +288,44 @@ class GenVehicleTest(BaseGenAgent):
         self.current_phi_ref = None
 
     def act(self, obs):
-        v_ref, d_ref = self.get_target_references(obs)
-
         nn_obs = self.transform_obs(obs)
-        nn_action = self.agent.act(nn_obs, noise=0)
+        nn_action = self.agent.act(nn_obs)
         self.cur_nn_act = nn_action
 
-        self.d_ref_history.append(d_ref)
         self.mod_history.append(self.cur_nn_act[0])
         self.critic_history.append(self.agent.get_critic_value(nn_obs, nn_action))
         self.state_action = [nn_obs, self.cur_nn_act]
 
-        v_ref, d_ref = self.modify_references(self.cur_nn_act, v_ref, d_ref, obs)
+        v_ref, d_ref = self.generate_references(self.cur_nn_act, obs)
 
         self.steps += 1
+
+        return [v_ref, d_ref]
+
+
+class GenVehicleTestV(BaseGenAgent):
+    def __init__(self, name):
+        path = 'Vehicles/' + name + ''
+        self.agent = TD3(1, 1, 1, name)
+        self.agent.load(directory=path)
+
+        print(f"NN: {self.agent.actor.type}")
+
+        nn_size = self.agent.actor.l1.in_features
+        n_beams = nn_size - 3
+        BaseGenAgent.__init__(self, name, n_beams)
+
+
+    def generate_references(self, nn_action):
+        d_ref = nn_action[0] * self.max_d
+        v_ref = nn_action[1] * self.max_v
+
+        return v_ref, d_ref
+
+    def act(self, obs):
+        nn_obs = self.transform_obs(obs)
+        nn_action = self.agent.act(nn_obs, noise=0)
+
+        v_ref, d_ref = self.generate_references(nn_action)
 
         return [v_ref, d_ref]
