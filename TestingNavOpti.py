@@ -1,16 +1,14 @@
 import numpy as np
-import matplotlib.pyplot as plt
+
+
 from HistoryStructs import TrainHistory
-
-import timeit
-
 from Simulator import ForestSim
 from SimMaps import  ForestMap
 from ModelsRL import ReplayBufferDQN, ReplayBufferTD3
 import LibFunctions as lib
 
 # from AgentOptimal import OptimalAgent
-# from AgentMod import ModVehicleTest, ModVehicleTrain
+from AgentMod import ModVehicleTest, ModVehicleTrain
 from RefGen import GenVehicleTest, GenVehicleTestV
 from RefGen import GenTrainDis, GenTrainDisV, GenTrainSteer, GenTrainSteerV
 
@@ -18,7 +16,6 @@ names = ['columbia', 'levine_blocked', 'mtl', 'porto', 'torino', 'race_track']
 name = names[5]
 myMap = 'TrackMap1000'
 forest_name = 'forest'
-
 
 
 
@@ -114,6 +111,54 @@ def TrainGenVehicle(agent_name, vehicle):
 
     return t_his.rewards
 
+"""Training functions: PURE MOD"""
+def TrainModVehicle(agent_name, vehicle):
+    path = 'Vehicles/' + agent_name
+    buffer = ReplayBufferTD3()
+
+    # env_map = SimMap(name)
+    # env = TrackSim(env_map)
+
+    env_map = ForestMap(forest_name)
+    env = ForestSim(env_map)
+
+    t_his = TrainHistory(agent_name)
+    print_n = 500
+
+    done, state = False, env.reset()
+    wpts = vehicle.init_agent(env_map)
+
+    for n in range(25000):
+        a = vehicle.act(state)
+        s_prime, r, done, _ = env.step(a)
+
+        new_r = vehicle.add_memory_entry(r, done, s_prime, buffer)
+        t_his.add_step_data(new_r)
+
+        state = s_prime
+        vehicle.agent.train(buffer, 2)
+        
+        # env.render(False)
+
+        if n % print_n == 0 and n > 0:
+            t_his.print_update()
+            vehicle.agent.save(directory=path)
+        
+        if done:
+            t_his.lap_done()
+            # vehicle.show_vehicle_history()
+            env.render(wait=False, save=False)
+
+            vehicle.reset_lap()
+            state = env.reset()
+
+
+    vehicle.agent.save(directory=path)
+
+    t_his.save_csv_data()
+
+
+
 
 """Testing Function"""
 def RunVehicleLap(vehicle, env, show=False):
@@ -192,32 +237,58 @@ def test_vehicles(vehicle_list, laps, eval_name, add_obs):
         print(f"-----------------------------------------------------")
 
 
-def test_gen():
-    vehicle_list = []
+"""b2 tests"""
+def train_gen_disV_b2():
+    load = False
 
-    agent_name = "GenDis"
-    vehicle = GenVehicleTest(agent_name)
-    vehicle_list.append(vehicle)
+    agent_name = "GenDisV_0_02_0"
+    vehicle = GenTrainDisV(agent_name, load, 200, 10)
+    vehicle.init_reward(0, 0.2, 0)
 
-    agent_name = "GenSteer"
-    vehicle = GenVehicleTest(agent_name)
-    vehicle_list.append(vehicle)
+    TrainGenVehicle(agent_name, vehicle)
 
-    agent_name = "GenDisV"
-    vehicle = GenVehicleTestV(agent_name)
-    vehicle_list.append(vehicle)
+    agent_name = "GenDisV_0_05_0"
+    vehicle = GenTrainDisV(agent_name, load, 200, 10)
+    vehicle.init_reward(0, 0.5, 0)
 
-    agent_name = "GenSteerV"
-    vehicle = GenVehicleTestV(agent_name)
-    vehicle_list.append(vehicle)
+    TrainGenVehicle(agent_name, vehicle)
 
+    agent_name = "GenDisV_0_06_0"
+    vehicle = GenTrainDisV(agent_name, load, 200, 10)
+    vehicle.init_reward(0, 0.6, 0)
 
-    # test_vehicles(vehicle_list, 100, vehicle_name + "/Eval_Obs" , True)
-    test_vehicles(vehicle_list, 10, "Eval_gen" , True)
+    TrainGenVehicle(agent_name, vehicle)
+    agent_name = "GenDisV_0_07_0"
+    vehicle = GenTrainDisV(agent_name, load, 200, 10)
+    vehicle.init_reward(0, 0.7, 0)
+
+    TrainGenVehicle(agent_name, vehicle)
+    agent_name = "GenDisV_0_08_0"
+    vehicle = GenTrainDisV(agent_name, load, 200, 10)
+    vehicle.init_reward(0, 0.8, 0)
+
+    TrainGenVehicle(agent_name, vehicle)
+    agent_name = "GenDisV_0_09_0"
+    vehicle = GenTrainDisV(agent_name, load, 200, 10)
+    vehicle.init_reward(0, 0.9, 0)
+
+    TrainGenVehicle(agent_name, vehicle)
+
+    agent_name = "GenDisV_0_1_0"
+    vehicle = GenTrainDisV(agent_name, load, 200, 10)
+    vehicle.init_reward(0, 1, 0)
+
+    TrainGenVehicle(agent_name, vehicle)
+    
+    agent_name = "GenDisV_0_2_0"
+    vehicle = GenTrainDisV(agent_name, load, 200, 10)
+    vehicle.init_reward(0, 2, 0)
+
+    TrainGenVehicle(agent_name, vehicle)
 
     # test_vehicles(vehicle_list, 10, vehicle_name + "/Eval_NoObs", False)
 
-def test_b1():
+def test_b2():
     vehicle_list = []
 
     agent_name = "GenDisV_0_02_0"
@@ -253,12 +324,97 @@ def test_b1():
     vehicle_list.append(vehicle)
 
 
-    # test_vehicles(vehicle_list, 100, vehicle_name + "/Eval_Obs" , True)
     test_vehicles(vehicle_list, 100, "OptiV_b1" , True)
 
-    # test_vehicles(vehicle_list, 10, vehicle_name + "/Eval_NoObs", False)
+
+"""Mod tests"""
+def train_m1():
+    load = False
+
+    agent_name = "Mod_0_02"
+    vehicle = ModVehicleTrain(agent_name, load, 200, 10)
+    vehicle.init_reward(0, 0.2)
+    # TrainModVehicle(agent_name, vehicle)
+
+    agent_name = "Mod_01_02"
+    vehicle = ModVehicleTrain(agent_name, load, 200, 10)
+    vehicle.init_reward(0.1, 0.2)
+    # TrainModVehicle(agent_name, vehicle)
+
+    agent_name = "Mod_02_02"
+    vehicle = ModVehicleTrain(agent_name, load, 200, 10)
+    vehicle.init_reward(0.2, 0.2)
+    TrainModVehicle(agent_name, vehicle)
+
+    agent_name = "Mod_04_02"
+    vehicle = ModVehicleTrain(agent_name, load, 200, 10)
+    vehicle.init_reward(0.4, 0.2)
+    # TrainModVehicle(agent_name, vehicle)
+
+def train_m2():
+    load = False
+    agent_name = "Mod_02_01"
+    vehicle = ModVehicleTrain(agent_name, load, 200, 10)
+    vehicle.init_reward(0.2, 0.1)
+    TrainModVehicle(agent_name, vehicle)
+
+    # agent_name = "Mod_02_02"
+    # vehicle = ModVehicleTrain(agent_name, load, 200, 10)
+    # vehicle.init_reward(0.2, 0.2)
+    # TrainModVehicle(agent_name, vehicle)
+
+    agent_name = "Mod_02_03"
+    vehicle = ModVehicleTrain(agent_name, load, 200, 10)
+    vehicle.init_reward(0.2, 0.3)
+    TrainModVehicle(agent_name, vehicle)
+
+    agent_name = "Mod_02_04"
+    vehicle = ModVehicleTrain(agent_name, load, 200, 10)
+    vehicle.init_reward(0.2, 0.4)
+    TrainModVehicle(agent_name, vehicle)
+
+def test_m():
+    vehicle_list = []
+
+    # m2
+    agent_name = "Mod_02_01"
+    vehicle = ModVehicleTest(agent_name)
+    vehicle_list.append(vehicle)
+
+    agent_name = "Mod_02_02"
+    vehicle = ModVehicleTest(agent_name)
+    vehicle_list.append(vehicle)
+
+    agent_name = "Mod_02_03"
+    vehicle = ModVehicleTest(agent_name)
+    vehicle_list.append(vehicle)
+
+    agent_name = "Mod_02_04"
+    vehicle = ModVehicleTest(agent_name)
+    vehicle_list.append(vehicle)
+
+    # m1
+    agent_name = "Mod_0_02"
+    vehicle = ModVehicleTest(agent_name)
+    vehicle_list.append(vehicle)
+
+    agent_name = "Mod_01_02"
+    vehicle = ModVehicleTest(agent_name)
+    vehicle_list.append(vehicle)
+
+    agent_name = "Mod_04_02"
+    vehicle = ModVehicleTest(agent_name)
+    vehicle_list.append(vehicle)
 
 
+
+    test_vehicles(vehicle_list, 10, "Mod_m1m2" , True)
+
+
+
+
+
+"""Under development still"""
 def train_gen_dis():
     load = False
     agent_name = "GenDis"
@@ -273,53 +429,31 @@ def train_gen_steer():
 
     TrainGenVehicle(agent_name, vehicle)
 
-def train_gen_disV_b1():
-    load = False
+def test_gen():
+    vehicle_list = []
 
-    # agent_name = "GenDisV_0_02_0"
-    # vehicle = GenTrainDisV(agent_name, load, 200, 10)
-    # vehicle.init_reward(0, 0.2, 0)
+    agent_name = "GenDis"
+    vehicle = GenVehicleTest(agent_name)
+    vehicle_list.append(vehicle)
 
-    # TrainGenVehicle(agent_name, vehicle)
+    agent_name = "GenSteer"
+    vehicle = GenVehicleTest(agent_name)
+    vehicle_list.append(vehicle)
 
-    # agent_name = "GenDisV_0_05_0"
-    # vehicle = GenTrainDisV(agent_name, load, 200, 10)
-    # vehicle.init_reward(0, 0.5, 0)
+    agent_name = "GenDisV"
+    vehicle = GenVehicleTestV(agent_name)
+    vehicle_list.append(vehicle)
 
-    # TrainGenVehicle(agent_name, vehicle)
+    agent_name = "GenSteerV"
+    vehicle = GenVehicleTestV(agent_name)
+    vehicle_list.append(vehicle)
 
-    agent_name = "GenDisV_0_06_0"
-    vehicle = GenTrainDisV(agent_name, load, 200, 10)
-    vehicle.init_reward(0, 0.6, 0)
 
-    TrainGenVehicle(agent_name, vehicle)
-    agent_name = "GenDisV_0_07_0"
-    vehicle = GenTrainDisV(agent_name, load, 200, 10)
-    vehicle.init_reward(0, 0.7, 0)
+    # test_vehicles(vehicle_list, 100, vehicle_name + "/Eval_Obs" , True)
+    test_vehicles(vehicle_list, 10, "Eval_gen" , True)
 
-    TrainGenVehicle(agent_name, vehicle)
-    agent_name = "GenDisV_0_08_0"
-    vehicle = GenTrainDisV(agent_name, load, 200, 10)
-    vehicle.init_reward(0, 0.8, 0)
+    # test_vehicles(vehicle_list, 10, vehicle_name + "/Eval_NoObs", False)
 
-    TrainGenVehicle(agent_name, vehicle)
-    agent_name = "GenDisV_0_09_0"
-    vehicle = GenTrainDisV(agent_name, load, 200, 10)
-    vehicle.init_reward(0, 0.9, 0)
-
-    TrainGenVehicle(agent_name, vehicle)
-
-    # agent_name = "GenDisV_0_1_0"
-    # vehicle = GenTrainDisV(agent_name, load, 200, 10)
-    # vehicle.init_reward(0, 1, 0)
-
-    # TrainGenVehicle(agent_name, vehicle)
-    
-    # agent_name = "GenDisV_0_2_0"
-    # vehicle = GenTrainDisV(agent_name, load, 200, 10)
-    # vehicle.init_reward(0, 2, 0)
-
-    TrainGenVehicle(agent_name, vehicle)
 
 def train_gen_steerV():
     load = False
@@ -334,12 +468,16 @@ def train_gen_steerV():
 
 if __name__ == "__main__":
 
-    # train_gen()
 
-    # train_gen_disV_b1()
-    test_b1()
+    # train_gen_disV_b2()
+    # test_b2()
 
-    # test_gen()
+    # train_m1()
+    # train_m2()
+
+    test_m()
+
+
 
 
 
