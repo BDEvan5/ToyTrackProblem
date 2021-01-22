@@ -1,10 +1,13 @@
 import LibFunctions as lib
 import os, shutil
+import csv
+import numpy as np
 
 
 class TrainHistory():
     def __init__(self, agent_name) -> None:
         self.agent_name = agent_name
+        self.path = 'Vehicles/' + self.agent_name 
 
         # training data
         self.lengths = []
@@ -18,14 +21,12 @@ class TrainHistory():
         self.init_file_struct()
 
     def init_file_struct(self):
-        path = 'Vehicles/' + self.agent_name 
-
-        if os.path.exists(path):
+        if os.path.exists(self.path):
             try:
-                os.rmdir(path)
+                os.rmdir(self.path)
             except:
-                shutil.rmtree(path)
-        os.mkdir(path)
+                shutil.rmtree(self.path)
+        os.mkdir(self.path)
 
     def add_step_data(self, new_r):
         self.ep_reward += new_r
@@ -45,3 +46,12 @@ class TrainHistory():
         print(f"Run: {self.t_counter} --> Score: {score:.2f} --> Mean: {mean:.2f} --> ")
         
         lib.plot(self.rewards, figure_n=2)
+
+    def save_csv_data(self):
+        data = []
+        for i in range(len(self.rewards)):
+            data.append([i, self.rewards[i], self.lengths[i]])
+        with open(self.path + '/training_rewards.csv', 'w') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            csvwriter.writerows(data)
+

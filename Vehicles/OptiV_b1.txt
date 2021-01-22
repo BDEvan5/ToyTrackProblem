@@ -1,0 +1,45 @@
+
+Testing Complete 
+Map name: race_track 
+-----------------------------------------------------
+-----------------------------------------------------
+Vehicle: GenDisV_0_02_0
+Crashes: 57.0 --> Completes 43.0
+% Finished = 43.00
+Avg lap times: 31.3953488372093
+-----------------------------------------------------
+Vehicle: GenDisV_0_05_0
+Crashes: 8.0 --> Completes 92.0
+% Finished = 92.00
+Avg lap times: 24.434782608695652
+-----------------------------------------------------
+Vehicle: GenDisV_0_06_0
+Crashes: 10.0 --> Completes 90.0
+% Finished = 90.00
+Avg lap times: 20.522222222222222
+-----------------------------------------------------
+Vehicle: GenDisV_0_07_0
+Crashes: 16.0 --> Completes 84.0
+% Finished = 84.00
+Avg lap times: 21.75
+-----------------------------------------------------
+Vehicle: GenDisV_0_08_0
+Crashes: 8.0 --> Completes 92.0
+% Finished = 92.00
+Avg lap times: 35.06521739130435
+-----------------------------------------------------
+Vehicle: GenDisV_0_09_0
+Crashes: 8.0 --> Completes 92.0
+% Finished = 92.00
+Avg lap times: 28.532608695652176
+-----------------------------------------------------
+Vehicle: GenDisV_0_1_0
+Crashes: 26.0 --> Completes 74.0
+% Finished = 74.00
+Avg lap times: 28.027027027027028
+-----------------------------------------------------
+Vehicle: GenDisV_0_2_0
+Crashes: 31.0 --> Completes 69.0
+% Finished = 69.00
+Avg lap times: 29.014492753623188
+-----------------------------------------------------

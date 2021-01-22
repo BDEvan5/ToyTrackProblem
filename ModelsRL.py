@@ -223,10 +223,10 @@ class TD3(object):
 
         print("Agent Loaded")
 
-    def try_load(self, load=True, h_size=300):
+    def try_load(self, load=True, h_size=300, path=None):
         if load:
             try:
-                self.load()
+                self.load(path)
             except Exception as e:
                 print(f"Exception: {e}")
                 print(f"Unable to load model")

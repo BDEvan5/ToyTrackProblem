@@ -15,7 +15,7 @@ class BaseGenAgent:
         self.env_map = None
         self.wpts = None
 
-        self.path_name = None
+        self.path_name = 'Vehicles/%s' % self.name
         self.pind = 1
         self.target = None
 
@@ -146,7 +146,7 @@ class GenVehicleTrainV(BaseGenAgent):
 
         state_space = 3 + self.n_beams
         self.agent = TD3(state_space, 2, 1, name)
-        self.agent.try_load(load, h_size)
+        self.agent.try_load(load, h_size, path=self.path_name)
 
     def act(self, obs):
         nn_obs = self.transform_obs(obs)
@@ -178,7 +178,7 @@ class GenVehicleTrainV(BaseGenAgent):
 
     def generate_references(self, nn_action, space=None):
         d_ref = nn_action[0] * self.max_d
-        v_ref = nn_action[1] * self.max_v
+        v_ref = (nn_action[1] + 1) / 2 * self.max_v # change the min from -1 to 0
 
         return v_ref, d_ref
 
@@ -226,17 +226,25 @@ class GenTrainDisV(GenVehicleTrainV):
         super().__init__(name, load, h_size, n_beams)
 
         self.prev_dist_target = 0
+        self.b1 = None
+        self.b2 = None
+        self.b3 = None
+
+    def init_reward(self, b1, b2, b3):
+        self.b1 = b1
+        self.b2 = b2
+        self.b3 = b3
 
     def update_reward(self, reward, s_prime):
-        beta = 1
-        gamma = 0
         if reward == -1:
             new_reward = -1
             self.prev_dist_target = lib.get_distance(self.env_map.start, self.env_map.end)
         else:
             dist_target = lib.get_distance(s_prime[0:2], self.env_map.end)
-            ds_reward = (self.prev_dist_target - dist_target) 
-            new_reward = (s_prime[2] / self.max_v) * gamma + ds_reward * beta
+            d_dis = self.prev_dist_target - dist_target
+            vel = s_prime[2] / self.max_v
+
+            new_reward = self.b1 + d_dis * self.b2 + vel * self.b3
 
             self.prev_dist_target = dist_target
 
@@ -301,7 +309,7 @@ class GenVehicleTestV(BaseGenAgent):
 
     def generate_references(self, nn_action, space=None):
         d_ref = nn_action[0] * self.max_d
-        v_ref = nn_action[1] * self.max_v
+        v_ref = (nn_action[1] + 1) / 2 * self.max_v # change the min from -1 to 0
 
         return v_ref, d_ref
 
