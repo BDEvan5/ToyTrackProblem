@@ -128,7 +128,7 @@ def TrainModVehicle(agent_name, vehicle):
     done, state = False, env.reset()
     wpts = vehicle.init_agent(env_map)
 
-    for n in range(25000):
+    for n in range(2500):
         a = vehicle.act(state)
         s_prime, r, done, _ = env.step(a)
 
@@ -334,12 +334,12 @@ def train_m1():
     agent_name = "Mod_0_02"
     vehicle = ModVehicleTrain(agent_name, load, 200, 10)
     vehicle.init_reward(0, 0.2)
-    # TrainModVehicle(agent_name, vehicle)
+    TrainModVehicle(agent_name, vehicle)
 
     agent_name = "Mod_01_02"
     vehicle = ModVehicleTrain(agent_name, load, 200, 10)
     vehicle.init_reward(0.1, 0.2)
-    # TrainModVehicle(agent_name, vehicle)
+    TrainModVehicle(agent_name, vehicle)
 
     agent_name = "Mod_02_02"
     vehicle = ModVehicleTrain(agent_name, load, 200, 10)
@@ -349,7 +349,7 @@ def train_m1():
     agent_name = "Mod_04_02"
     vehicle = ModVehicleTrain(agent_name, load, 200, 10)
     vehicle.init_reward(0.4, 0.2)
-    # TrainModVehicle(agent_name, vehicle)
+    TrainModVehicle(agent_name, vehicle)
 
 def train_m2():
     load = False
